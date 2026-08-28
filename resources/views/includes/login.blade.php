@@ -26,7 +26,7 @@
 
                     <!-- Brand -->
                     <div>
-                        <h1 class="text-lg font-bold tracking-tight text-slate-900">ePayroll</h1>
+                        <h1 class="text-2xl font-bold tracking-tight text-slate-900">ePayroll</h1>
                         <p class="text-xs text-slate-500">Payroll Web Based System</p>
                     </div>
 
