@@ -26,6 +26,10 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-info');
     })->name('employee.info');
 
+     Route::get('/employee/employee-deduction', function () {
+        return view('employee.employee-deduction');
+    })->name('employee.deduction');
+
     Route::post('/api/logout', [AuthController::class, 'logout'])
         ->name('api.logout');
 });

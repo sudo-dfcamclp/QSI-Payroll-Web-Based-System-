@@ -20,7 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const PAGE_SCRIPTS = {
 
         employees: () =>
-            import('../pages/employees.js'),
+            import('../pages/employee-info.js'),
+         employees: () =>
+            import('../pages/employee-deduction.js'),
+                
+            
 
         // Add more pages here when needed.
         //
