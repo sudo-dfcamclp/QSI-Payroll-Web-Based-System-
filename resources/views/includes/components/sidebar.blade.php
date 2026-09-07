@@ -6,308 +6,578 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <!-- =========================================================
+     ROLE PERMISSIONS
+     ========================================================= -->
+
+@php
+    use App\Models\Role;
+
+    $user = auth()->user();
+
+    /*
+    |--------------------------------------------------------------------------
+    | SIDEBAR ACCESS
+    |--------------------------------------------------------------------------
+    |
+    | Super Admin = access to all current sidebar modules.
+    |
+    */
+
+    $canHR = $user->hasAnyRoleId([
+        Role::SUPER_ADMIN,
+        Role::HR,
+    ]);
+
+    $canAdmin = $user->hasAnyRoleId([
+        Role::SUPER_ADMIN,
+        Role::ADMIN,
+    ]);
+
+    $canPayroll = $user->hasAnyRoleId([
+        Role::SUPER_ADMIN,
+        Role::PAYROLL,
+    ]);
+@endphp
+
+<!-- =========================================================
      MOBILE HAMBURGER
      ========================================================= -->
 
-<button id="mobileMenuButton" type="button" onclick="toggleMobileSidebar()" class="fixed top-4 left-4 z-[60] hidden w-11 h-11 items-center justify-center rounded-lg bg-white text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 cursor-pointer">
+<button id="mobileMenuButton"
+        type="button"
+        onclick="toggleMobileSidebar()"
+        class="fixed top-4 left-4 z-[60] hidden w-11 h-11 items-center justify-center rounded-lg bg-white text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 cursor-pointer">
+
     <i class="fa-solid fa-bars text-lg pointer-events-none"></i>
+
 </button>
 
 <!-- =========================================================
      MOBILE OVERLAY
      ========================================================= -->
 
-<div id="sidebarOverlay" onclick="closeMobileSidebar()" class="fixed inset-0 z-40 hidden bg-black/40 md:hidden cursor-pointer"></div>
+<div id="sidebarOverlay"
+     onclick="closeMobileSidebar()"
+     class="fixed inset-0 z-40 hidden bg-black/40 md:hidden cursor-pointer">
+</div>
 
 <!-- =========================================================
      SIDEBAR
      ========================================================= -->
 
-<aside id="sidebar" class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-gray-200 flex flex-col z-50 shadow-lg overflow-hidden font-['Inter'] transition-all duration-300 ease-in-out">
+<aside id="sidebar"
+       class="fixed left-0 top-0 h-full w-[280px] bg-white border-r border-gray-200 flex flex-col z-50 shadow-lg overflow-hidden font-['Inter'] transition-all duration-300 ease-in-out">
 
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
 
-<!-- =====================================================
-     HEADER
-     ===================================================== -->
+    <div class="p-5 flex items-center gap-3 border-b border-gray-100 min-h-[72px] shrink-0">
 
-<div class="p-5 flex items-center gap-3 border-b border-gray-100 min-h-[72px] shrink-0">
+        <!-- LOGO -->
 
-    <!-- LOGO -->
+        <button type="button"
+                onclick="handleLogoClick()"
+                class="sidebar-logo w-10 h-10 rounded-xl flex items-center justify-center shrink-0 hover:bg-gray-100 transition-colors cursor-pointer">
 
-    <button type="button" onclick="handleLogoClick()" class="sidebar-logo w-10 h-10 rounded-xl flex items-center justify-center shrink-0 hover:bg-gray-100 transition-colors cursor-pointer">
-        <img src="{{ asset('assets/logo/logo.png') }}" alt="QSI Logo" class="w-10 h-10 object-contain pointer-events-none">
-    </button>
+            <img src="{{ asset('assets/logo/logo.png') }}"
+                 alt="QSI Logo"
+                 class="w-10 h-10 object-contain pointer-events-none">
 
-    <!-- TITLE -->
-
-    <h1 class="sidebar-text whitespace-nowrap text-xl font-bold text-gray-800 tracking-tight select-none">
-        QSI ePayroll
-    </h1>
-
-    <!-- DESKTOP COLLAPSE -->
-
-    <button id="desktopCollapseButton" type="button" onclick="toggleSidebar()" class="sidebar-text ml-auto p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all shrink-0 cursor-pointer">
-        <i id="collapseIcon" class="fa-solid fa-chevron-left text-lg pointer-events-none"></i>
-    </button>
-
-    <!-- MOBILE CLOSE -->
-
-    <button id="mobileCloseButton" type="button" onclick="closeMobileSidebar()" class="hidden ml-auto p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all shrink-0 cursor-pointer">
-        <i class="fa-solid fa-xmark text-xl pointer-events-none"></i>
-    </button>
-
-</div>
-
-<!-- =====================================================
-     SEARCH
-     ===================================================== -->
-
-<div id="sidebarSearch" class="px-5 py-3 shrink-0">
-
-    <!-- EXPANDED SEARCH -->
-
-    <div id="searchExpanded" class="relative">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
-            <i class="fa-solid fa-magnifying-glass text-sm"></i>
-        </span>
-        <input type="text" placeholder="Search..." class="w-full pl-9 pr-3 py-2 bg-gray-100 border-none rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-green-500 focus:bg-white transition-all outline-none">
-    </div>
-
-    <!-- MINI SEARCH -->
-
-    <button id="searchMini" type="button" onclick="expandFromSearch()" class="hidden w-10 h-10 mx-auto items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
-        <i class="fa-solid fa-magnifying-glass text-lg pointer-events-none"></i>
-    </button>
-
-</div>
-
-<!-- =====================================================
-     NAVIGATION
-     ===================================================== -->
-
-<nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3 space-y-1">
-
-    <div class="sidebar-separator my-2 border-t border-gray-200 mx-2"></div>
-
-    <!-- =================================================
-         HUMAN RESOURCE
-         ================================================= -->
-
-    <div class="dropdown-container relative">
-
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-regular fa-user text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Human Resource
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
         </button>
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+        <!-- TITLE -->
 
-            <!-- EMPLOYEE INFO -->
+        <h1 class="sidebar-text whitespace-nowrap text-xl font-bold text-gray-800 tracking-tight select-none">
+            QSI ePayroll
+        </h1>
 
-            <a href="{{ route('employee.info') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/employee-info') }}" data-tab-id="employee-info" data-tab-title="Employee Info" data-tab-icon="fa-regular fa-user">
-                Employee Info
-            </a>
+        <!-- DESKTOP COLLAPSE -->
+
+        <button id="desktopCollapseButton"
+                type="button"
+                onclick="toggleSidebar()"
+                class="sidebar-text ml-auto p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all shrink-0 cursor-pointer">
+
+            <i id="collapseIcon"
+               class="fa-solid fa-chevron-left text-lg pointer-events-none">
+            </i>
+
+        </button>
+
+        <!-- MOBILE CLOSE -->
+
+        <button id="mobileCloseButton"
+                type="button"
+                onclick="closeMobileSidebar()"
+                class="hidden ml-auto p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all shrink-0 cursor-pointer">
+
+            <i class="fa-solid fa-xmark text-xl pointer-events-none"></i>
+
+        </button>
+
+    </div>
+
+    <!-- =====================================================
+         SEARCH
+         ===================================================== -->
+
+    <div id="sidebarSearch" class="px-5 py-3 shrink-0">
+
+        <!-- EXPANDED SEARCH -->
+
+        <div id="searchExpanded" class="relative">
+
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+
+                <i class="fa-solid fa-magnifying-glass text-sm"></i>
+
+            </span>
+
+            <input type="text"
+                   placeholder="Search..."
+                   class="w-full pl-9 pr-3 py-2 bg-gray-100 border-none rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-green-500 focus:bg-white transition-all outline-none">
 
         </div>
 
-    </div>
+        <!-- MINI SEARCH -->
 
-    <!-- =================================================
-         ADMINISTRATIVE
-         ================================================= -->
+        <button id="searchMini"
+                type="button"
+                onclick="expandFromSearch()"
+                class="hidden w-10 h-10 mx-auto items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors cursor-pointer">
 
-    <div class="dropdown-container relative">
+            <i class="fa-solid fa-magnifying-glass text-lg pointer-events-none"></i>
 
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-solid fa-shield text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Administrative
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
         </button>
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+    </div>
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/deduction-type') }}" data-tab-id="deduction-type" data-tab-title="Deduction Type" data-tab-icon="fa-solid fa-shield">
-                Deduction Type
-            </a>
+    <!-- =====================================================
+         NAVIGATION
+         ===================================================== -->
 
-            <a href="{{ route('employee.deduction') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/employee-deduction') }}" data-tab-id="employee-deduction" data-tab-title="Employee Deduction" data-tab-icon="fa-solid fa-user-minus">
-                Employee Deduction
-            </a>
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3 space-y-1">
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/client-master') }}" data-tab-id="client-master" data-tab-title="Client Master" data-tab-icon="fa-solid fa-building">
-                Client Master
-            </a>
+        <div class="sidebar-separator my-2 border-t border-gray-200 mx-2"></div>
+
+
+        <!-- =================================================
+             HUMAN RESOURCE
+             ROLE: SUPER ADMIN / HR
+             ================================================= -->
+
+        @if($canHR)
+
+            <div class="dropdown-container relative">
+
+                <button type="button"
+                        onclick="handleMenuClick(this)"
+                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+
+                    <i class="fa-regular fa-user text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                    <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                        Human Resource
+                    </span>
+
+                    <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
+
+                </button>
+
+                <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+
+                    <!-- EMPLOYEE INFO -->
+
+                    <a href="{{ route('employee.info') }}"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/employee-info') }}"
+                       data-tab-id="employee-info"
+                       data-tab-title="Employee Info"
+                       data-tab-icon="fa-regular fa-user">
+
+                        Employee Info
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        @endif
+
+
+        <!-- =================================================
+             ADMINISTRATIVE
+             ROLE: SUPER ADMIN / ADMIN
+             ================================================= -->
+
+        @if($canAdmin)
+
+            <div class="dropdown-container relative">
+
+                <button type="button"
+                        onclick="handleMenuClick(this)"
+                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+
+                    <i class="fa-solid fa-shield text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                    <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                        Administrative
+                    </span>
+
+                    <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
+
+                </button>
+
+                <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+
+                    <!-- DEDUCTION TYPE -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/deduction-type') }}"
+                       data-tab-id="deduction-type"
+                       data-tab-title="Deduction Type"
+                       data-tab-icon="fa-solid fa-shield">
+
+                        Deduction Type
+
+                    </a>
+
+                    <!-- EMPLOYEE DEDUCTION -->
+
+                    <a href="{{ route('employee.deduction') }}"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/employee-deduction') }}"
+                       data-tab-id="employee-deduction"
+                       data-tab-title="Employee Deduction"
+                       data-tab-icon="fa-solid fa-user-minus">
+
+                        Employee Deduction
+
+                    </a>
+
+                    <!-- CLIENT MASTER -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/client-master') }}"
+                       data-tab-id="client-master"
+                       data-tab-title="Client Master"
+                       data-tab-icon="fa-solid fa-building">
+
+                        Client Master
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        @endif
+
+
+        <!-- =================================================
+             PAYROLL
+             ROLE: SUPER ADMIN / PAYROLL
+             ================================================= -->
+
+        @if($canPayroll)
+
+            <div class="dropdown-container relative">
+
+                <button type="button"
+                        onclick="handleMenuClick(this)"
+                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+
+                    <i class="fa-regular fa-calendar text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                    <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                        Payroll
+                    </span>
+
+                    <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
+
+                </button>
+
+                <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+
+                    <!-- PAYROLL TRANSACTION -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/employee-payroll') }}"
+                       data-tab-id="employee-payroll"
+                       data-tab-title="Payroll Transaction"
+                       data-tab-icon="fa-regular fa-calendar">
+
+                        Payroll Transaction
+
+                    </a>
+
+                    <!-- FIRST / LAST CUT-OFF -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/employee/first-last-cutoff') }}"
+                       data-tab-id="first-last-cutoff"
+                       data-tab-title="First / Last Cut-Off"
+                       data-tab-icon="fa-solid fa-calendar-days">
+
+                        First / Last Cut-Off
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        @endif
+
+
+        <!-- =================================================
+             MAINTENANCE
+             ================================================= -->
+
+        <div class="dropdown-container relative">
+
+            <button type="button"
+                    onclick="handleMenuClick(this)"
+                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+
+                <i class="fa-solid fa-screwdriver-wrench text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                    Maintenance
+                </span>
+
+                <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
+
+            </button>
+
+            <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/branch') }}"
+                   data-tab-id="branch"
+                   data-tab-title="Branch"
+                   data-tab-icon="fa-solid fa-code-branch">
+
+                    Branch
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/department') }}"
+                   data-tab-id="department"
+                   data-tab-title="Department"
+                   data-tab-icon="fa-solid fa-building">
+
+                    Department
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/position') }}"
+                   data-tab-id="position"
+                   data-tab-title="Position"
+                   data-tab-icon="fa-solid fa-briefcase">
+
+                    Position
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/tax-table') }}"
+                   data-tab-id="tax-table"
+                   data-tab-title="Tax Table"
+                   data-tab-icon="fa-solid fa-table">
+
+                    Tax Table
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/pagibig-table') }}"
+                   data-tab-id="pagibig-table"
+                   data-tab-title="Pagibig Table"
+                   data-tab-icon="fa-solid fa-table">
+
+                    Pagibig Table
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/phealth-table') }}"
+                   data-tab-id="phealth-table"
+                   data-tab-title="P-Health Table"
+                   data-tab-icon="fa-solid fa-table">
+
+                    P-Health Table
+
+                </a>
+
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/sss-table') }}"
+                   data-tab-id="sss-table"
+                   data-tab-title="SSS Table"
+                   data-tab-icon="fa-solid fa-table">
+
+                    SSS Table
+
+                </a>
+
+            </div>
 
         </div>
 
-    </div>
 
-    <!-- =================================================
-         PAYROLL
-         ================================================= -->
+        <!-- =================================================
+             BILLING
+             ================================================= -->
 
-    <div class="dropdown-container relative">
+        <div class="dropdown-container relative">
 
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-regular fa-calendar text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Payroll
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
-        </button>
+            <button type="button"
+                    onclick="handleMenuClick(this)"
+                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+                <i class="fa-solid fa-file-invoice text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/employee-payroll') }}" data-tab-id="employee-payroll" data-tab-title="Payroll Transaction" data-tab-icon="fa-regular fa-calendar">
-                Payroll Transaction
-            </a>
+                <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                    Billing
+                </span>
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/first-last-cutoff') }}" data-tab-id="first-last-cutoff" data-tab-title="First / Last Cut-Off" data-tab-icon="fa-solid fa-calendar-days">
-                First / Last Cut-Off
-            </a>
+                <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
 
-        </div>
+            </button>
 
-    </div>
+            <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
 
-    <!-- =================================================
-         MAINTENANCE
-         ================================================= -->
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/billing-transaction') }}"
+                   data-tab-id="billing-transaction"
+                   data-tab-title="Billing Transaction"
+                   data-tab-icon="fa-solid fa-file-invoice">
 
-    <div class="dropdown-container relative">
+                    Billing Transaction
 
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-solid fa-screwdriver-wrench text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Maintenance
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
-        </button>
+                </a>
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/branch') }}" data-tab-id="branch" data-tab-title="Branch" data-tab-icon="fa-solid fa-code-branch">
-                Branch
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/department') }}" data-tab-id="department" data-tab-title="Department" data-tab-icon="fa-solid fa-building">
-                Department
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/position') }}" data-tab-id="position" data-tab-title="Position" data-tab-icon="fa-solid fa-briefcase">
-                Position
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/tax-table') }}" data-tab-id="tax-table" data-tab-title="Tax Table" data-tab-icon="fa-solid fa-table">
-                Tax Table
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/pagibig-table') }}" data-tab-id="pagibig-table" data-tab-title="Pagibig Table" data-tab-icon="fa-solid fa-table">
-                Pagibig Table
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/phealth-table') }}" data-tab-id="phealth-table" data-tab-title="P-Health Table" data-tab-icon="fa-solid fa-table">
-                P-Health Table
-            </a>
-
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/sss-table') }}" data-tab-id="sss-table" data-tab-title="SSS Table" data-tab-icon="fa-solid fa-table">
-                SSS Table
-            </a>
+            </div>
 
         </div>
 
-    </div>
 
-    <!-- =================================================
-         BILLING
-         ================================================= -->
+        <!-- =================================================
+             BENEFITS
+             ================================================= -->
 
-    <div class="dropdown-container relative">
+        <div class="dropdown-container relative">
 
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-solid fa-file-invoice text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Billing
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
-        </button>
+            <button type="button"
+                    onclick="handleMenuClick(this)"
+                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+                <i class="fa-regular fa-handshake text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/billing-transaction') }}" data-tab-id="billing-transaction" data-tab-title="Billing Transaction" data-tab-icon="fa-solid fa-file-invoice">
-                Billing Transaction
-            </a>
+                <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                    Benefits
+                </span>
 
-        </div>
+                <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
 
-    </div>
+            </button>
 
-    <!-- =================================================
-         BENEFITS
-         ================================================= -->
+            <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
 
-    <div class="dropdown-container relative">
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/old-deduction') }}"
+                   data-tab-id="old-deduction"
+                   data-tab-title="Old Deduction"
+                   data-tab-icon="fa-solid fa-money-bill-transfer">
 
-        <button type="button" onclick="handleMenuClick(this)" class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
-            <i class="fa-regular fa-handshake text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span class="sidebar-text whitespace-nowrap font-medium select-none">
-                Benefits
-            </span>
-            <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
-        </button>
+                    Old Deduction
 
-        <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+                </a>
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/old-deduction') }}" data-tab-id="old-deduction" data-tab-title="Old Deduction" data-tab-icon="fa-solid fa-money-bill-transfer">
-                Old Deduction
-            </a>
+                <a href="#"
+                   class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                   data-page="{{ url('/employee/mandatory') }}"
+                   data-tab-id="mandatory"
+                   data-tab-title="Mandatory"
+                   data-tab-icon="fa-solid fa-handshake">
 
-            <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer" data-page="{{ url('/employee/mandatory') }}" data-tab-id="mandatory" data-tab-title="Mandatory" data-tab-icon="fa-solid fa-handshake">
-                Mandatory
-            </a>
+                    Mandatory
+
+                </a>
+
+            </div>
 
         </div>
 
-    </div>
+    </nav>
 
-</nav>
 
-<!-- =====================================================
-     FOOTER
-     ===================================================== -->
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
 
-<div class="p-3 border-t border-gray-200 bg-gray-50 shrink-0">
+    <div class="p-3 border-t border-gray-200 bg-gray-50 shrink-0">
 
-    <!-- SETTINGS -->
+        <!-- SETTINGS -->
 
-    <a href="#" class="tab-link flex items-center gap-3 px-3 py-2.5 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-1 cursor-pointer" data-page="{{ url('/employee/settings') }}" data-tab-id="settings" data-tab-title="Settings" data-tab-icon="fa-solid fa-gear">
-        <i class="fa-solid fa-gear text-gray-500 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-        <span class="sidebar-text whitespace-nowrap font-medium text-sm select-none">
-            Settings
-        </span>
-    </a>
+        <a href="#"
+           class="tab-link flex items-center gap-3 px-3 py-2.5 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors mb-1 cursor-pointer"
+           data-page="{{ url('/employee/settings') }}"
+           data-tab-id="settings"
+           data-tab-title="Settings"
+           data-tab-icon="fa-solid fa-gear">
 
-    <!-- LOGOUT -->
+            <i class="fa-solid fa-gear text-gray-500 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
-    <form action="{{ route('api.logout') }}" method="POST" class="m-0">
-        @csrf
-        <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer text-left">
-            <i class="fa-solid fa-right-from-bracket text-lg shrink-0 w-5 text-center pointer-events-none"></i>
             <span class="sidebar-text whitespace-nowrap font-medium text-sm select-none">
-                Logout
+                Settings
             </span>
-        </button>
-    </form>
 
-</div>
+        </a>
 
+
+        <!-- LOGOUT -->
+
+        <form action="{{ route('api.logout') }}"
+              method="POST"
+              class="m-0">
+
+            @csrf
+
+            <button type="submit"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer text-left">
+
+                <i class="fa-solid fa-right-from-bracket text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                <span class="sidebar-text whitespace-nowrap font-medium text-sm select-none">
+                    Logout
+                </span>
+
+            </button>
+
+        </form>
+
+    </div>
 
 </aside>
+
 
 <!-- =========================================================
      MINI SIDEBAR

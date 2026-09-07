@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -52,7 +53,65 @@ class LoginController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | LOGIN ATTEMPT
+        | GET USER
+        |--------------------------------------------------------------------------
+        |
+        | Find the account using the username first.
+        |
+        */
+
+        $user = User::where('username', $request->input('username'))
+            ->first();
+
+        /*
+        |--------------------------------------------------------------------------
+        | INVALID USERNAME
+        |--------------------------------------------------------------------------
+        */
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid username or password.',
+            ], 401);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACCOUNT STATUS CHECK
+        |--------------------------------------------------------------------------
+        |
+        | Pending accounts must stop here.
+        | Auth::attempt() will NOT be executed.
+        |
+        */
+
+        if ($user->status === 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is still pending. Please contact your Admin.',
+            ], 403);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACCOUNT STATUS
+        |--------------------------------------------------------------------------
+        |
+        | Only active accounts are allowed to continue.
+        |
+        */
+
+        if ($user->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is not active. Please contact your Admin.',
+            ], 403);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | AUTHENTICATE USER
         |--------------------------------------------------------------------------
         */
 
@@ -62,12 +121,6 @@ class LoginController extends Controller
         ];
 
         $remember = $request->boolean('remember');
-
-        /*
-        |--------------------------------------------------------------------------
-        | AUTHENTICATE USER
-        |--------------------------------------------------------------------------
-        */
 
         if (!Auth::attempt($credentials, $remember)) {
             return response()->json([
@@ -80,9 +133,49 @@ class LoginController extends Controller
         |--------------------------------------------------------------------------
         | REGENERATE SESSION
         |--------------------------------------------------------------------------
+        |
+        | Regenerate the session immediately after successful authentication.
+        |
         */
 
         $request->session()->regenerate();
+
+        /*
+        |--------------------------------------------------------------------------
+        | GET AUTHENTICATED USER
+        |--------------------------------------------------------------------------
+        */
+
+        $authenticatedUser = Auth::user();
+
+        if (!$authenticatedUser instanceof User) {
+            Auth::logout();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to retrieve the authenticated user.',
+            ], 401);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CHECK USER ROLE
+        |--------------------------------------------------------------------------
+        |
+        | The account is active and credentials are correct.
+        | Now check if the user has at least one role.
+        |
+        */
+
+        if (!$authenticatedUser->roles()->exists()) {
+
+            Auth::logout();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is activated but no role has been assigned. Please contact your Admin.',
+            ], 403);
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -105,12 +198,6 @@ class LoginController extends Controller
 
     public function register(Request $request)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDATE REGISTRATION
-        |--------------------------------------------------------------------------
-        */
-
         $validator = Validator::make($request->all(), [
             'username' => [
                 'required',
@@ -146,7 +233,7 @@ class LoginController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | VALIDATION FAILED
+        | REGISTRATION VALIDATION ERROR
         |--------------------------------------------------------------------------
         */
 
@@ -163,22 +250,9 @@ class LoginController extends Controller
         | CREATE USER
         |--------------------------------------------------------------------------
         |
-        | User.php should contain:
-        |
-        | protected $fillable = [
-        |     'username',
-        |     'email',
-        |     'password',
-        | ];
-        |
-        | And:
-        |
-        | protected function casts(): array
-        | {
-        |     return [
-        |         'password' => 'hashed',
-        |     ];
-        | }
+        | IMPORTANT:
+        | No role is assigned during registration.
+        | Role assignment will be handled by the Super Admin.
         |
         */
 
@@ -187,12 +261,6 @@ class LoginController extends Controller
             'email' => $request->input('email'),
             'password' => $request->input('password'),
         ]);
-
-        /*
-        |--------------------------------------------------------------------------
-        | REGISTRATION SUCCESS
-        |--------------------------------------------------------------------------
-        */
 
         return response()->json([
             'success' => true,
@@ -208,35 +276,11 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | LOGOUT USER
-        |--------------------------------------------------------------------------
-        */
-
         Auth::logout();
-
-        /*
-        |--------------------------------------------------------------------------
-        | INVALIDATE SESSION
-        |--------------------------------------------------------------------------
-        */
 
         $request->session()->invalidate();
 
-        /*
-        |--------------------------------------------------------------------------
-        | GENERATE NEW CSRF TOKEN
-        |--------------------------------------------------------------------------
-        */
-
         $request->session()->regenerateToken();
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOGOUT SUCCESS
-        |--------------------------------------------------------------------------
-        */
 
         return response()->json([
             'success' => true,

@@ -19,9 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const PAGE_SCRIPTS = {
 
-        employees: () =>
+        'employees-info': () =>
             import('../pages/employee-info.js'),
-         employees: () =>
+        'employees-deduction': () =>
             import('../pages/employee-deduction.js'),
                 
             

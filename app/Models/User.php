@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Role;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
@@ -34,5 +35,46 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ROLES
+    |--------------------------------------------------------------------------
+    */
+
+    public function roles()
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'user_roles',
+            'user_id',
+            'role_id'
+        )->withPivot('created_at');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK SINGLE ROLE
+    |--------------------------------------------------------------------------
+    */
+
+    public function hasRoleId(int $roleId): bool
+    {
+        return $this->roles
+            ->contains('role_id', $roleId);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK MULTIPLE ROLES
+    |--------------------------------------------------------------------------
+    */
+
+    public function hasAnyRoleId(array $roleIds): bool
+    {
+        return $this->roles
+            ->whereIn('role_id', $roleIds)
+            ->isNotEmpty();
     }
 }
