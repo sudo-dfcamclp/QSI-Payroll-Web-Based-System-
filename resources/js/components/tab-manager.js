@@ -13,23 +13,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------------------------------
     // Each tab can have its own JavaScript module.
     //
-    // IMPORTANT:
+    // STANDARD:
+    // Every page module MUST export:
+    //
+    // export function init(panel) {}
+    //
     // The JavaScript is loaded ONLY when the tab is opened.
     // =========================================================
 
     const PAGE_SCRIPTS = {
 
-        'employees-info': () =>
+        'employee-info': () =>
             import('../pages/employee-info.js'),
-        'employees-deduction': () =>
-            import('../pages/employee-deduction.js'),
-                
-            
 
-        // Add more pages here when needed.
-        //
-        // reports: () =>
-        //     import('../pages/reports.js'),
+        'employee-deduction': () =>
+            import('../pages/employee-deduction.js'),
+
+        'user-management': () =>
+            import('../admin_script/UserManagement.js'),
+
+        'role-management': () =>
+            import('../admin_script/RoleManagement.js'),
+
+        'system-settings': () =>
+            import('../admin_script/SystemSetting.js'),
+
     };
 
 
@@ -61,9 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
 
     function getTabs() {
+
         return Array.from(
             tabList.querySelectorAll('.tab-item')
         );
+
     }
 
 
@@ -77,7 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         getTabs().forEach(tab => {
 
-            const rect = tab.getBoundingClientRect();
+            const rect =
+                tab.getBoundingClientRect();
 
             positions.set(tab, {
                 left: rect.left,
@@ -106,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const first = firstPositions.get(tab);
+            const first =
+                firstPositions.get(tab);
 
             if (!first) {
                 return;
@@ -148,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         });
+
     }
 
 
@@ -166,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tab.style.transform =
             'translate(0, 0) scale(1)';
+
     }
 
 
@@ -184,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             event.preventDefault();
             return;
+
         }
 
         draggedTab = tab;
@@ -236,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
             }
+
         }
 
         requestAnimationFrame(() => {
@@ -249,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         });
+
     }
 
 
@@ -344,13 +361,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 playTabFlip(
                     firstPositions
                 );
+
             }
+
         }
 
         dragOverTab =
             targetTab;
 
         updateDragOverVisuals();
+
     }
 
 
@@ -378,6 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             targetTab;
 
         updateDragOverVisuals();
+
     }
 
 
@@ -408,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         targetTab.classList.remove(
             'tab-drag-over'
         );
+
     }
 
 
@@ -433,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 return;
+
             }
 
             tab.classList.remove(
@@ -440,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
         });
+
     }
 
 
@@ -464,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         saveTabs();
+
     }
 
 
@@ -527,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 item.style.transform =
                     'translate(0, 0) scale(1)';
+
             }
 
         });
@@ -544,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dragStartIndex =
             -1;
+
     }
 
 
@@ -589,6 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'dragend',
             handleDragEnd
         );
+
     }
 
 
@@ -636,7 +664,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         page
                     )
                 );
+
             }
+
         }
 
         // Wait for all tabs to finish loading
@@ -678,8 +708,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
 
                 }
+
             }
+
         }
+
     }
 
 
@@ -757,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabTitle,
             tabId
         );
+
     }
 
 
@@ -785,7 +819,9 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             return [];
+
         }
+
     }
 
 
@@ -828,6 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 page:
                     tabButton.dataset.page
+
             });
 
         });
@@ -836,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
             STORAGE_KEY,
             JSON.stringify(tabs)
         );
+
     }
 
 
@@ -849,6 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ACTIVE_TAB_KEY,
             tabId
         );
+
     }
 
 
@@ -910,6 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
                 return;
+
             }
 
 
@@ -941,9 +981,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         closeTab(
                             tabId
                         );
+
                     }
 
                     return;
+
                 }
 
 
@@ -956,7 +998,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     activateTab(
                         tabId
                     );
+
                 }
+
             }
 
         }
@@ -990,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             return;
+
         }
 
 
@@ -1057,7 +1102,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveToStorage) {
 
             saveTabs();
+
         }
+
     }
 
 
@@ -1119,6 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         return button;
+
     }
 
 
@@ -1186,6 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'text-green-600',
                 'border-green-600'
             );
+
         }
 
 
@@ -1195,6 +1244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedPanel.classList.remove(
                 'hidden'
             );
+
         }
 
 
@@ -1206,6 +1256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 block: 'nearest',
                 inline: 'center'
             });
+
         }
 
 
@@ -1213,6 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveActiveTab(
             tabId
         );
+
     }
 
 
@@ -1259,6 +1311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(
                     `HTTP Error: ${response.status}`
                 );
+
             }
 
 
@@ -1321,14 +1374,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 </div>
             `;
+
         }
+
     }
 
 
     // =========================================================
     // LOAD PAGE-SPECIFIC JAVASCRIPT
     // ---------------------------------------------------------
-    // Dynamic import means the JS is loaded only when needed.
+    // STANDARD CONTRACT:
+    //
+    // Every registered page JavaScript module MUST export:
+    //
+    // export function init(panel) {}
+    //
+    // The Tab Manager will call:
+    //
+    // module.init(panel)
     // =========================================================
 
     async function loadPageScript(
@@ -1342,7 +1405,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Page has no JavaScript
         if (!loader) {
-
             return;
         }
 
@@ -1353,53 +1415,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loader();
 
 
-            // Preferred:
-            // export function init(panel) {}
+            // =================================================
+            // REQUIRED PAGE MODULE CONTRACT
+            // =================================================
 
             if (
-                module &&
-                typeof module.init ===
-                    'function'
+                !module ||
+                typeof module.init !== 'function'
             ) {
 
-                await module.init(
-                    panel
+                throw new Error(
+                    `Page module "${tabId}" must export an init(panel) function.`
                 );
 
-                return;
             }
 
 
-            // Alternative:
-            // export default function(panel) {}
+            // =================================================
+            // INITIALIZE PAGE
+            // =================================================
 
-            if (
-                module &&
-                typeof module.default ===
-                    'function'
-            ) {
-
-                await module.default(
-                    panel
-                );
-
-                return;
-            }
-
-
-            console.warn(
-                `JavaScript module for "${tabId}" was loaded, but no init() function was found.`
+            await module.init(
+                panel
             );
 
 
         } catch (error) {
 
             console.error(
-                `Failed to initialize JavaScript for "${tabId}":`,
+                `Failed to initialize page "${tabId}":`,
                 error
             );
 
         }
+
     }
 
 
@@ -1479,8 +1528,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 activateTab(
                     lastTab.dataset.tabId
                 );
+
             }
+
         }
+
     }
 
 
@@ -1499,6 +1551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             value;
 
         return div.innerHTML;
+
     }
 
 
@@ -1509,3 +1562,4 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreSavedTabs();
 
 });
+

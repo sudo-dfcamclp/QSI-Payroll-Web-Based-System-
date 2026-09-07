@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserManagementController;
 
 
 /*
@@ -64,7 +65,25 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
 
+    /*
+    |--------------------------------------------------------------------------
+    | USER MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
 
+    Route::get('/admin/user-management', [UserManagementController::class, 'index'])
+        ->name('UserManagement');
+
+    Route::get('/api/admin/users', [UserManagementController::class, 'users'])
+        ->name('api.admin.users');
+
+    Route::patch('/api/admin/users/{user}/status', [UserManagementController::class, 'toggleStatus'])
+        ->name('api.admin.users.status');
+    
+    Route::patch(
+    '/api/admin/users/{user}/password',
+    [UserManagementController::class, 'resetPassword']
+    )->name('api.admin.users.password');
     /*
     |--------------------------------------------------------------------------
     | LOGOUT

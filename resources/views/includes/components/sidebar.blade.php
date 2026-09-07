@@ -1,3 +1,4 @@
+```blade
 <!-- =========================================================
      EXTERNAL FONTS / ICONS
      ========================================================= -->
@@ -22,6 +23,8 @@
     | Super Admin = access to all current sidebar modules.
     |
     */
+
+    $isSuperAdmin = $user->hasRoleId(Role::SUPER_ADMIN);
 
     $canHR = $user->hasAnyRoleId([
         Role::SUPER_ADMIN,
@@ -161,7 +164,6 @@
 
         <div class="sidebar-separator my-2 border-t border-gray-200 mx-2"></div>
 
-
         <!-- =================================================
              HUMAN RESOURCE
              ROLE: SUPER ADMIN / HR
@@ -172,8 +174,7 @@
             <div class="dropdown-container relative">
 
                 <button type="button"
-                        onclick="handleMenuClick(this)"
-                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                        class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                     <i class="fa-regular fa-user text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -206,7 +207,6 @@
 
         @endif
 
-
         <!-- =================================================
              ADMINISTRATIVE
              ROLE: SUPER ADMIN / ADMIN
@@ -217,8 +217,7 @@
             <div class="dropdown-container relative">
 
                 <button type="button"
-                        onclick="handleMenuClick(this)"
-                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                        class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                     <i class="fa-solid fa-shield text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -277,7 +276,6 @@
 
         @endif
 
-
         <!-- =================================================
              PAYROLL
              ROLE: SUPER ADMIN / PAYROLL
@@ -288,8 +286,7 @@
             <div class="dropdown-container relative">
 
                 <button type="button"
-                        onclick="handleMenuClick(this)"
-                        class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                        class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                     <i class="fa-regular fa-calendar text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -335,7 +332,6 @@
 
         @endif
 
-
         <!-- =================================================
              MAINTENANCE
              ================================================= -->
@@ -343,8 +339,7 @@
         <div class="dropdown-container relative">
 
             <button type="button"
-                    onclick="handleMenuClick(this)"
-                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                    class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                 <i class="fa-solid fa-screwdriver-wrench text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -439,7 +434,6 @@
 
         </div>
 
-
         <!-- =================================================
              BILLING
              ================================================= -->
@@ -447,8 +441,7 @@
         <div class="dropdown-container relative">
 
             <button type="button"
-                    onclick="handleMenuClick(this)"
-                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                    class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                 <i class="fa-solid fa-file-invoice text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -477,7 +470,6 @@
 
         </div>
 
-
         <!-- =================================================
              BENEFITS
              ================================================= -->
@@ -485,8 +477,7 @@
         <div class="dropdown-container relative">
 
             <button type="button"
-                    onclick="handleMenuClick(this)"
-                    class="w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+                    class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
 
                 <i class="fa-regular fa-handshake text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
@@ -526,8 +517,76 @@
 
         </div>
 
-    </nav>
+        <!-- =================================================
+             CONFIGURATION
+             ROLE: SUPER ADMIN ONLY
+             ================================================= -->
 
+        @if($isSuperAdmin)
+
+            <div class="dropdown-container relative">
+
+                <button type="button"
+                        class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer">
+
+                    <i class="fa-solid fa-sliders text-gray-500 group-hover:text-green-600 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
+
+                    <span class="sidebar-text whitespace-nowrap font-medium select-none">
+                        Configuration
+                    </span>
+
+                    <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
+
+                </button>
+
+                <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
+
+                    <!-- USER MANAGEMENT -->
+
+                    <a href="{{ route('UserManagement') }}"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/admin/user-management') }}"
+                       data-tab-id="user-management"
+                       data-tab-title="User Management"
+                       data-tab-icon="fa-solid fa-users">
+
+                        User Management
+
+                    </a>
+
+                    <!-- ROLE MANAGEMENT -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/configuration/role-management') }}"
+                       data-tab-id="role-management"
+                       data-tab-title="Role Management"
+                       data-tab-icon="fa-solid fa-user-shield">
+
+                        Role Management
+
+                    </a>
+
+                    <!-- SYSTEM SETTINGS -->
+
+                    <a href="#"
+                       class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
+                       data-page="{{ url('/configuration/system-settings') }}"
+                       data-tab-id="system-settings"
+                       data-tab-title="System Settings"
+                       data-tab-icon="fa-solid fa-sliders">
+
+                        System Settings
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        @endif
+
+    </nav>
 
     <!-- =====================================================
          FOOTER
@@ -551,7 +610,6 @@
             </span>
 
         </a>
-
 
         <!-- LOGOUT -->
 
@@ -578,7 +636,6 @@
 
 </aside>
 
-
 <!-- =========================================================
      MINI SIDEBAR
      ========================================================= -->
@@ -588,3 +645,4 @@
         display: none !important;
     }
 </style>
+```
