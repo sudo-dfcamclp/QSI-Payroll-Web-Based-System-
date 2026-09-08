@@ -1,50 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
-
     // =========================================================
     // LOCAL STORAGE KEY
     // =========================================================
-
     const STORAGE_KEY = 'laravel_epayroll_open_tabs';
     const ACTIVE_TAB_KEY = 'laravel_epayroll_active_tab';
 
+    // =========================================================
+    // AUTHORIZATION
+    // =========================================================
+    let currentUserId = null;
+    let allowedTabs = new Set();
 
     // =========================================================
     // PAGE JAVASCRIPT REGISTRY
-    // ---------------------------------------------------------
-    // Each tab can have its own JavaScript module.
-    //
-    // STANDARD:
-    // Every page module MUST export:
-    //
-    // export function init(panel) {}
-    //
-    // The JavaScript is loaded ONLY when the tab is opened.
     // =========================================================
-
     const PAGE_SCRIPTS = {
-
-        'employee-info': () =>
-            import('../pages/employee-info.js'),
-
-        'employee-deduction': () =>
-            import('../pages/employee-deduction.js'),
-
-        'user-management': () =>
-            import('../admin_script/UserManagement.js'),
-
-        'role-management': () =>
-            import('../admin_script/RoleManagement.js'),
-
-        'system-settings': () =>
-            import('../admin_script/SystemSetting.js'),
-
+        'employee-info': () => import('../pages/employee-info.js'),
+        'employee-deduction': () => import('../pages/employee-deduction.js'),
+        'user-management': () => import('../admin_script/UserManagement.js'),
+        'role-management': () => import('../admin_script/RoleManagement.js'),
+        'system-settings': () => import('../admin_script/SystemSetting.js'),
     };
-
 
     // =========================================================
     // ELEMENTS
     // =========================================================
-
     const tabList = document.getElementById('tabList');
     const tabContent = document.getElementById('tabContent');
 
@@ -52,43 +32,126 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // =========================================================
+    // LOAD CURRENT USER PERMISSIONS
+    // =========================================================
+    async function loadCurrentUserPermissions() {
+        try {
+            const permissionsUrl = document
+                .querySelector('meta[name="auth-permissions-url"]')
+                ?.getAttribute('content');
+
+            if (!permissionsUrl) {
+                throw new Error('Auth permissions URL is not configured.');
+            }
+
+            console.log('Permissions URL:', permissionsUrl);
+
+            const response = await fetch(permissionsUrl, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            console.log('Permissions response:', data);
+
+            if (
+                !data ||
+                data.success !== true ||
+                !data.user ||
+                !Array.isArray(data.allowed_tabs)
+            ) {
+                throw new Error('Invalid permissions response.');
+            }
+
+            currentUserId = data.user.user_id;
+            allowedTabs = new Set(data.allowed_tabs);
+            allowedTabs.add('dashboard');
+
+            return true;
+        } catch (error) {
+            console.error(
+                'Failed to load current user permissions:',
+                error
+            );
+
+            currentUserId = null;
+            allowedTabs = new Set();
+
+            return false;
+        }
+    }
+
+    // =========================================================
+    // CHECK TAB AUTHORIZATION
+    // =========================================================
+    function isTabAllowed(tabId) {
+        if (!tabId) {
+            return false;
+        }
+
+        if (tabId === 'dashboard') {
+            return true;
+        }
+
+        return allowedTabs.has(tabId);
+    }
+
+    // =========================================================
+    // GET USER-SPECIFIC STORAGE KEY
+    // =========================================================
+    function getStorageKey() {
+        if (!currentUserId) {
+            return null;
+        }
+
+        return `${STORAGE_KEY}_user_${currentUserId}`;
+    }
+
+    // =========================================================
+    // GET ACTIVE TAB STORAGE KEY
+    // =========================================================
+    function getActiveTabKey() {
+        if (!currentUserId) {
+            return null;
+        }
+
+        return `${ACTIVE_TAB_KEY}_user_${currentUserId}`;
+    }
 
     // =========================================================
     // DRAGGABLE TAB + ANIMATION
     // =========================================================
-
     let draggedTab = null;
     let dragOverTab = null;
     let isDragging = false;
     let dragStartIndex = -1;
     let lastPointerX = 0;
 
-
     // =========================================================
     // GET TABS
     // =========================================================
-
     function getTabs() {
-
-        return Array.from(
-            tabList.querySelectorAll('.tab-item')
-        );
-
+        return Array.from(tabList.querySelectorAll('.tab-item'));
     }
-
 
     // =========================================================
     // FLIP — CAPTURE POSITIONS
     // =========================================================
-
     function captureTabPositions() {
-
         const positions = new Map();
 
         getTabs().forEach(tab => {
-
-            const rect =
-                tab.getBoundingClientRect();
+            const rect = tab.getBoundingClientRect();
 
             positions.set(tab, {
                 left: rect.left,
@@ -96,383 +159,216 @@ document.addEventListener('DOMContentLoaded', () => {
                 width: rect.width,
                 height: rect.height
             });
-
         });
 
         return positions;
     }
 
-
     // =========================================================
     // FLIP — PLAY ANIMATION
     // =========================================================
-
     function playTabFlip(firstPositions) {
-
         const tabs = getTabs();
 
         tabs.forEach(tab => {
-
             if (tab === draggedTab) {
                 return;
             }
 
-            const first =
-                firstPositions.get(tab);
+            const first = firstPositions.get(tab);
 
             if (!first) {
                 return;
             }
 
-            const lastRect =
-                tab.getBoundingClientRect();
+            const lastRect = tab.getBoundingClientRect();
+            const deltaX = first.left - lastRect.left;
+            const deltaY = first.top - lastRect.top;
 
-            const deltaX =
-                first.left - lastRect.left;
-
-            const deltaY =
-                first.top - lastRect.top;
-
-            if (
-                Math.abs(deltaX) < 1 &&
-                Math.abs(deltaY) < 1
-            ) {
+            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
                 return;
             }
 
             tab.style.transition = 'none';
-
-            tab.style.transform =
-                `translate(${deltaX}px, ${deltaY}px)`;
+            tab.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
             requestAnimationFrame(() => {
-
                 requestAnimationFrame(() => {
-
-                    tab.style.transition =
-                        'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
-
-                    tab.style.transform =
-                        'translate(0, 0)';
-
+                    tab.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+                    tab.style.transform = 'translate(0, 0)';
                 });
-
             });
-
         });
-
     }
-
 
     // =========================================================
     // RESET TAB TRANSFORM
     // =========================================================
-
     function resetTabAnimation(tab) {
-
         if (!tab) {
             return;
         }
 
-        tab.style.transition =
-            'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
-
-        tab.style.transform =
-            'translate(0, 0) scale(1)';
-
+        tab.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
+        tab.style.transform = 'translate(0, 0) scale(1)';
     }
-
 
     // =========================================================
     // DRAG START
     // =========================================================
-
     function handleDragStart(event) {
-
         const tab = event.currentTarget;
 
-        if (
-            !tab ||
-            tab.dataset.tabId === 'dashboard'
-        ) {
-
+        if (!tab || tab.dataset.tabId === 'dashboard') {
             event.preventDefault();
             return;
-
         }
 
         draggedTab = tab;
         isDragging = true;
 
         const tabs = getTabs();
+        dragStartIndex = tabs.indexOf(tab);
 
-        dragStartIndex =
-            tabs.indexOf(tab);
-
-        tab.classList.add(
-            'tab-dragging'
-        );
-
-        tab.style.transition =
-            'transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease';
-
-        tab.style.transform =
-            'translateY(-3px) scale(1.04)';
-
-        tab.style.opacity =
-            '0.72';
-
-        tab.style.zIndex =
-            '1000';
-
-        tab.style.position =
-            'relative';
-
-        tab.style.boxShadow =
-            '0 12px 28px rgba(0, 0, 0, 0.18)';
+        tab.classList.add('tab-dragging');
+        tab.style.transition = 'transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease';
+        tab.style.transform = 'translateY(-3px) scale(1.04)';
+        tab.style.opacity = '0.72';
+        tab.style.zIndex = '1000';
+        tab.style.position = 'relative';
+        tab.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.18)';
 
         if (event.dataTransfer) {
-
-            event.dataTransfer.effectAllowed =
-                'move';
+            event.dataTransfer.effectAllowed = 'move';
 
             try {
-
                 event.dataTransfer.setData(
                     'text/plain',
                     tab.dataset.tabId
                 );
-
             } catch (error) {
-
-                console.warn(
-                    'Unable to set drag data:',
-                    error
-                );
-
+                console.warn('Unable to set drag data:', error);
             }
-
         }
 
         requestAnimationFrame(() => {
-
             if (tab) {
-
-                tab.classList.add(
-                    'tab-drag-active'
-                );
-
+                tab.classList.add('tab-drag-active');
             }
-
         });
-
     }
-
 
     // =========================================================
     // DRAG OVER
     // =========================================================
-
     function handleDragOver(event) {
-
         event.preventDefault();
 
-        if (
-            !isDragging ||
-            !draggedTab
-        ) {
+        if (!isDragging || !draggedTab) {
             return;
         }
 
-        const targetTab =
-            event.currentTarget;
+        const targetTab = event.currentTarget;
 
-        if (
-            !targetTab ||
-            targetTab === draggedTab
-        ) {
+        if (!targetTab || targetTab === draggedTab) {
             return;
         }
 
-        if (
-            targetTab.dataset.tabId ===
-            'dashboard'
-        ) {
+        if (targetTab.dataset.tabId === 'dashboard') {
             return;
         }
 
-        lastPointerX =
-            event.clientX;
+        lastPointerX = event.clientX;
 
         if (event.dataTransfer) {
-
-            event.dataTransfer.dropEffect =
-                'move';
-
+            event.dataTransfer.dropEffect = 'move';
         }
 
-        const rect =
-            targetTab.getBoundingClientRect();
+        const rect = targetTab.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const insertBefore = event.clientX < centerX;
+        const firstPositions = captureTabPositions();
 
-        const centerX =
-            rect.left +
-            rect.width / 2;
-
-        const insertBefore =
-            event.clientX < centerX;
-
-
-        // Capture BEFORE DOM reorder
-        const firstPositions =
-            captureTabPositions();
-
-
-        // Prevent unnecessary DOM movement
         if (insertBefore) {
-
-            if (
-                draggedTab.nextElementSibling !==
-                targetTab
-            ) {
-
-                tabList.insertBefore(
-                    draggedTab,
-                    targetTab
-                );
-
-                playTabFlip(
-                    firstPositions
-                );
-
+            if (draggedTab.nextElementSibling !== targetTab) {
+                tabList.insertBefore(draggedTab, targetTab);
+                playTabFlip(firstPositions);
             }
-
         } else {
-
-            if (
-                draggedTab.previousElementSibling !==
-                targetTab
-            ) {
-
+            if (draggedTab.previousElementSibling !== targetTab) {
                 tabList.insertBefore(
                     draggedTab,
                     targetTab.nextSibling
                 );
-
-                playTabFlip(
-                    firstPositions
-                );
-
+                playTabFlip(firstPositions);
             }
-
         }
 
-        dragOverTab =
-            targetTab;
-
+        dragOverTab = targetTab;
         updateDragOverVisuals();
-
     }
-
 
     // =========================================================
     // DRAG ENTER
     // =========================================================
-
     function handleDragEnter(event) {
-
         event.preventDefault();
 
-        const targetTab =
-            event.currentTarget;
+        const targetTab = event.currentTarget;
 
         if (
             !targetTab ||
             targetTab === draggedTab ||
-            targetTab.dataset.tabId ===
-                'dashboard'
+            targetTab.dataset.tabId === 'dashboard'
         ) {
             return;
         }
 
-        dragOverTab =
-            targetTab;
-
+        dragOverTab = targetTab;
         updateDragOverVisuals();
-
     }
-
 
     // =========================================================
     // DRAG LEAVE
     // =========================================================
-
     function handleDragLeave(event) {
-
-        const targetTab =
-            event.currentTarget;
+        const targetTab = event.currentTarget;
 
         if (!targetTab) {
             return;
         }
 
-        // Huwag agad tanggalin kung pumunta
-        // sa child element ng tab.
         if (
             event.relatedTarget &&
-            targetTab.contains(
-                event.relatedTarget
-            )
+            targetTab.contains(event.relatedTarget)
         ) {
             return;
         }
 
-        targetTab.classList.remove(
-            'tab-drag-over'
-        );
-
+        targetTab.classList.remove('tab-drag-over');
     }
-
 
     // =========================================================
     // UPDATE DRAG VISUALS
     // =========================================================
-
     function updateDragOverVisuals() {
-
         getTabs().forEach(tab => {
-
-            if (
-                tab === draggedTab ||
-                tab === dragOverTab
-            ) {
-
+            if (tab === draggedTab || tab === dragOverTab) {
                 if (tab === dragOverTab) {
-
-                    tab.classList.add(
-                        'tab-drag-over'
-                    );
-
+                    tab.classList.add('tab-drag-over');
                 }
 
                 return;
-
             }
 
-            tab.classList.remove(
-                'tab-drag-over'
-            );
-
+            tab.classList.remove('tab-drag-over');
         });
-
     }
-
 
     // =========================================================
     // DROP
     // =========================================================
-
     function handleDrop(event) {
-
         event.preventDefault();
 
         if (!draggedTab) {
@@ -480,56 +376,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         getTabs().forEach(tab => {
-
-            tab.classList.remove(
-                'tab-drag-over'
-            );
-
+            tab.classList.remove('tab-drag-over');
         });
 
         saveTabs();
-
     }
-
 
     // =========================================================
     // DRAG END
     // =========================================================
-
     function handleDragEnd() {
-
         if (!draggedTab) {
             return;
         }
 
-        const tab =
-            draggedTab;
+        const tab = draggedTab;
 
         tab.classList.remove(
             'tab-dragging',
             'tab-drag-active'
         );
 
-        tab.style.transition =
-            'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
-
-        tab.style.transform =
-            'translateY(0) scale(1)';
-
-        tab.style.opacity =
-            '1';
-
-        tab.style.zIndex =
-            '';
-
-        tab.style.position =
-            '';
-
-        tab.style.boxShadow =
-            '';
+        tab.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
+        tab.style.transform = 'translateY(0) scale(1)';
+        tab.style.opacity = '1';
+        tab.style.zIndex = '';
+        tab.style.position = '';
+        tab.style.boxShadow = '';
 
         getTabs().forEach(item => {
-
             item.classList.remove(
                 'tab-drag-over',
                 'tab-dragging',
@@ -537,55 +412,31 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             if (item !== tab) {
-
-                item.style.opacity =
-                    '1';
-
-                item.style.zIndex =
-                    '';
-
-                item.style.boxShadow =
-                    '';
-
-                item.style.transition =
-                    'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
-
-                item.style.transform =
-                    'translate(0, 0) scale(1)';
-
+                item.style.opacity = '1';
+                item.style.zIndex = '';
+                item.style.boxShadow = '';
+                item.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 180ms ease';
+                item.style.transform = 'translate(0, 0) scale(1)';
             }
-
         });
 
         saveTabs();
 
-        draggedTab =
-            null;
-
-        dragOverTab =
-            null;
-
-        isDragging =
-            false;
-
-        dragStartIndex =
-            -1;
-
+        draggedTab = null;
+        dragOverTab = null;
+        isDragging = false;
+        dragStartIndex = -1;
     }
-
 
     // =========================================================
     // INITIALIZE DRAG
     // =========================================================
-
     function initializeTabDrag(tabButton) {
-
         if (!tabButton) {
             return;
         }
 
-        tabButton.draggable =
-            true;
+        tabButton.draggable = true;
 
         tabButton.addEventListener(
             'dragstart',
@@ -616,28 +467,55 @@ document.addEventListener('DOMContentLoaded', () => {
             'dragend',
             handleDragEnd
         );
-
     }
-
 
     // =========================================================
     // RESTORE TABS FROM LOCAL STORAGE
     // =========================================================
-
     async function restoreSavedTabs() {
+        if (!currentUserId) {
+            return;
+        }
 
-        const savedTabs =
-            getSavedTabs();
+        const savedTabs = getSavedTabs();
 
         if (savedTabs.length === 0) {
             return;
         }
 
-        // Create ALL tabs first WITHOUT activating any
+        // =====================================================
+        // FILTER UNAUTHORIZED TABS
+        // =====================================================
+        const authorizedTabs = savedTabs.filter(tab => {
+            if (!tab || !tab.tabId) {
+                return false;
+            }
+
+            return isTabAllowed(tab.tabId);
+        });
+
+        // =====================================================
+        // REMOVE UNAUTHORIZED TABS FROM STORAGE
+        // =====================================================
+        if (authorizedTabs.length !== savedTabs.length) {
+            localStorage.setItem(
+                getStorageKey(),
+                JSON.stringify(authorizedTabs)
+            );
+        }
+
+        if (authorizedTabs.length === 0) {
+            localStorage.removeItem(getActiveTabKey());
+            return;
+        }
+
+        // =====================================================
+        // CREATE ALL AUTHORIZED TABS FIRST
+        // WITHOUT ACTIVATING ANY
+        // =====================================================
         const loadPromises = [];
 
-        for (const tab of savedTabs) {
-
+        for (const tab of authorizedTabs) {
             const {
                 tabId,
                 tabTitle,
@@ -645,17 +523,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 page
             } = tab;
 
-            // Skip if tab already exists
-            const existingTab =
-                document.querySelector(
-                    `.tab-item[data-tab-id="${tabId}"]`
-                );
+            const existingTab = document.querySelector(
+                `.tab-item[data-tab-id="${tabId}"]`
+            );
 
             if (
                 !existingTab &&
-                tabId !== 'dashboard'
+                isTabAllowed(tabId)
             ) {
-
                 loadPromises.push(
                     createTabWithoutActivating(
                         tabId,
@@ -664,353 +539,293 @@ document.addEventListener('DOMContentLoaded', () => {
                         page
                     )
                 );
-
             }
-
         }
 
-        // Wait for all tabs to finish loading
-        await Promise.all(
-            loadPromises
-        );
+        // =====================================================
+        // WAIT FOR ALL TABS TO FINISH LOADING
+        // =====================================================
+        await Promise.all(loadPromises);
 
-        // Activate last active tab
-        const lastActiveTabId =
-            localStorage.getItem(
-                ACTIVE_TAB_KEY
+        // =====================================================
+        // ACTIVATE LAST ACTIVE TAB
+        // =====================================================
+        const activeTabKey = getActiveTabKey();
+        const lastActiveTabId = activeTabKey
+            ? localStorage.getItem(activeTabKey)
+            : null;
+
+        if (
+            lastActiveTabId &&
+            isTabAllowed(lastActiveTabId)
+        ) {
+            const activeTab = document.querySelector(
+                `.tab-item[data-tab-id="${lastActiveTabId}"]`
             );
 
-        if (lastActiveTabId) {
-
-            const activeTab =
-                document.querySelector(
-                    `.tab-item[data-tab-id="${lastActiveTabId}"]`
-                );
-
             if (activeTab) {
-
-                activateTab(
-                    lastActiveTabId
-                );
-
-            } else {
-
-                // Fallback
-                const firstTab =
-                    document.querySelector(
-                        '.tab-item'
-                    );
-
-                if (firstTab) {
-
-                    activateTab(
-                        firstTab.dataset.tabId
-                    );
-
-                }
-
+                activateTab(lastActiveTabId);
+                return;
             }
-
         }
 
-    }
+        // =====================================================
+        // FALLBACK
+        // =====================================================
+        const firstTab = document.querySelector('.tab-item');
 
+        if (firstTab) {
+            activateTab(firstTab.dataset.tabId);
+        }
+    }
 
     // =========================================================
     // CREATE TAB WITHOUT ACTIVATING
     // =========================================================
-
     async function createTabWithoutActivating(
         tabId,
         tabTitle,
         tabIcon,
         page
     ) {
+        if (!isTabAllowed(tabId)) {
+            return;
+        }
 
-        // Check again to avoid duplicates
-        const existingTab =
-            document.querySelector(
-                `.tab-item[data-tab-id="${tabId}"]`
-            );
+        const existingTab = document.querySelector(
+            `.tab-item[data-tab-id="${tabId}"]`
+        );
 
         if (existingTab) {
             return;
         }
 
-
-        // Create tab button
-        const tabButton =
-            createTabButton(
-                tabId,
-                tabTitle,
-                tabIcon,
-                page
-            );
-
-        tabList.appendChild(
-            tabButton
+        const tabButton = createTabButton(
+            tabId,
+            tabTitle,
+            tabIcon,
+            page
         );
 
+        tabList.appendChild(tabButton);
 
-        // Create content panel
-        const panel =
-            document.createElement(
-                'div'
-            );
+        const panel = document.createElement('div');
 
-        panel.id =
-            `tab-${tabId}`;
-
-        panel.className =
-            'tab-panel hidden';
+        panel.id = `tab-${tabId}`;
+        panel.className = 'tab-panel hidden';
 
         panel.innerHTML = `
             <div class="flex items-center justify-center min-h-[300px]">
                 <div class="text-center">
-
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-green-600 mb-4"></i>
-
                     <p class="text-gray-500">
                         Loading ${escapeHtml(tabTitle)}...
                     </p>
-
                 </div>
             </div>
         `;
 
-        tabContent.appendChild(
-            panel
-        );
+        tabContent.appendChild(panel);
 
-
-        // Load content WITHOUT activating
         await loadTabContent(
             panel,
             page,
             tabTitle,
             tabId
         );
-
     }
-
 
     // =========================================================
     // GET SAVED TABS
     // =========================================================
-
     function getSavedTabs() {
+        const storageKey = getStorageKey();
+
+        if (!storageKey) {
+            return [];
+        }
 
         try {
+            const data = localStorage.getItem(storageKey);
 
-            const data =
-                localStorage.getItem(
-                    STORAGE_KEY
-                );
+            if (!data) {
+                return [];
+            }
 
-            return data
-                ? JSON.parse(data)
+            const parsed = JSON.parse(data);
+
+            return Array.isArray(parsed)
+                ? parsed
                 : [];
-
         } catch (error) {
-
             console.error(
                 'Error reading saved tabs:',
                 error
             );
 
             return [];
-
         }
-
     }
-
 
     // =========================================================
     // SAVE TABS
     // =========================================================
-
     function saveTabs() {
+        const storageKey = getStorageKey();
+
+        if (!storageKey || !currentUserId) {
+            return;
+        }
 
         const tabs = [];
 
-        document.querySelectorAll(
-            '.tab-item'
-        ).forEach(tabButton => {
+        document.querySelectorAll('.tab-item').forEach(
+            tabButton => {
+                const tabId = tabButton.dataset.tabId;
 
-            const tabId =
-                tabButton.dataset.tabId;
+                if (
+                    !tabId ||
+                    tabId === 'dashboard'
+                ) {
+                    return;
+                }
 
-            // Dashboard is always in HTML
-            if (
-                tabId === 'dashboard'
-            ) {
-                return;
+                if (!isTabAllowed(tabId)) {
+                    return;
+                }
+
+                tabs.push({
+                    tabId: tabId,
+                    tabTitle:
+                        tabButton.dataset.tabTitle ||
+                        tabButton
+                            .querySelector('span')
+                            ?.textContent,
+                    tabIcon:
+                        tabButton.dataset.tabIcon ||
+                        'fa-solid fa-file',
+                    page: tabButton.dataset.page
+                });
             }
-
-            tabs.push({
-
-                tabId:
-                    tabId,
-
-                tabTitle:
-                    tabButton.dataset.tabTitle ||
-                    tabButton
-                        .querySelector('span')
-                        ?.textContent,
-
-                tabIcon:
-                    tabButton.dataset.tabIcon ||
-                    'fa-solid fa-file',
-
-                page:
-                    tabButton.dataset.page
-
-            });
-
-        });
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(tabs)
         );
 
+        localStorage.setItem(
+            storageKey,
+            JSON.stringify(tabs)
+        );
     }
-
 
     // =========================================================
     // SAVE ACTIVE TAB
     // =========================================================
-
     function saveActiveTab(tabId) {
+        const activeTabKey = getActiveTabKey();
+
+        if (!activeTabKey || !currentUserId) {
+            return;
+        }
+
+        if (!isTabAllowed(tabId)) {
+            return;
+        }
 
         localStorage.setItem(
-            ACTIVE_TAB_KEY,
+            activeTabKey,
             tabId
         );
-
     }
-
 
     // =========================================================
     // DELEGATED CLICK HANDLER
-    // Handles sidebar links AND tab buttons
     // =========================================================
+    document.addEventListener('click', event => {
+        // =====================================================
+        // SIDEBAR TAB LINK
+        // =====================================================
+        const link = event.target.closest('.tab-link');
 
-    document.addEventListener(
-        'click',
-        event => {
+        if (link) {
+            event.preventDefault();
 
-            // =================================================
-            // SIDEBAR TAB LINK
-            // =================================================
+            const page = link.dataset.page;
+            const tabId = link.dataset.tabId;
+            const tabTitle = link.dataset.tabTitle;
+            const tabIcon =
+                link.dataset.tabIcon ||
+                'fa-solid fa-file';
 
-            const link =
-                event.target.closest(
-                    '.tab-link'
-                );
-
-            if (link) {
-
-                event.preventDefault();
-
-                const page =
-                    link.dataset.page;
-
-                const tabId =
-                    link.dataset.tabId;
-
-                const tabTitle =
-                    link.dataset.tabTitle;
-
-                const tabIcon =
-                    link.dataset.tabIcon ||
-                    'fa-solid fa-file';
-
-                if (
-                    !page ||
-                    !tabId ||
-                    !tabTitle
-                ) {
-
-                    console.error(
-                        'Missing tab data attributes.',
-                        link
-                    );
-
-                    return;
-                }
-
-                openTab(
-                    tabId,
-                    tabTitle,
-                    tabIcon,
-                    page,
-                    true
+            if (
+                !page ||
+                !tabId ||
+                !tabTitle
+            ) {
+                console.error(
+                    'Missing tab data attributes.',
+                    link
                 );
 
                 return;
-
             }
 
-
             // =================================================
-            // TAB BAR BUTTON
+            // AUTHORIZATION CHECK
             // =================================================
-
-            const tabButton =
-                event.target.closest(
-                    '.tab-item'
+            if (!isTabAllowed(tabId)) {
+                console.warn(
+                    `Access denied for tab: ${tabId}`
                 );
 
-            if (tabButton) {
+                return;
+            }
 
-                // Close button
-                if (
-                    event.target.closest(
-                        '.tab-close'
-                    )
-                ) {
+            openTab(
+                tabId,
+                tabTitle,
+                tabIcon,
+                page,
+                true
+            );
 
-                    event.stopPropagation();
+            return;
+        }
 
-                    const tabId =
-                        tabButton.dataset.tabId;
+        // =====================================================
+        // TAB BAR BUTTON
+        // =====================================================
+        const tabButton =
+            event.target.closest('.tab-item');
 
-                    if (tabId) {
+        if (tabButton) {
+            if (
+                event.target.closest('.tab-close')
+            ) {
+                event.stopPropagation();
 
-                        closeTab(
-                            tabId
-                        );
-
-                    }
-
-                    return;
-
-                }
-
-
-                // Activate tab
                 const tabId =
                     tabButton.dataset.tabId;
 
                 if (tabId) {
-
-                    activateTab(
-                        tabId
-                    );
-
+                    closeTab(tabId);
                 }
 
+                return;
             }
 
-        }
-    );
+            const tabId =
+                tabButton.dataset.tabId;
 
+            if (
+                tabId &&
+                isTabAllowed(tabId)
+            ) {
+                activateTab(tabId);
+            }
+        }
+    });
 
     // =========================================================
     // OPEN TAB
     // =========================================================
-
     async function openTab(
         tabId,
         tabTitle,
@@ -1018,78 +833,53 @@ document.addEventListener('DOMContentLoaded', () => {
         page,
         saveToStorage = true
     ) {
-
-        // Check if tab already exists
-        let existingTab =
-            document.querySelector(
-                `.tab-item[data-tab-id="${tabId}"]`
-            );
-
-
-        // If already exists
-        if (existingTab) {
-
-            activateTab(
-                tabId
+        if (!isTabAllowed(tabId)) {
+            console.warn(
+                `Access denied for tab: ${tabId}`
             );
 
             return;
-
         }
 
-
-        // Create new tab
-        const tabButton =
-            createTabButton(
-                tabId,
-                tabTitle,
-                tabIcon,
-                page
-            );
-
-        tabList.appendChild(
-            tabButton
+        let existingTab = document.querySelector(
+            `.tab-item[data-tab-id="${tabId}"]`
         );
 
+        if (existingTab) {
+            activateTab(tabId);
+            return;
+        }
 
-        // Create content panel
+        const tabButton = createTabButton(
+            tabId,
+            tabTitle,
+            tabIcon,
+            page
+        );
+
+        tabList.appendChild(tabButton);
+
         const panel =
-            document.createElement(
-                'div'
-            );
+            document.createElement('div');
 
-        panel.id =
-            `tab-${tabId}`;
-
-        panel.className =
-            'tab-panel hidden';
+        panel.id = `tab-${tabId}`;
+        panel.className = 'tab-panel hidden';
 
         panel.innerHTML = `
             <div class="flex items-center justify-center min-h-[300px]">
                 <div class="text-center">
-
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-green-600 mb-4"></i>
-
                     <p class="text-gray-500">
                         Loading ${escapeHtml(tabTitle)}...
                     </p>
-
                 </div>
             </div>
         `;
 
-        tabContent.appendChild(
-            panel
-        );
+        tabContent.appendChild(panel);
 
+        activateTab(tabId);
 
-        // Activate immediately
-        activateTab(
-            tabId
-        );
-
-
-        // Load HTML + page JavaScript
         await loadTabContent(
             panel,
             page,
@@ -1097,133 +887,88 @@ document.addEventListener('DOMContentLoaded', () => {
             tabId
         );
 
-
-        // Save to localStorage
         if (saveToStorage) {
-
             saveTabs();
-
         }
-
     }
-
 
     // =========================================================
     // CREATE TAB BUTTON
     // =========================================================
-
     function createTabButton(
         tabId,
         tabTitle,
         tabIcon,
         page
     ) {
-
         const button =
-            document.createElement(
-                'button'
-            );
+            document.createElement('button');
 
-        button.type =
-            'button';
+        button.type = 'button';
 
         button.className =
             'tab-item flex items-center gap-3 px-5 py-4 text-base font-semibold text-gray-500 border-b-2 border-transparent hover:text-green-600 hover:bg-green-50 cursor-pointer whitespace-nowrap transition-colors select-none';
 
-        button.dataset.tabId =
-            tabId;
-
-        button.dataset.tabTitle =
-            tabTitle;
-
-        button.dataset.tabIcon =
-            tabIcon;
-
-        button.dataset.page =
-            page;
+        button.dataset.tabId = tabId;
+        button.dataset.tabTitle = tabTitle;
+        button.dataset.tabIcon = tabIcon;
+        button.dataset.page = page;
 
         button.innerHTML = `
-            <i
-                class="${escapeHtml(tabIcon)} text-lg pointer-events-none">
-            </i>
-
+            <i class="${escapeHtml(tabIcon)} text-lg pointer-events-none"></i>
             <span class="pointer-events-none">
                 ${escapeHtml(tabTitle)}
             </span>
-
-            <span
-                class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 hover:text-red-500"
-                title="Close tab"
-            >
+            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 hover:text-red-500" title="Close tab">
                 <i class="fa-solid fa-xmark text-xs pointer-events-none"></i>
             </span>
         `;
 
-
-        // Initialize draggable behavior
-        initializeTabDrag(
-            button
-        );
+        initializeTabDrag(button);
 
         return button;
-
     }
-
 
     // =========================================================
     // ACTIVATE TAB
     // =========================================================
-
     function activateTab(tabId) {
+        if (!isTabAllowed(tabId)) {
+            return;
+        }
 
-        // Remove active state
-        document.querySelectorAll(
-            '.tab-item'
-        ).forEach(tab => {
+        document.querySelectorAll('.tab-item').forEach(
+            tab => {
+                tab.classList.remove(
+                    'active',
+                    'text-green-600',
+                    'border-green-600'
+                );
 
-            tab.classList.remove(
-                'active',
-                'text-green-600',
-                'border-green-600'
-            );
+                tab.classList.add(
+                    'text-gray-500',
+                    'border-transparent'
+                );
+            }
+        );
 
-            tab.classList.add(
-                'text-gray-500',
-                'border-transparent'
-            );
+        document.querySelectorAll('.tab-panel').forEach(
+            panel => {
+                panel.classList.add('hidden');
+            }
+        );
 
-        });
-
-
-        // Hide all panels
-        document.querySelectorAll(
-            '.tab-panel'
-        ).forEach(panel => {
-
-            panel.classList.add(
-                'hidden'
-            );
-
-        });
-
-
-        // Selected tab
         const selectedTab =
             document.querySelector(
                 `.tab-item[data-tab-id="${tabId}"]`
             );
 
-
-        // Selected panel
         const selectedPanel =
             document.getElementById(
                 `tab-${tabId}`
             );
 
-
-        // Activate tab
         if (selectedTab) {
-
             selectedTab.classList.remove(
                 'text-gray-500',
                 'border-transparent'
@@ -1234,332 +979,196 @@ document.addEventListener('DOMContentLoaded', () => {
                 'text-green-600',
                 'border-green-600'
             );
-
         }
 
-
-        // Show panel
         if (selectedPanel) {
-
             selectedPanel.classList.remove(
                 'hidden'
             );
-
         }
 
-
-        // Scroll active tab
         if (selectedTab) {
-
             selectedTab.scrollIntoView({
                 behavior: 'smooth',
                 block: 'nearest',
                 inline: 'center'
             });
-
         }
 
-
-        // Save active tab
-        saveActiveTab(
-            tabId
-        );
-
+        saveActiveTab(tabId);
     }
-
 
     // =========================================================
     // LOAD TAB CONTENT
-    // ---------------------------------------------------------
-    // 1. Fetch Blade HTML
-    // 2. Insert HTML into panel
-    // 3. Load the JS module assigned to this tab
     // =========================================================
-
     async function loadTabContent(
         panel,
         page,
         tabTitle,
         tabId
     ) {
-
         try {
-
-            // =================================================
-            // LOAD BLADE HTML
-            // =================================================
-
-            const response =
-                await fetch(
-                    page,
-                    {
-                        method: 'GET',
-
-                        headers: {
-                            'X-Requested-With':
-                                'XMLHttpRequest',
-
-                            'Accept':
-                                'text/html'
-                        }
-                    }
-                );
-
+            const response = await fetch(page, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html'
+                },
+                credentials: 'same-origin'
+            });
 
             if (!response.ok) {
-
                 throw new Error(
                     `HTTP Error: ${response.status}`
                 );
-
             }
 
+            const html = await response.text();
 
-            const html =
-                await response.text();
-
-
-            // =================================================
-            // INSERT HTML
-            // =================================================
-
-            panel.innerHTML =
-                html;
-
-
-            // =================================================
-            // LOAD PAGE-SPECIFIC JAVASCRIPT
-            // =================================================
+            panel.innerHTML = html;
 
             await loadPageScript(
                 tabId,
                 panel
             );
-
-
         } catch (error) {
-
             console.error(
                 `Failed to load tab "${tabId}":`,
                 error
             );
 
-
             panel.innerHTML = `
                 <div class="container mx-auto px-6 py-10">
-
                     <div class="bg-white border border-red-200 rounded-xl p-8 text-center">
-
                         <div class="text-red-500 text-4xl mb-4">
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
-
                         <h2 class="text-xl font-semibold text-gray-800 mb-2">
                             Unable to Load Page
                         </h2>
-
                         <p class="text-gray-500 mb-4">
                             The ${escapeHtml(tabTitle)} page could not be loaded.
                         </p>
-
-                        <button
-                            type="button"
-                            onclick="location.reload()"
-                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                        >
+                        <button type="button" onclick="location.reload()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                             Reload Page
                         </button>
-
                     </div>
-
                 </div>
             `;
-
         }
-
     }
-
 
     // =========================================================
     // LOAD PAGE-SPECIFIC JAVASCRIPT
-    // ---------------------------------------------------------
-    // STANDARD CONTRACT:
-    //
-    // Every registered page JavaScript module MUST export:
-    //
-    // export function init(panel) {}
-    //
-    // The Tab Manager will call:
-    //
-    // module.init(panel)
     // =========================================================
+    async function loadPageScript(tabId, panel) {
+        const loader = PAGE_SCRIPTS[tabId];
 
-    async function loadPageScript(
-        tabId,
-        panel
-    ) {
-
-        const loader =
-            PAGE_SCRIPTS[tabId];
-
-
-        // Page has no JavaScript
         if (!loader) {
             return;
         }
 
-
         try {
-
-            const module =
-                await loader();
-
-
-            // =================================================
-            // REQUIRED PAGE MODULE CONTRACT
-            // =================================================
+            const module = await loader();
 
             if (
                 !module ||
                 typeof module.init !== 'function'
             ) {
-
                 throw new Error(
                     `Page module "${tabId}" must export an init(panel) function.`
                 );
-
             }
 
-
-            // =================================================
-            // INITIALIZE PAGE
-            // =================================================
-
-            await module.init(
-                panel
-            );
-
-
+            await module.init(panel);
         } catch (error) {
-
             console.error(
                 `Failed to initialize page "${tabId}":`,
                 error
             );
-
         }
-
     }
-
 
     // =========================================================
     // CLOSE TAB
     // =========================================================
-
     function closeTab(tabId) {
-
-        // Dashboard cannot be closed
-        if (
-            tabId ===
-            'dashboard'
-        ) {
+        if (tabId === 'dashboard') {
             return;
         }
 
-
-        const tab =
-            document.querySelector(
-                `.tab-item[data-tab-id="${tabId}"]`
-            );
-
+        const tab = document.querySelector(
+            `.tab-item[data-tab-id="${tabId}"]`
+        );
 
         const panel =
             document.getElementById(
                 `tab-${tabId}`
             );
 
-
-        if (
-            !tab ||
-            !panel
-        ) {
+        if (!tab || !panel) {
             return;
         }
 
-
-        // Check active
         const isActive =
-            tab.classList.contains(
-                'active'
-            );
+            tab.classList.contains('active');
 
-
-        // Remove tab
         tab.remove();
-
-
-        // Remove content
         panel.remove();
 
-
-        // Update storage
         saveTabs();
 
-
-        // If active tab was closed
         if (isActive) {
-
             const remainingTabs =
                 document.querySelectorAll(
                     '.tab-item'
                 );
 
-
-            if (
-                remainingTabs.length > 0
-            ) {
-
+            if (remainingTabs.length > 0) {
                 const lastTab =
                     remainingTabs[
                         remainingTabs.length - 1
                     ];
 
-
                 activateTab(
                     lastTab.dataset.tabId
                 );
-
             }
-
         }
-
     }
-
 
     // =========================================================
     // ESCAPE HTML
     // =========================================================
-
     function escapeHtml(value) {
-
         const div =
-            document.createElement(
-                'div'
-            );
+            document.createElement('div');
 
-        div.textContent =
-            value;
+        div.textContent = value ?? '';
 
         return div.innerHTML;
-
     }
 
+    // =========================================================
+    // INITIALIZE TAB MANAGER
+    // =========================================================
+    async function initializeTabManager() {
+        const authenticated =
+            await loadCurrentUserPermissions();
+
+        if (!authenticated) {
+            console.warn(
+                'Tab Manager stopped because current user permissions could not be verified.'
+            );
+
+            return;
+        }
+
+        await restoreSavedTabs();
+    }
 
     // =========================================================
-    // RESTORE TABS ON PAGE LOAD
+    // INITIALIZE
     // =========================================================
-
-    restoreSavedTabs();
-
+    initializeTabManager();
 });
-

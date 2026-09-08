@@ -44,6 +44,20 @@ Route::middleware('auth')->group(function () {
         return view('includes.dashboard');
     })->name('dashboard');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUTHENTICATED USER PERMISSIONS
+    |--------------------------------------------------------------------------
+    | Used by the Tab Manager to determine which tabs can be
+    | restored or opened for the currently authenticated user.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/api/auth/permissions', [AuthController::class, 'permissions'])
+        ->name('api.auth.permissions');
+
+
     /*
     |--------------------------------------------------------------------------
     | EMPLOYEE INFO
@@ -65,11 +79,14 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
 
+
     /*
     |--------------------------------------------------------------------------
     | USER MANAGEMENT
     |--------------------------------------------------------------------------
     */
+
+    Route::middleware('can:manage-users')->group(function () {
 
     Route::get('/admin/user-management', [UserManagementController::class, 'index'])
         ->name('UserManagement');
@@ -79,11 +96,13 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/api/admin/users/{user}/status', [UserManagementController::class, 'toggleStatus'])
         ->name('api.admin.users.status');
-    
+
     Route::patch(
-    '/api/admin/users/{user}/password',
-    [UserManagementController::class, 'resetPassword']
+        '/api/admin/users/{user}/password',
+        [UserManagementController::class, 'resetPassword']
     )->name('api.admin.users.password');
+
+});
     /*
     |--------------------------------------------------------------------------
     | LOGOUT
@@ -92,4 +111,5 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/api/logout', [AuthController::class, 'logout'])
         ->name('api.logout');
+
 });
