@@ -9,32 +9,36 @@ use Illuminate\Support\Facades\Hash;
 
 class UserManagementController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | USER MANAGEMENT PAGE
-    |--------------------------------------------------------------------------
-    */
-
+    // User management page
     public function index()
     {
         return view('admin.UserManagement');
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | GET USERS
-    |--------------------------------------------------------------------------
-    */
-
-    public function users(): JsonResponse
+    // Get paginated users
+    public function users(Request $request): JsonResponse
     {
+        $search = trim((string) $request->input('search', ''));
+        $status = trim((string) $request->input('status', 'all'));
+
         $users = User::query()
             ->whereNotIn('user_id', function ($query) {
                 $query->select('user_id')
                     ->from('user_roles')
                     ->where('role_id', 1);
             })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when(
+                in_array($status, ['active', 'pending', 'disabled'], true),
+                function ($query) use ($status) {
+                    $query->where('status', $status);
+                }
+            )
             ->select([
                 'user_id',
                 'username',
@@ -44,21 +48,24 @@ class UserManagementController extends Controller
                 'updated_at',
             ])
             ->orderBy('user_id', 'desc')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return response()->json([
             'success' => true,
-            'users' => $users,
+            'users' => $users->items(),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+                'from' => $users->firstItem(),
+                'to' => $users->lastItem(),
+            ],
         ]);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | ACTIVATE / DISABLE USER
-    |--------------------------------------------------------------------------
-    */
-
+    // Activate or disable user
     public function toggleStatus(User $user): JsonResponse
     {
         $user->status = $user->status === 'active'
@@ -83,18 +90,9 @@ class UserManagementController extends Controller
         ]);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | RESET USER PASSWORD
-    |--------------------------------------------------------------------------
-    */
-
-    public function resetPassword(
-        Request $request,
-        User $user
-    ): JsonResponse {
-
+    // Reset user password
+    public function resetPassword(Request $request, User $user): JsonResponse
+    {
         $validated = $request->validate([
             'password' => [
                 'required',

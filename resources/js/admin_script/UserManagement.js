@@ -1,41 +1,27 @@
 export async function init(panel) {
-
-    // =========================================================
-    // ELEMENTS
-    // =========================================================
-
+    // Elements
     const userGrid = panel.querySelector('#userGrid');
     const emptyState = panel.querySelector('#emptyState');
     const userSearch = panel.querySelector('#userSearch');
     const statusFilter = panel.querySelector('#statusFilter');
+    const pagination = panel.querySelector('#pagination');
 
     if (!userGrid) {
-        console.error(
-            'UserManagement: #userGrid was not found.'
-        );
-
+        console.error('UserManagement: #userGrid was not found.');
         return;
     }
 
-    // =========================================================
-    // API URLS
-    // =========================================================
-
+    // API URLs
     const usersUrl = userGrid.dataset.usersUrl;
     const statusBaseUrl = userGrid.dataset.statusUrl;
 
-    // =========================================================
-    // CSRF TOKEN
-    // =========================================================
-
+    // CSRF token
     const csrfToken = document
         .querySelector('meta[name="csrf-token"]')
         ?.getAttribute('content');
 
     if (!csrfToken) {
-        console.error(
-            'UserManagement: CSRF token was not found.'
-        );
+        console.error('UserManagement: CSRF token was not found.');
 
         await Swal.fire({
             icon: 'error',
@@ -52,42 +38,46 @@ export async function init(panel) {
         return;
     }
 
-    // =========================================================
-    // STATE
-    // =========================================================
-
+    // State
     let users = [];
+    let currentPage = 1;
 
-    // =========================================================
-    // INITIALIZE
-    // =========================================================
+    // Initialize
+    await loadUsers(1);
 
-    await loadUsers();
-
-    // =========================================================
-    // LOAD USERS
-    // =========================================================
-
-    async function loadUsers() {
-
+    // Load users
+    async function loadUsers(page = 1) {
         try {
+            currentPage = page;
 
-            const response = await fetch(usersUrl, {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+            const params = new URLSearchParams({
+                page: String(page),
+                search: userSearch?.value?.trim() || '',
+                status: statusFilter?.value || 'all'
             });
+
+            const response = await fetch(
+                `${usersUrl}?${params.toString()}`,
+                {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }
+            );
+
+            const data = await parseJsonResponse(response);
 
             if (!response.ok) {
                 throw new Error(
-                    `Failed to load users. HTTP ${response.status}`
+                    getErrorMessage(
+                        data,
+                        `Failed to load users. HTTP ${response.status}`
+                    )
                 );
             }
-
-            const data = await response.json();
 
             if (!data.success) {
                 throw new Error(
@@ -99,10 +89,9 @@ export async function init(panel) {
                 ? data.users
                 : [];
 
-            renderUsers();
+            renderUsers(data.pagination);
 
         } catch (error) {
-
             console.error(
                 'UserManagement: Failed to load users:',
                 error
@@ -110,69 +99,44 @@ export async function init(panel) {
 
             userGrid.innerHTML = '';
 
-            emptyState.classList.remove('hidden');
+            if (pagination) {
+                pagination.innerHTML = '';
+                pagination.classList.add('hidden');
+            }
 
-            const emptyTitle = emptyState.querySelector('h3');
-            const emptyDescription = emptyState.querySelector('p');
+            emptyState?.classList.remove('hidden');
+
+            const emptyTitle =
+                emptyState?.querySelector('h3');
+
+            const emptyDescription =
+                emptyState?.querySelector('p');
 
             if (emptyTitle) {
-                emptyTitle.textContent = 'Unable to load users';
+                emptyTitle.textContent =
+                    'Unable to load users';
             }
 
             if (emptyDescription) {
                 emptyDescription.textContent =
+                    error.message ||
                     'Please refresh the page and try again.';
             }
         }
     }
 
-    // =========================================================
-    // RENDER USERS
-    // =========================================================
-
-    function renderUsers() {
-
-        const searchValue = (
-            userSearch?.value || ''
-        )
-            .trim()
-            .toLowerCase();
-
-        const selectedStatus = statusFilter?.value || 'all';
-
-        const filteredUsers = users.filter(user => {
-
-            const username = String(
-                user.username || ''
-            ).toLowerCase();
-
-            const email = String(
-                user.email || ''
-            ).toLowerCase();
-
-            const status = String(
-                user.status || ''
-            ).toLowerCase();
-
-            const matchesSearch =
-                username.includes(searchValue) ||
-                email.includes(searchValue);
-
-            const matchesStatus =
-                selectedStatus === 'all' ||
-                status === selectedStatus;
-
-            return matchesSearch && matchesStatus;
-        });
-
+    // Render users
+    function renderUsers(paginationData) {
         userGrid.innerHTML = '';
 
-        if (filteredUsers.length === 0) {
+        if (users.length === 0) {
+            emptyState?.classList.remove('hidden');
 
-            emptyState.classList.remove('hidden');
+            const emptyTitle =
+                emptyState?.querySelector('h3');
 
-            const emptyTitle = emptyState.querySelector('h3');
-            const emptyDescription = emptyState.querySelector('p');
+            const emptyDescription =
+                emptyState?.querySelector('p');
 
             if (emptyTitle) {
                 emptyTitle.textContent = 'No users found';
@@ -183,25 +147,185 @@ export async function init(panel) {
                     'Try changing your search or status filter.';
             }
 
+            if (pagination) {
+                pagination.innerHTML = '';
+                pagination.classList.add('hidden');
+            }
+
             return;
         }
 
-        emptyState.classList.add('hidden');
+        emptyState?.classList.add('hidden');
 
-        filteredUsers.forEach(user => {
+        users.forEach(user => {
             userGrid.insertAdjacentHTML(
                 'beforeend',
                 createUserCard(user)
             );
         });
+
+        renderPagination(paginationData);
     }
 
-    // =========================================================
-    // CREATE USER CARD
-    // =========================================================
+    // Render pagination
+    function renderPagination(data) {
+        if (!pagination || !data) {
+            return;
+        }
 
+        const current = Number(
+            data.current_page || 1
+        );
+
+        const last = Number(
+            data.last_page || 1
+        );
+
+        const from = Number(
+            data.from || 0
+        );
+
+        const to = Number(
+            data.to || 0
+        );
+
+        const total = Number(
+            data.total || 0
+        );
+
+        if (last <= 1) {
+            pagination.innerHTML = '';
+            pagination.classList.add('hidden');
+            return;
+        }
+
+        pagination.classList.remove('hidden');
+
+        pagination.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-5 border-t border-gray-100">
+                <p class="text-sm text-gray-500">
+                    Showing
+                    <span class="font-medium text-gray-700">${from}</span>
+                    to
+                    <span class="font-medium text-gray-700">${to}</span>
+                    of
+                    <span class="font-medium text-gray-700">${total}</span>
+                    users
+                </p>
+
+                <div class="flex items-center gap-1">
+                    <button
+                        type="button"
+                        data-page="${current - 1}"
+                        class="pagination-button px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer ${current === 1 ? 'opacity-50 pointer-events-none' : ''}"
+                        ${current === 1 ? 'disabled' : ''}
+                    >
+                        <i class="fa-solid fa-chevron-left text-xs mr-1"></i>
+                        Previous
+                    </button>
+
+                    ${createPageButtons(current, last)}
+
+                    <button
+                        type="button"
+                        data-page="${current + 1}"
+                        class="pagination-button px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer ${current === last ? 'opacity-50 pointer-events-none' : ''}"
+                        ${current === last ? 'disabled' : ''}
+                    >
+                        Next
+                        <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // Create pagination buttons
+    function createPageButtons(current, last) {
+        const buttons = [];
+
+        let start = Math.max(
+            1,
+            current - 2
+        );
+
+        let end = Math.min(
+            last,
+            current + 2
+        );
+
+        if (current <= 3) {
+            start = 1;
+            end = Math.min(5, last);
+        }
+
+        if (current >= last - 2) {
+            start = Math.max(1, last - 4);
+            end = last;
+        }
+
+        if (start > 1) {
+            buttons.push(`
+                <button
+                    type="button"
+                    data-page="1"
+                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                >
+                    1
+                </button>
+            `);
+
+            if (start > 2) {
+                buttons.push(`
+                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
+                        ...
+                    </span>
+                `);
+            }
+        }
+
+        for (let page = start; page <= end; page++) {
+            const activeClass =
+                page === current
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'text-gray-600 hover:bg-gray-50';
+
+            buttons.push(`
+                <button
+                    type="button"
+                    data-page="${page}"
+                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium transition cursor-pointer ${activeClass}"
+                >
+                    ${page}
+                </button>
+            `);
+        }
+
+        if (end < last) {
+            if (end < last - 1) {
+                buttons.push(`
+                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
+                        ...
+                    </span>
+                `);
+            }
+
+            buttons.push(`
+                <button
+                    type="button"
+                    data-page="${last}"
+                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                >
+                    ${last}
+                </button>
+            `);
+        }
+
+        return buttons.join('');
+    }
+
+    // Create user card
     function createUserCard(user) {
-
         const userId = user.user_id;
 
         const username = escapeHtml(
@@ -220,23 +344,14 @@ export async function init(panel) {
             user.username || ''
         );
 
-        // =====================================================
-        // DYNAMIC STATUS LABEL
-        // =====================================================
+        const statusLabel =
+            formatStatusLabel(status);
 
-        const statusLabel = formatStatusLabel(status);
+        const statusClasses =
+            getStatusClasses(status);
 
-        // =====================================================
-        // DYNAMIC STATUS STYLE
-        // =====================================================
-
-        const statusClasses = getStatusClasses(status);
-
-        // =====================================================
-        // ACCOUNT ACTION
-        // =====================================================
-
-        const isActive = status === 'active';
+        const isActive =
+            status === 'active';
 
         const actionLabel = isActive
             ? 'Disable Account'
@@ -251,13 +366,7 @@ export async function init(panel) {
                 class="relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition"
                 data-user-id="${escapeHtml(String(userId))}"
             >
-
-                <!-- =================================================
-                     THREE DOT MENU
-                     ================================================= -->
-
                 <div class="absolute top-4 right-4">
-
                     <button
                         type="button"
                         class="user-menu-button w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
@@ -267,16 +376,9 @@ export async function init(panel) {
                         <i class="fa-solid fa-ellipsis-vertical"></i>
                     </button>
 
-                    <!-- =================================================
-                         DROPDOWN MENU
-                         ================================================= -->
-
                     <div
                         class="user-menu hidden absolute right-0 top-10 z-50 w-48 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden"
                     >
-
-                        <!-- STATUS ACTION -->
-
                         <button
                             type="button"
                             class="user-status-action w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
@@ -284,13 +386,8 @@ export async function init(panel) {
                             data-user-id="${escapeHtml(String(userId))}"
                         >
                             <i class="fa-solid ${actionIcon} w-4 text-gray-400"></i>
-
-                            <span>
-                                ${actionLabel}
-                            </span>
+                            <span>${actionLabel}</span>
                         </button>
-
-                        <!-- RESET PASSWORD -->
 
                         <button
                             type="button"
@@ -299,13 +396,8 @@ export async function init(panel) {
                             data-user-id="${escapeHtml(String(userId))}"
                         >
                             <i class="fa-solid fa-key w-4 text-gray-400"></i>
-
-                            <span>
-                                Reset Password
-                            </span>
+                            <span>Reset Password</span>
                         </button>
-
-                        <!-- DELETE PLACEHOLDER -->
 
                         <button
                             type="button"
@@ -314,34 +406,19 @@ export async function init(panel) {
                             data-user-id="${escapeHtml(String(userId))}"
                         >
                             <i class="fa-solid fa-trash w-4"></i>
-
-                            <span>
-                                Delete User
-                            </span>
+                            <span>Delete User</span>
                         </button>
-
                     </div>
-
                 </div>
 
-                <!-- =================================================
-                     PROFILE
-                     ================================================= -->
-
                 <div class="flex items-center gap-4 pr-8">
-
-                    <!-- PROFILE CIRCLE -->
-
                     <div
                         class="flex-shrink-0 w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-lg uppercase"
                     >
                         ${escapeHtml(initials)}
                     </div>
 
-                    <!-- USER INFORMATION -->
-
                     <div class="min-w-0 flex-1">
-
                         <h3
                             class="font-semibold text-gray-800 truncate"
                             title="${username}"
@@ -357,33 +434,21 @@ export async function init(panel) {
                         </p>
 
                         <div class="mt-2">
-
                             <span
                                 class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusClasses}"
                             >
-                                <span
-                                    class="w-1.5 h-1.5 rounded-full bg-current mr-1.5"
-                                ></span>
-
+                                <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
                                 ${escapeHtml(statusLabel)}
                             </span>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
         `;
     }
 
-    // =========================================================
-    // FORMAT STATUS LABEL
-    // =========================================================
-
+    // Format status label
     function formatStatusLabel(status) {
-
         const value = String(status || '').trim();
 
         if (!value) {
@@ -396,19 +461,13 @@ export async function init(panel) {
             .replace(/\b\w/g, character => character.toUpperCase());
     }
 
-    // =========================================================
-    // GET STATUS CLASSES
-    // =========================================================
-
+    // Get status classes
     function getStatusClasses(status) {
-
         const statusClasses = {
             active:
                 'bg-green-50 text-green-600 border-green-100',
-
             pending:
                 'bg-yellow-50 text-yellow-600 border-yellow-100',
-
             disabled:
                 'bg-red-50 text-red-600 border-red-100'
         };
@@ -417,58 +476,90 @@ export async function init(panel) {
             || 'bg-gray-50 text-gray-600 border-gray-100';
     }
 
-    // =========================================================
-    // SEARCH
-    // =========================================================
-
+    // Search
     userSearch?.addEventListener(
         'input',
-        renderUsers
+        debounce(() => {
+            loadUsers(1);
+        }, 300)
     );
 
-    // =========================================================
-    // STATUS FILTER
-    // =========================================================
-
+    // Status filter
     statusFilter?.addEventListener(
         'change',
-        renderUsers
+        () => {
+            loadUsers(1);
+        }
     );
 
-    // =========================================================
-    // CLOSE MENUS
-    // =========================================================
+    // Pagination
+    pagination?.addEventListener(
+        'click',
+        async event => {
+            const button =
+                event.target.closest('.pagination-button');
 
+            if (!button) {
+                return;
+            }
+
+            const page = Number(
+                button.dataset.page
+            );
+
+            if (!page || page === currentPage) {
+                return;
+            }
+
+            await loadUsers(page);
+
+            userGrid.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    );
+
+    // Debounce
+    function debounce(callback, delay) {
+        let timeout;
+
+        return (...args) => {
+            clearTimeout(timeout);
+
+            timeout = setTimeout(() => {
+                callback(...args);
+            }, delay);
+        };
+    }
+
+    // Close menus
     function closeMenus(exceptMenu = null) {
-
         panel
             .querySelectorAll('.user-menu')
             .forEach(menu => {
-
                 if (menu !== exceptMenu) {
                     menu.classList.add('hidden');
                 }
-
             });
     }
 
-    // =========================================================
-    // DOCUMENT CLICK
-    // =========================================================
-
+    // Document click
     document.addEventListener(
         'click',
         handleDocumentClick
     );
 
     function handleDocumentClick(event) {
+        const menuButton =
+            event.target.closest(
+                '[data-user-menu-button]'
+            );
 
-        const menuButton = event.target.closest(
-            '[data-user-menu-button]'
-        );
-
-        if (menuButton && panel.contains(menuButton)) {
-
+        if (
+            menuButton &&
+            panel.contains(menuButton)
+        ) {
             const menu = menuButton
                 .closest('.relative')
                 ?.querySelector('.user-menu');
@@ -477,7 +568,8 @@ export async function init(panel) {
                 return;
             }
 
-            const isHidden = menu.classList.contains('hidden');
+            const isHidden =
+                menu.classList.contains('hidden');
 
             closeMenus(
                 isHidden ? menu : null
@@ -500,24 +592,24 @@ export async function init(panel) {
         }
     }
 
-    // =========================================================
-    // ACTION DELEGATION
-    // =========================================================
-
+    // Action delegation
     userGrid.addEventListener(
         'click',
         async event => {
-
-            const actionButton = event.target.closest(
-                '[data-user-action]'
-            );
+            const actionButton =
+                event.target.closest(
+                    '[data-user-action]'
+                );
 
             if (!actionButton) {
                 return;
             }
 
-            const userId = actionButton.dataset.userId;
-            const action = actionButton.dataset.userAction;
+            const userId =
+                actionButton.dataset.userId;
+
+            const action =
+                actionButton.dataset.userAction;
 
             closeMenus();
 
@@ -525,53 +617,28 @@ export async function init(panel) {
                 return;
             }
 
-            // =====================================================
-            // STATUS
-            // =====================================================
-
             if (action === 'status') {
-
-                await handleStatusAction(
-                    userId
-                );
-
+                await handleStatusAction(userId);
                 return;
             }
-
-            // =====================================================
-            // RESET PASSWORD
-            // =====================================================
 
             if (action === 'reset-password') {
-
-                await handleResetPassword(
-                    userId
-                );
-
+                await handleResetPassword(userId);
                 return;
             }
 
-            // =====================================================
-            // DELETE
-            // =====================================================
-
             if (action === 'delete') {
-
-                await handleDeleteAction(
-                    userId
-                );
+                await handleDeleteAction(userId);
             }
         }
     );
 
-    // =========================================================
-    // STATUS ACTION
-    // =========================================================
-
+    // Status action
     async function handleStatusAction(userId) {
-
         const user = users.find(
-            item => String(item.user_id) === String(userId)
+            item =>
+                String(item.user_id) ===
+                String(userId)
         );
 
         if (!user) {
@@ -582,7 +649,8 @@ export async function init(panel) {
             user.status || ''
         ).trim().toLowerCase();
 
-        const isActive = status === 'active';
+        const isActive =
+            status === 'active';
 
         const title = isActive
             ? 'Do you want to disable this user?'
@@ -593,32 +661,20 @@ export async function init(panel) {
             : 'Yes, Activate!';
 
         const result = await Swal.fire({
-
             icon: 'warning',
-
             title,
-
             text: isActive
                 ? 'This account will no longer be active.'
                 : 'This account will be activated again.',
-
             showCancelButton: true,
-
             confirmButtonText: confirmText,
-
             cancelButtonText: 'No, Cancel',
-
             reverseButtons: true,
-
             buttonsStyling: false,
-
             customClass: {
-
                 actions: 'gap-3',
-
                 confirmButton:
                     'px-5 py-2.5 rounded-lg bg-red-700 hover:bg-red-800 text-white font-medium transition cursor-pointer',
-
                 cancelButton:
                     'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
             }
@@ -631,17 +687,12 @@ export async function init(panel) {
         await updateUserStatus(userId);
     }
 
-    // =========================================================
-    // UPDATE USER STATUS
-    // =========================================================
-
+    // Update user status
     async function updateUserStatus(userId) {
-
         const statusUrl =
             `${statusBaseUrl}/${encodeURIComponent(userId)}/status`;
 
         try {
-
             Swal.fire({
                 title: 'Updating account...',
                 text: 'Please wait.',
@@ -667,12 +718,10 @@ export async function init(panel) {
                 }
             );
 
-            const data = await parseJsonResponse(
-                response
-            );
+            const data =
+                await parseJsonResponse(response);
 
             if (!response.ok) {
-
                 throw new Error(
                     getErrorMessage(
                         data,
@@ -682,75 +731,42 @@ export async function init(panel) {
             }
 
             if (!data.success) {
-
                 throw new Error(
                     data.message ||
                     'Failed to update user status.'
                 );
             }
 
-            // =====================================================
-            // UPDATE LOCAL USER
-            // =====================================================
-
-            const userIndex = users.findIndex(
-                item =>
-                    String(item.user_id) === String(userId)
-            );
-
-            if (
-                userIndex !== -1 &&
-                data.user
-            ) {
-                users[userIndex] = {
-                    ...users[userIndex],
-                    ...data.user
-                };
-            }
-
-            renderUsers();
-
             await Swal.fire({
-
                 icon: 'success',
-
                 title: 'Success',
-
                 text:
                     data.message ||
                     'User status updated successfully.',
-
                 confirmButtonText: 'OK',
-
                 buttonsStyling: false,
-
                 customClass: {
                     confirmButton:
                         'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
                 }
             });
 
-        } catch (error) {
+            await loadUsers(currentPage);
 
+        } catch (error) {
             console.error(
                 'UserManagement: Status update failed:',
                 error
             );
 
             await Swal.fire({
-
                 icon: 'error',
-
                 title: 'Update Failed',
-
                 text:
                     error.message ||
                     'Unable to update user status.',
-
                 confirmButtonText: 'OK',
-
                 buttonsStyling: false,
-
                 customClass: {
                     confirmButton:
                         'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
@@ -759,14 +775,12 @@ export async function init(panel) {
         }
     }
 
-    // =========================================================
-    // RESET PASSWORD
-    // =========================================================
-
+    // Reset password
     async function handleResetPassword(userId) {
-
         const user = users.find(
-            item => String(item.user_id) === String(userId)
+            item =>
+                String(item.user_id) ===
+                String(userId)
         );
 
         if (!user) {
@@ -777,40 +791,24 @@ export async function init(panel) {
             user.username || 'this user'
         );
 
-        // =====================================================
-        // FIRST CONFIRMATION
-        // =====================================================
-
         const confirmation = await Swal.fire({
-
             icon: 'warning',
-
             title: 'Do you want to reset this account password?',
-
             html: `
                 <p class="text-sm text-gray-500">
                     Account:
                     <strong>${username}</strong>
                 </p>
             `,
-
             showCancelButton: true,
-
             confirmButtonText: 'Yes, Reset!',
-
             cancelButtonText: 'No, Cancel',
-
             reverseButtons: true,
-
             buttonsStyling: false,
-
             customClass: {
-
                 actions: 'gap-3',
-
                 confirmButton:
                     'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer',
-
                 cancelButton:
                     'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
             }
@@ -820,17 +818,10 @@ export async function init(panel) {
             return;
         }
 
-        // =====================================================
-        // PASSWORD FORM
-        // =====================================================
-
         const passwordResult = await Swal.fire({
-
             title: 'Reset Password',
-
             html: `
                 <div class="text-left">
-
                     <label
                         for="swal-new-password"
                         class="block text-sm font-medium text-gray-700 mb-1"
@@ -864,35 +855,22 @@ export async function init(panel) {
                     <p class="text-xs text-gray-400 mt-3">
                         Password must be at least 8 characters.
                     </p>
-
                 </div>
             `,
-
             showCancelButton: true,
-
             confirmButtonText: 'Reset Password',
-
             cancelButtonText: 'Cancel',
-
             reverseButtons: true,
-
             focusConfirm: false,
-
             buttonsStyling: false,
-
             customClass: {
-
                 actions: 'gap-3',
-
                 confirmButton:
                     'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer',
-
                 cancelButton:
                     'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
             },
-
             preConfirm: () => {
-
                 const password = document
                     .getElementById('swal-new-password')
                     ?.value || '';
@@ -902,40 +880,33 @@ export async function init(panel) {
                     ?.value || '';
 
                 if (!password) {
-
                     Swal.showValidationMessage(
                         'Please enter a new password.'
                     );
-
                     return false;
                 }
 
                 if (password.length < 8) {
-
                     Swal.showValidationMessage(
                         'Password must be at least 8 characters.'
                     );
-
                     return false;
                 }
 
                 if (!passwordConfirmation) {
-
                     Swal.showValidationMessage(
                         'Please confirm the new password.'
                     );
-
                     return false;
                 }
 
                 if (
-                    password !== passwordConfirmation
+                    password !==
+                    passwordConfirmation
                 ) {
-
                     Swal.showValidationMessage(
                         'Passwords do not match.'
                     );
-
                     return false;
                 }
 
@@ -957,21 +928,16 @@ export async function init(panel) {
         );
     }
 
-    // =========================================================
-    // RESET USER PASSWORD API
-    // =========================================================
-
+    // Reset user password API
     async function resetUserPassword(
         userId,
         password,
         passwordConfirmation
     ) {
-
         const passwordUrl =
             `${statusBaseUrl}/${encodeURIComponent(userId)}/password`;
 
         try {
-
             Swal.fire({
                 title: 'Resetting password...',
                 text: 'Please wait.',
@@ -1002,12 +968,10 @@ export async function init(panel) {
                 }
             );
 
-            const data = await parseJsonResponse(
-                response
-            );
+            const data =
+                await parseJsonResponse(response);
 
             if (!response.ok) {
-
                 throw new Error(
                     getErrorMessage(
                         data,
@@ -1017,7 +981,6 @@ export async function init(panel) {
             }
 
             if (!data.success) {
-
                 throw new Error(
                     data.message ||
                     'Failed to reset password.'
@@ -1025,19 +988,13 @@ export async function init(panel) {
             }
 
             await Swal.fire({
-
                 icon: 'success',
-
                 title: 'Password Reset',
-
                 text:
                     data.message ||
                     'User password reset successfully.',
-
                 confirmButtonText: 'OK',
-
                 buttonsStyling: false,
-
                 customClass: {
                     confirmButton:
                         'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
@@ -1045,26 +1002,19 @@ export async function init(panel) {
             });
 
         } catch (error) {
-
             console.error(
                 'UserManagement: Password reset failed:',
                 error
             );
 
             await Swal.fire({
-
                 icon: 'error',
-
                 title: 'Reset Failed',
-
                 text:
                     error.message ||
                     'Unable to reset user password.',
-
                 confirmButtonText: 'OK',
-
                 buttonsStyling: false,
-
                 customClass: {
                     confirmButton:
                         'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
@@ -1073,14 +1023,12 @@ export async function init(panel) {
         }
     }
 
-    // =========================================================
-    // DELETE PLACEHOLDER
-    // =========================================================
-
+    // Delete placeholder
     async function handleDeleteAction(userId) {
-
         const user = users.find(
-            item => String(item.user_id) === String(userId)
+            item =>
+                String(item.user_id) ===
+                String(userId)
         );
 
         if (!user) {
@@ -1088,18 +1036,12 @@ export async function init(panel) {
         }
 
         await Swal.fire({
-
             icon: 'info',
-
             title: 'Delete User',
-
             text:
                 'Delete functionality is not implemented yet.',
-
             confirmButtonText: 'OK',
-
             buttonsStyling: false,
-
             customClass: {
                 confirmButton:
                     'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
@@ -1107,22 +1049,17 @@ export async function init(panel) {
         });
     }
 
-    // =========================================================
-    // GET INITIALS
-    // =========================================================
-
+    // Get initials
     function getInitials(name) {
-
-        const value = String(name || '')
-            .trim();
+        const value =
+            String(name || '').trim();
 
         if (!value) {
             return 'U';
         }
 
-        const parts = value
-            .split(/\s+/)
-            .filter(Boolean);
+        const parts =
+            value.split(/\s+/).filter(Boolean);
 
         if (parts.length === 1) {
             return parts[0]
@@ -1136,12 +1073,8 @@ export async function init(panel) {
         ).toUpperCase();
     }
 
-    // =========================================================
-    // ESCAPE HTML
-    // =========================================================
-
+    // Escape HTML
     function escapeHtml(value) {
-
         return String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -1150,17 +1083,12 @@ export async function init(panel) {
             .replace(/'/g, '&#039;');
     }
 
-    // =========================================================
-    // PARSE JSON RESPONSE
-    // =========================================================
-
+    // Parse JSON response
     async function parseJsonResponse(response) {
-
         const contentType =
             response.headers.get('content-type') || '';
 
         if (!contentType.includes('application/json')) {
-
             const text = await response.text();
 
             console.error(
@@ -1176,15 +1104,8 @@ export async function init(panel) {
         return await response.json();
     }
 
-    // =========================================================
-    // ERROR MESSAGE
-    // =========================================================
-
-    function getErrorMessage(
-        data,
-        fallback
-    ) {
-
+    // Error message
+    function getErrorMessage(data, fallback) {
         if (
             data &&
             typeof data.message === 'string'
@@ -1197,7 +1118,6 @@ export async function init(panel) {
             data.errors &&
             typeof data.errors === 'object'
         ) {
-
             const messages = Object
                 .values(data.errors)
                 .flat()

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\RoleManagementController;
 
 
 /*
@@ -49,9 +50,10 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     | AUTHENTICATED USER PERMISSIONS
     |--------------------------------------------------------------------------
+    |
     | Used by the Tab Manager to determine which tabs can be
     | restored or opened for the currently authenticated user.
-    |--------------------------------------------------------------------------
+    |
     */
 
     Route::get('/api/auth/permissions', [AuthController::class, 'permissions'])
@@ -84,25 +86,89 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     | USER MANAGEMENT
     |--------------------------------------------------------------------------
+    |
+    | Only users with the "manage-users" ability may access
+    | the User Management page and its API endpoints.
+    |
     */
 
     Route::middleware('can:manage-users')->group(function () {
 
-    Route::get('/admin/user-management', [UserManagementController::class, 'index'])
-        ->name('UserManagement');
+        // USER MANAGEMENT PAGE
+        Route::get(
+            '/admin/user-management',
+            [UserManagementController::class, 'index']
+        )->name('UserManagement');
 
-    Route::get('/api/admin/users', [UserManagementController::class, 'users'])
-        ->name('api.admin.users');
 
-    Route::patch('/api/admin/users/{user}/status', [UserManagementController::class, 'toggleStatus'])
-        ->name('api.admin.users.status');
+        // GET USERS
+        Route::get(
+            '/api/admin/users',
+            [UserManagementController::class, 'users']
+        )->name('api.admin.users');
 
+
+        // ACTIVATE / DISABLE USER
+        Route::patch(
+            '/api/admin/users/{user}/status',
+            [UserManagementController::class, 'toggleStatus']
+        )->name('api.admin.users.status');
+
+
+        // RESET USER PASSWORD
+        Route::patch(
+            '/api/admin/users/{user}/password',
+            [UserManagementController::class, 'resetPassword']
+        )->name('api.admin.users.password');
+
+    });
+
+
+    /*
+|--------------------------------------------------------------------------
+| ROLE MANAGEMENT
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('can:manage-roles')->group(function () {
+
+    // ROLE MANAGEMENT PAGE
+    Route::get(
+        '/admin/role-management',
+        [RoleManagementController::class, 'index']
+    )->name('RoleManagement');
+
+
+    // GET USERS WITH ROLES
+    Route::get(
+        '/api/admin/role-management/users',
+        [RoleManagementController::class, 'users']
+    )->name('api.admin.role-management.users');
+
+
+    // GET AVAILABLE ROLES
+    Route::get(
+        '/api/admin/role-management/roles',
+        [RoleManagementController::class, 'roles']
+    )->name('api.admin.role-management.roles');
+
+
+    // GET USER ASSIGNED ROLES
+    Route::get(
+        '/api/admin/role-management/users/{user}/roles',
+        [RoleManagementController::class, 'userRoles']
+    )->name('api.admin.role-management.user-roles');
+
+
+    // ASSIGN / REMOVE USER ROLE
     Route::patch(
-        '/api/admin/users/{user}/password',
-        [UserManagementController::class, 'resetPassword']
-    )->name('api.admin.users.password');
+        '/api/admin/role-management/users/{user}/roles',
+        [RoleManagementController::class, 'updateRole']
+    )->name('api.admin.role-management.update-role');
 
 });
+
+
     /*
     |--------------------------------------------------------------------------
     | LOGOUT

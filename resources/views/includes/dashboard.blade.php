@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="auth-permissions-url" content="{{ route('api.auth.permissions') }}">
+    <meta name="role-management-users-url" content="{{ route('api.admin.role-management.users') }}">
+    <meta name="role-management-roles-url" content="{{ route('api.admin.role-management.roles') }}">
+    <meta name="role-management-user-roles-url" content="{{ url('/api/admin/role-management/users') }}">
+    <meta name="role-management-update-role-url" content="{{ url('/api/admin/role-management/users') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ePayroll - Dashboard</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])

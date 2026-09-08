@@ -556,9 +556,9 @@
 
                     <!-- ROLE MANAGEMENT -->
 
-                    <a href="#"
+                    <a href="{{ route('RoleManagement') }}"
                        class="tab-link block px-3 py-2 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md cursor-pointer"
-                       data-page="{{ url('/configuration/role-management') }}"
+                       data-page="{{ url('/admin/role-management') }}"
                        data-tab-id="role-management"
                        data-tab-title="Role Management"
                        data-tab-icon="fa-solid fa-user-shield">

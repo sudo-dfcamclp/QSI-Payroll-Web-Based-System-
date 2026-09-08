@@ -30,5 +30,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-users', function (User $user): bool {
             return $user->hasRoleId(1);
         });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ROLE MANAGEMENT AUTHORIZATION
+        |--------------------------------------------------------------------------
+        */
+
+        Gate::define('manage-roles', function (User $user): bool {
+            return $user->hasRoleId(1);
+        });
     }
 }
