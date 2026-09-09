@@ -1,322 +1,143 @@
+import { initUserManagementDelete } from './UserManagementDelete';
+
 export async function init(panel) {
-    // Elements
+    // Get elements
     const userGrid = panel.querySelector('#userGrid');
     const emptyState = panel.querySelector('#emptyState');
     const userSearch = panel.querySelector('#userSearch');
     const statusFilter = panel.querySelector('#statusFilter');
     const pagination = panel.querySelector('#pagination');
+    const activeUserTab = panel.querySelector('#activeUserTab');
+    const deletedUserTab = panel.querySelector('#deletedUserTab');
+    const activeUsersContent = panel.querySelector('#activeUsersContent');
+    const deletedUsersContent = panel.querySelector('#deletedUsersContent');
 
     if (!userGrid) {
-        console.error('UserManagement: #userGrid was not found.');
         return;
     }
 
-    // API URLs
+    // Get API URLs
     const usersUrl = userGrid.dataset.usersUrl;
     const statusBaseUrl = userGrid.dataset.statusUrl;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-    // CSRF token
-    const csrfToken = document
-        .querySelector('meta[name="csrf-token"]')
-        ?.getAttribute('content');
-
-    if (!csrfToken) {
-        console.error('UserManagement: CSRF token was not found.');
-
-        await Swal.fire({
-            icon: 'error',
-            title: 'Security Error',
-            text: 'CSRF token was not found. Please refresh the page.',
-            confirmButtonText: 'OK',
-            buttonsStyling: false,
-            customClass: {
-                confirmButton:
-                    'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-            }
-        });
-
-        return;
-    }
-
-    // State
     let users = [];
     let currentPage = 1;
+    let searchTimer = null;
 
-    // Initialize
-    await loadUsers(1);
+    const deleteManager = initUserManagementDelete(panel);
 
-    // Load users
+    // Load active users
     async function loadUsers(page = 1) {
-        try {
-            currentPage = page;
+        currentPage = page;
+        showLoading();
 
+        try {
             const params = new URLSearchParams({
                 page: String(page),
-                search: userSearch?.value?.trim() || '',
+                search: userSearch?.value.trim() || '',
                 status: statusFilter?.value || 'all'
             });
 
-            const response = await fetch(
-                `${usersUrl}?${params.toString()}`,
-                {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+            const response = await fetch(`${usersUrl}?${params.toString()}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-            );
+            });
 
             const data = await parseJsonResponse(response);
 
-            if (!response.ok) {
-                throw new Error(
-                    getErrorMessage(
-                        data,
-                        `Failed to load users. HTTP ${response.status}`
-                    )
-                );
+            if (!response.ok || !data.success) {
+                throw new Error(getErrorMessage(data, 'Unable to load users.'));
             }
 
-            if (!data.success) {
-                throw new Error(
-                    data.message || 'Failed to load users.'
-                );
+            users = Array.isArray(data.users) ? data.users : [];
+
+            renderUsers();
+            renderPagination(data.pagination);
+
+            if (users.length === 0) {
+                showEmpty();
+            } else {
+                showUsers();
             }
-
-            users = Array.isArray(data.users)
-                ? data.users
-                : [];
-
-            renderUsers(data.pagination);
-
         } catch (error) {
-            console.error(
-                'UserManagement: Failed to load users:',
-                error
-            );
-
-            userGrid.innerHTML = '';
-
-            if (pagination) {
-                pagination.innerHTML = '';
-                pagination.classList.add('hidden');
-            }
-
-            emptyState?.classList.remove('hidden');
-
-            const emptyTitle =
-                emptyState?.querySelector('h3');
-
-            const emptyDescription =
-                emptyState?.querySelector('p');
-
-            if (emptyTitle) {
-                emptyTitle.textContent =
-                    'Unable to load users';
-            }
-
-            if (emptyDescription) {
-                emptyDescription.textContent =
-                    error.message ||
-                    'Please refresh the page and try again.';
-            }
+            showError(error.message);
         }
     }
 
-    // Render users
-    function renderUsers(paginationData) {
-        userGrid.innerHTML = '';
-
-        if (users.length === 0) {
-            emptyState?.classList.remove('hidden');
-
-            const emptyTitle =
-                emptyState?.querySelector('h3');
-
-            const emptyDescription =
-                emptyState?.querySelector('p');
-
-            if (emptyTitle) {
-                emptyTitle.textContent = 'No users found';
-            }
-
-            if (emptyDescription) {
-                emptyDescription.textContent =
-                    'Try changing your search or status filter.';
-            }
-
-            if (pagination) {
-                pagination.innerHTML = '';
-                pagination.classList.add('hidden');
-            }
-
+    // Render active users
+    function renderUsers() {
+        if (!userGrid) {
             return;
         }
 
-        emptyState?.classList.add('hidden');
-
-        users.forEach(user => {
-            userGrid.insertAdjacentHTML(
-                'beforeend',
-                createUserCard(user)
-            );
-        });
-
-        renderPagination(paginationData);
+        userGrid.innerHTML = users.map(createUserCard).join('');
     }
 
-    // Render pagination
+    // Render active pagination
     function renderPagination(data) {
-        if (!pagination || !data) {
+        if (!pagination) {
             return;
         }
 
-        const current = Number(
-            data.current_page || 1
-        );
-
-        const last = Number(
-            data.last_page || 1
-        );
-
-        const from = Number(
-            data.from || 0
-        );
-
-        const to = Number(
-            data.to || 0
-        );
-
-        const total = Number(
-            data.total || 0
-        );
-
-        if (last <= 1) {
+        if (!data || data.last_page <= 1) {
             pagination.innerHTML = '';
-            pagination.classList.add('hidden');
             return;
         }
-
-        pagination.classList.remove('hidden');
 
         pagination.innerHTML = `
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-5 border-t border-gray-100">
+            <div class="flex items-center justify-between mt-6">
                 <p class="text-sm text-gray-500">
-                    Showing
-                    <span class="font-medium text-gray-700">${from}</span>
-                    to
-                    <span class="font-medium text-gray-700">${to}</span>
-                    of
-                    <span class="font-medium text-gray-700">${total}</span>
-                    users
+                    Showing ${escapeHtml(String(data.from || 0))} to ${escapeHtml(String(data.to || 0))} of ${escapeHtml(String(data.total || 0))} users
                 </p>
-
-                <div class="flex items-center gap-1">
-                    <button
-                        type="button"
-                        data-page="${current - 1}"
-                        class="pagination-button px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer ${current === 1 ? 'opacity-50 pointer-events-none' : ''}"
-                        ${current === 1 ? 'disabled' : ''}
-                    >
-                        <i class="fa-solid fa-chevron-left text-xs mr-1"></i>
-                        Previous
-                    </button>
-
-                    ${createPageButtons(current, last)}
-
-                    <button
-                        type="button"
-                        data-page="${current + 1}"
-                        class="pagination-button px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer ${current === last ? 'opacity-50 pointer-events-none' : ''}"
-                        ${current === last ? 'disabled' : ''}
-                    >
-                        Next
-                        <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
-                    </button>
+                <div class="flex items-center gap-2">
+                    ${createPageButtons(data)}
                 </div>
             </div>
         `;
     }
 
-    // Create pagination buttons
-    function createPageButtons(current, last) {
+    // Create active pagination buttons
+    function createPageButtons(data) {
         const buttons = [];
+        const current = Number(data.current_page);
+        const last = Number(data.last_page);
 
-        let start = Math.max(
-            1,
-            current - 2
-        );
-
-        let end = Math.min(
-            last,
-            current + 2
-        );
-
-        if (current <= 3) {
-            start = 1;
-            end = Math.min(5, last);
-        }
-
-        if (current >= last - 2) {
-            start = Math.max(1, last - 4);
-            end = last;
-        }
-
-        if (start > 1) {
+        if (current > 1) {
             buttons.push(`
-                <button
-                    type="button"
-                    data-page="1"
-                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer"
-                >
-                    1
+                <button type="button" data-page="${current - 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
             `);
+        }
 
-            if (start > 2) {
+        for (let page = 1; page <= last; page++) {
+            if (page === 1 || page === last || Math.abs(page - current) <= 1) {
                 buttons.push(`
-                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
+                    <button type="button" data-page="${page}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border ${page === current ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition cursor-pointer">
+                        ${page}
+                    </button>
+                `);
+            } else if (
+                (page === current - 2 && current > 3) ||
+                (page === current + 2 && current < last - 2)
+            ) {
+                buttons.push(`
+                    <span class="w-9 h-9 flex items-center justify-center text-gray-400">
                         ...
                     </span>
                 `);
             }
         }
 
-        for (let page = start; page <= end; page++) {
-            const activeClass =
-                page === current
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'text-gray-600 hover:bg-gray-50';
-
+        if (current < last) {
             buttons.push(`
-                <button
-                    type="button"
-                    data-page="${page}"
-                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium transition cursor-pointer ${activeClass}"
-                >
-                    ${page}
-                </button>
-            `);
-        }
-
-        if (end < last) {
-            if (end < last - 1) {
-                buttons.push(`
-                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">
-                        ...
-                    </span>
-                `);
-            }
-
-            buttons.push(`
-                <button
-                    type="button"
-                    data-page="${last}"
-                    class="pagination-button w-9 h-9 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer"
-                >
-                    ${last}
+                <button type="button" data-page="${current + 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
             `);
         }
@@ -324,363 +145,167 @@ export async function init(panel) {
         return buttons.join('');
     }
 
-    // Create user card
+    // Create active user card
     function createUserCard(user) {
         const userId = user.user_id;
+        const username = escapeHtml(user.username || '');
+        const email = escapeHtml(user.email || '');
+        const status = String(user.status || 'pending').toLowerCase();
+        const initials = getInitials(user.username || user.email || 'U');
 
-        const username = escapeHtml(
-            user.username || 'Unknown User'
-        );
+        let statusClass = 'bg-yellow-50 text-yellow-700';
+        let statusIcon = 'fa-clock';
 
-        const email = escapeHtml(
-            user.email || 'No email'
-        );
+        if (status === 'active') {
+            statusClass = 'bg-green-50 text-green-700';
+            statusIcon = 'fa-circle-check';
+        }
 
-        const status = String(
-            user.status || ''
-        ).trim().toLowerCase();
-
-        const initials = getInitials(
-            user.username || ''
-        );
-
-        const statusLabel =
-            formatStatusLabel(status);
-
-        const statusClasses =
-            getStatusClasses(status);
-
-        const isActive =
-            status === 'active';
-
-        const actionLabel = isActive
-            ? 'Disable Account'
-            : 'Activate Account';
-
-        const actionIcon = isActive
-            ? 'fa-user-slash'
-            : 'fa-user-check';
+        if (status === 'disabled') {
+            statusClass = 'bg-red-50 text-red-700';
+            statusIcon = 'fa-circle-xmark';
+        }
 
         return `
-            <div
-                class="relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition"
-                data-user-id="${escapeHtml(String(userId))}"
-            >
-                <div class="absolute top-4 right-4">
-                    <button
-                        type="button"
-                        class="user-menu-button w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
-                        data-user-menu-button
-                        aria-label="User actions"
-                    >
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </button>
-
-                    <div
-                        class="user-menu hidden absolute right-0 top-10 z-50 w-48 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden"
-                    >
-                        <button
-                            type="button"
-                            class="user-status-action w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                            data-user-action="status"
-                            data-user-id="${escapeHtml(String(userId))}"
-                        >
-                            <i class="fa-solid ${actionIcon} w-4 text-gray-400"></i>
-                            <span>${actionLabel}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="user-reset-password w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                            data-user-action="reset-password"
-                            data-user-id="${escapeHtml(String(userId))}"
-                        >
-                            <i class="fa-solid fa-key w-4 text-gray-400"></i>
-                            <span>Reset Password</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="user-delete-action w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition cursor-pointer"
-                            data-user-action="delete"
-                            data-user-id="${escapeHtml(String(userId))}"
-                        >
-                            <i class="fa-solid fa-trash w-4"></i>
-                            <span>Delete User</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4 pr-8">
-                    <div
-                        class="flex-shrink-0 w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-lg uppercase"
-                    >
-                        ${escapeHtml(initials)}
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                        <h3
-                            class="font-semibold text-gray-800 truncate"
-                            title="${username}"
-                        >
-                            ${username}
-                        </h3>
-
-                        <p
-                            class="text-sm text-gray-400 truncate mt-0.5"
-                            title="${email}"
-                        >
-                            ${email}
-                        </p>
-
-                        <div class="mt-2">
-                            <span
-                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusClasses}"
-                            >
-                                <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
-                                ${escapeHtml(statusLabel)}
-                            </span>
+            <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5" data-user-card data-user-type="active" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center font-semibold shrink-0">
+                            ${initials}
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-semibold text-gray-800 truncate">
+                                ${username}
+                            </h3>
+                            <p class="text-xs text-gray-500 truncate mt-1">
+                                ${email}
+                            </p>
                         </div>
                     </div>
+                    <div class="relative">
+                        <button type="button" class="user-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition cursor-pointer" data-user-menu-button>
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <div class="user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
+                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer" data-user-action="status" data-user-id="${escapeHtml(String(userId))}">
+                                <i class="fa-solid ${status === 'active' ? 'fa-user-slash' : 'fa-user-check'} w-4"></i>
+                                <span>${status === 'active' ? 'Disable User' : 'Activate User'}</span>
+                            </button>
+                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer" data-user-action="reset-password" data-user-id="${escapeHtml(String(userId))}">
+                                <i class="fa-solid fa-key w-4"></i>
+                                <span>Reset Password</span>
+                            </button>
+                            <button type="button" class="user-delete-action w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition cursor-pointer" data-user-action="delete" data-user-id="${escapeHtml(String(userId))}">
+                                <i class="fa-solid fa-trash w-4"></i>
+                                <span>Delete User</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-5">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${statusClass}">
+                        <i class="fa-solid ${statusIcon}"></i>
+                        ${escapeHtml(status.charAt(0).toUpperCase() + status.slice(1))}
+                    </span>
                 </div>
             </div>
         `;
     }
 
-    // Format status label
-    function formatStatusLabel(status) {
-        const value = String(status || '').trim();
+    // Show loading state
+    function showLoading() {
+        userGrid.classList.add('opacity-50', 'pointer-events-none');
 
-        if (!value) {
-            return 'Unknown';
-        }
-
-        return value
-            .replace(/[_-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .replace(/\b\w/g, character => character.toUpperCase());
-    }
-
-    // Get status classes
-    function getStatusClasses(status) {
-        const statusClasses = {
-            active:
-                'bg-green-50 text-green-600 border-green-100',
-            pending:
-                'bg-yellow-50 text-yellow-600 border-yellow-100',
-            disabled:
-                'bg-red-50 text-red-600 border-red-100'
-        };
-
-        return statusClasses[status]
-            || 'bg-gray-50 text-gray-600 border-gray-100';
-    }
-
-    // Search
-    userSearch?.addEventListener(
-        'input',
-        debounce(() => {
-            loadUsers(1);
-        }, 300)
-    );
-
-    // Status filter
-    statusFilter?.addEventListener(
-        'change',
-        () => {
-            loadUsers(1);
-        }
-    );
-
-    // Pagination
-    pagination?.addEventListener(
-        'click',
-        async event => {
-            const button =
-                event.target.closest('.pagination-button');
-
-            if (!button) {
-                return;
-            }
-
-            const page = Number(
-                button.dataset.page
-            );
-
-            if (!page || page === currentPage) {
-                return;
-            }
-
-            await loadUsers(page);
-
-            userGrid.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    );
-
-    // Debounce
-    function debounce(callback, delay) {
-        let timeout;
-
-        return (...args) => {
-            clearTimeout(timeout);
-
-            timeout = setTimeout(() => {
-                callback(...args);
-            }, delay);
-        };
-    }
-
-    // Close menus
-    function closeMenus(exceptMenu = null) {
-        panel
-            .querySelectorAll('.user-menu')
-            .forEach(menu => {
-                if (menu !== exceptMenu) {
-                    menu.classList.add('hidden');
-                }
-            });
-    }
-
-    // Document click
-    document.addEventListener(
-        'click',
-        handleDocumentClick
-    );
-
-    function handleDocumentClick(event) {
-        const menuButton =
-            event.target.closest(
-                '[data-user-menu-button]'
-            );
-
-        if (
-            menuButton &&
-            panel.contains(menuButton)
-        ) {
-            const menu = menuButton
-                .closest('.relative')
-                ?.querySelector('.user-menu');
-
-            if (!menu) {
-                return;
-            }
-
-            const isHidden =
-                menu.classList.contains('hidden');
-
-            closeMenus(
-                isHidden ? menu : null
-            );
-
-            if (isHidden) {
-                menu.classList.remove('hidden');
-            } else {
-                menu.classList.add('hidden');
-            }
-
-            return;
-        }
-
-        if (
-            !event.target.closest('.user-menu') &&
-            !event.target.closest('[data-user-menu-button]')
-        ) {
-            closeMenus();
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
         }
     }
 
-    // Action delegation
-    userGrid.addEventListener(
-        'click',
-        async event => {
-            const actionButton =
-                event.target.closest(
-                    '[data-user-action]'
-                );
+    // Show users
+    function showUsers() {
+        userGrid.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
 
-            if (!actionButton) {
-                return;
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+    }
+
+    // Show empty state
+    function showEmpty() {
+        userGrid.classList.add('hidden');
+        userGrid.classList.remove('opacity-50', 'pointer-events-none');
+
+        if (pagination) {
+            pagination.innerHTML = '';
+        }
+
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+        }
+    }
+
+    // Show error state
+    function showError(message) {
+        userGrid.innerHTML = '';
+        userGrid.classList.remove('opacity-50', 'pointer-events-none');
+        userGrid.classList.add('hidden');
+
+        if (pagination) {
+            pagination.innerHTML = '';
+        }
+
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+
+            const title = emptyState.querySelector('h3');
+            const text = emptyState.querySelector('p');
+
+            if (title) {
+                title.textContent = 'Unable to load users';
             }
 
-            const userId =
-                actionButton.dataset.userId;
-
-            const action =
-                actionButton.dataset.userAction;
-
-            closeMenus();
-
-            if (!userId) {
-                return;
-            }
-
-            if (action === 'status') {
-                await handleStatusAction(userId);
-                return;
-            }
-
-            if (action === 'reset-password') {
-                await handleResetPassword(userId);
-                return;
-            }
-
-            if (action === 'delete') {
-                await handleDeleteAction(userId);
+            if (text) {
+                text.textContent = message || 'Something went wrong while loading the users.';
             }
         }
-    );
+    }
 
-    // Status action
+    // Close active menus
+    function closeMenus() {
+        panel.querySelectorAll('.user-menu').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    }
+
+    // Handle active status action
     async function handleStatusAction(userId) {
-        const user = users.find(
-            item =>
-                String(item.user_id) ===
-                String(userId)
-        );
+        const user = users.find(item => Number(item.user_id) === Number(userId));
 
         if (!user) {
             return;
         }
 
-        const status = String(
-            user.status || ''
-        ).trim().toLowerCase();
+        const nextStatus = user.status === 'active' ? 'disabled' : 'active';
+        const actionText = nextStatus === 'active' ? 'activate' : 'disable';
 
-        const isActive =
-            status === 'active';
+        if (window.Swal) {
+            const result = await Swal.fire({
+                title: `${nextStatus === 'active' ? 'Activate' : 'Disable'} User?`,
+                text: `Are you sure you want to ${actionText} ${user.username}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: nextStatus === 'active' ? 'Activate' : 'Disable',
+                cancelButtonText: 'Cancel'
+            });
 
-        const title = isActive
-            ? 'Do you want to disable this user?'
-            : 'Do you want to activate this user?';
-
-        const confirmText = isActive
-            ? 'Yes, Disable!'
-            : 'Yes, Activate!';
-
-        const result = await Swal.fire({
-            icon: 'warning',
-            title,
-            text: isActive
-                ? 'This account will no longer be active.'
-                : 'This account will be activated again.',
-            showCancelButton: true,
-            confirmButtonText: confirmText,
-            cancelButtonText: 'No, Cancel',
-            reverseButtons: true,
-            buttonsStyling: false,
-            customClass: {
-                actions: 'gap-3',
-                confirmButton:
-                    'px-5 py-2.5 rounded-lg bg-red-700 hover:bg-red-800 text-white font-medium transition cursor-pointer',
-                cancelButton:
-                    'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
+            if (!result.isConfirmed) {
+                return;
             }
-        });
-
-        if (!result.isConfirmed) {
+        } else if (!window.confirm(`Are you sure you want to ${actionText} ${user.username}?`)) {
             return;
         }
 
@@ -689,393 +314,272 @@ export async function init(panel) {
 
     // Update user status
     async function updateUserStatus(userId) {
-        const statusUrl =
-            `${statusBaseUrl}/${encodeURIComponent(userId)}/status`;
-
         try {
-            Swal.fire({
-                title: 'Updating account...',
-                text: 'Please wait.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
+            const response = await fetch(`${statusBaseUrl}/${encodeURIComponent(userId)}/status`, {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
 
-            const response = await fetch(
-                statusUrl,
-                {
-                    method: 'PATCH',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken
-                    }
-                }
-            );
+            const data = await parseJsonResponse(response);
 
-            const data =
-                await parseJsonResponse(response);
-
-            if (!response.ok) {
-                throw new Error(
-                    getErrorMessage(
-                        data,
-                        `Request failed with HTTP ${response.status}.`
-                    )
-                );
+            if (!response.ok || !data.success) {
+                throw new Error(getErrorMessage(data, 'Unable to update user status.'));
             }
-
-            if (!data.success) {
-                throw new Error(
-                    data.message ||
-                    'Failed to update user status.'
-                );
-            }
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text:
-                    data.message ||
-                    'User status updated successfully.',
-                confirmButtonText: 'OK',
-                buttonsStyling: false,
-                customClass: {
-                    confirmButton:
-                        'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-                }
-            });
 
             await loadUsers(currentPage);
 
+            if (window.Swal) {
+                await Swal.fire({
+                    title: 'Success',
+                    text: data.message || 'User status updated successfully.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
         } catch (error) {
-            console.error(
-                'UserManagement: Status update failed:',
-                error
-            );
-
-            await Swal.fire({
-                icon: 'error',
-                title: 'Update Failed',
-                text:
-                    error.message ||
-                    'Unable to update user status.',
-                confirmButtonText: 'OK',
-                buttonsStyling: false,
-                customClass: {
-                    confirmButton:
-                        'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-                }
-            });
+            if (window.Swal) {
+                await Swal.fire({
+                    title: 'Error',
+                    text: error.message,
+                    icon: 'error'
+                });
+            } else {
+                window.alert(error.message);
+            }
         }
     }
 
-    // Reset password
+    // Handle password reset
     async function handleResetPassword(userId) {
-        const user = users.find(
-            item =>
-                String(item.user_id) ===
-                String(userId)
-        );
+        const user = users.find(item => Number(item.user_id) === Number(userId));
 
         if (!user) {
             return;
         }
 
-        const username = escapeHtml(
-            user.username || 'this user'
-        );
+        let password = '';
+        let confirmedPassword = '';
 
-        const confirmation = await Swal.fire({
-            icon: 'warning',
-            title: 'Do you want to reset this account password?',
-            html: `
-                <p class="text-sm text-gray-500">
-                    Account:
-                    <strong>${username}</strong>
-                </p>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Reset!',
-            cancelButtonText: 'No, Cancel',
-            reverseButtons: true,
-            buttonsStyling: false,
-            customClass: {
-                actions: 'gap-3',
-                confirmButton:
-                    'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer',
-                cancelButton:
-                    'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
+        if (window.Swal) {
+            const result = await Swal.fire({
+                title: 'Reset Password',
+                html: `
+                    <input id="resetPassword" type="password" class="swal2-input" placeholder="New password">
+                    <input id="resetPasswordConfirm" type="password" class="swal2-input" placeholder="Confirm password">
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Reset Password',
+                cancelButtonText: 'Cancel',
+                preConfirm: () => {
+                    password = document.querySelector('#resetPassword')?.value || '';
+                    confirmedPassword = document.querySelector('#resetPasswordConfirm')?.value || '';
+
+                    if (password.length < 8) {
+                        Swal.showValidationMessage('Password must be at least 8 characters.');
+                        return false;
+                    }
+
+                    if (password !== confirmedPassword) {
+                        Swal.showValidationMessage('Passwords do not match.');
+                        return false;
+                    }
+
+                    return true;
+                }
+            });
+
+            if (!result.isConfirmed) {
+                return;
             }
-        });
+        } else {
+            password = window.prompt('Enter new password:') || '';
 
-        if (!confirmation.isConfirmed) {
-            return;
+            if (password.length < 8) {
+                window.alert('Password must be at least 8 characters.');
+                return;
+            }
+
+            confirmedPassword = window.prompt('Confirm new password:') || '';
+
+            if (password !== confirmedPassword) {
+                window.alert('Passwords do not match.');
+                return;
+            }
         }
 
-        const passwordResult = await Swal.fire({
-            title: 'Reset Password',
-            html: `
-                <div class="text-left">
-                    <label
-                        for="swal-new-password"
-                        class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                        New Password
-                    </label>
-
-                    <input
-                        id="swal-new-password"
-                        type="password"
-                        class="swal2-input !m-0 !w-full"
-                        placeholder="Enter new password"
-                        autocomplete="new-password"
-                    >
-
-                    <label
-                        for="swal-confirm-password"
-                        class="block text-sm font-medium text-gray-700 mt-4 mb-1"
-                    >
-                        Confirm Password
-                    </label>
-
-                    <input
-                        id="swal-confirm-password"
-                        type="password"
-                        class="swal2-input !m-0 !w-full"
-                        placeholder="Confirm new password"
-                        autocomplete="new-password"
-                    >
-
-                    <p class="text-xs text-gray-400 mt-3">
-                        Password must be at least 8 characters.
-                    </p>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Reset Password',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true,
-            focusConfirm: false,
-            buttonsStyling: false,
-            customClass: {
-                actions: 'gap-3',
-                confirmButton:
-                    'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer',
-                cancelButton:
-                    'px-5 py-2.5 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-medium transition cursor-pointer'
-            },
-            preConfirm: () => {
-                const password = document
-                    .getElementById('swal-new-password')
-                    ?.value || '';
-
-                const passwordConfirmation = document
-                    .getElementById('swal-confirm-password')
-                    ?.value || '';
-
-                if (!password) {
-                    Swal.showValidationMessage(
-                        'Please enter a new password.'
-                    );
-                    return false;
-                }
-
-                if (password.length < 8) {
-                    Swal.showValidationMessage(
-                        'Password must be at least 8 characters.'
-                    );
-                    return false;
-                }
-
-                if (!passwordConfirmation) {
-                    Swal.showValidationMessage(
-                        'Please confirm the new password.'
-                    );
-                    return false;
-                }
-
-                if (
-                    password !==
-                    passwordConfirmation
-                ) {
-                    Swal.showValidationMessage(
-                        'Passwords do not match.'
-                    );
-                    return false;
-                }
-
-                return {
-                    password,
-                    passwordConfirmation
-                };
-            }
-        });
-
-        if (!passwordResult.isConfirmed) {
-            return;
-        }
-
-        await resetUserPassword(
-            userId,
-            passwordResult.value.password,
-            passwordResult.value.passwordConfirmation
-        );
+        await resetUserPassword(userId, password, confirmedPassword);
     }
 
-    // Reset user password API
-    async function resetUserPassword(
-        userId,
-        password,
-        passwordConfirmation
-    ) {
-        const passwordUrl =
-            `${statusBaseUrl}/${encodeURIComponent(userId)}/password`;
-
+    // Reset user password
+    async function resetUserPassword(userId, password, confirmedPassword) {
         try {
-            Swal.fire({
-                title: 'Resetting password...',
-                text: 'Please wait.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+            const response = await fetch(`${statusBaseUrl}/${encodeURIComponent(userId)}/password`, {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    password,
+                    password_confirmation: confirmedPassword
+                })
             });
 
-            const response = await fetch(
-                passwordUrl,
-                {
-                    method: 'PATCH',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({
-                        password,
-                        password_confirmation:
-                            passwordConfirmation
-                    })
-                }
-            );
+            const data = await parseJsonResponse(response);
 
-            const data =
-                await parseJsonResponse(response);
-
-            if (!response.ok) {
-                throw new Error(
-                    getErrorMessage(
-                        data,
-                        `Request failed with HTTP ${response.status}.`
-                    )
-                );
+            if (!response.ok || !data.success) {
+                throw new Error(getErrorMessage(data, 'Unable to reset user password.'));
             }
 
-            if (!data.success) {
-                throw new Error(
-                    data.message ||
-                    'Failed to reset password.'
-                );
+            if (window.Swal) {
+                await Swal.fire({
+                    title: 'Success',
+                    text: data.message || 'User password reset successfully.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Password Reset',
-                text:
-                    data.message ||
-                    'User password reset successfully.',
-                confirmButtonText: 'OK',
-                buttonsStyling: false,
-                customClass: {
-                    confirmButton:
-                        'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-                }
-            });
-
         } catch (error) {
-            console.error(
-                'UserManagement: Password reset failed:',
-                error
-            );
+            if (window.Swal) {
+                await Swal.fire({
+                    title: 'Error',
+                    text: error.message,
+                    icon: 'error'
+                });
+            } else {
+                window.alert(error.message);
+            }
+        }
+    }
 
-            await Swal.fire({
-                icon: 'error',
-                title: 'Reset Failed',
-                text:
-                    error.message ||
-                    'Unable to reset user password.',
-                confirmButtonText: 'OK',
-                buttonsStyling: false,
-                customClass: {
-                    confirmButton:
-                        'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-                }
+    // Handle tab switching
+    function initTabs() {
+        if (activeUserTab) {
+            activeUserTab.addEventListener('click', async () => {
+                activeUserTab.classList.add('text-green-600', 'font-semibold');
+                activeUserTab.classList.remove('text-gray-500', 'font-medium');
+
+                deletedUserTab?.classList.remove('text-green-600', 'font-semibold');
+                deletedUserTab?.classList.add('text-gray-500', 'font-medium');
+
+                activeUserTab.querySelector('span')?.classList.remove('hidden');
+                deletedUserTab?.querySelector('span')?.classList.add('hidden');
+
+                activeUsersContent?.classList.remove('hidden');
+                deletedUsersContent?.classList.add('hidden');
+
+                await loadUsers(currentPage);
+            });
+        }
+
+        if (deletedUserTab) {
+            deletedUserTab.addEventListener('click', async () => {
+                deletedUserTab.classList.add('text-green-600', 'font-semibold');
+                deletedUserTab.classList.remove('text-gray-500', 'font-medium');
+
+                activeUserTab?.classList.remove('text-green-600', 'font-semibold');
+                activeUserTab?.classList.add('text-gray-500', 'font-medium');
+
+                deletedUserTab.querySelector('span')?.classList.remove('hidden');
+                activeUserTab?.querySelector('span')?.classList.add('hidden');
+
+                deletedUsersContent?.classList.remove('hidden');
+                activeUsersContent?.classList.add('hidden');
+
+                await deleteManager.loadDeletedUsers(1);
             });
         }
     }
 
-    // Delete placeholder
-    async function handleDeleteAction(userId) {
-        const user = users.find(
-            item =>
-                String(item.user_id) ===
-                String(userId)
-        );
+    // Handle active search
+    function handleSearch() {
+        clearTimeout(searchTimer);
 
-        if (!user) {
+        searchTimer = setTimeout(() => {
+            loadUsers(1);
+        }, 300);
+    }
+
+    // Handle active pagination
+    function handlePagination(event) {
+        const button = event.target.closest('.user-page-button');
+
+        if (!button) {
             return;
         }
 
-        await Swal.fire({
-            icon: 'info',
-            title: 'Delete User',
-            text:
-                'Delete functionality is not implemented yet.',
-            confirmButtonText: 'OK',
-            buttonsStyling: false,
-            customClass: {
-                confirmButton:
-                    'px-5 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition cursor-pointer'
-            }
-        });
+        const page = Number(button.dataset.page);
+
+        if (!page || page === currentPage) {
+            return;
+        }
+
+        loadUsers(page);
     }
 
-    // Get initials
-    function getInitials(name) {
-        const value =
-            String(name || '').trim();
+    // Handle active actions
+    function handleActions(event) {
+        const menuButton = event.target.closest('[data-user-menu-button]');
 
-        if (!value) {
-            return 'U';
+        if (menuButton) {
+            event.stopPropagation();
+
+            const menu = menuButton.parentElement?.querySelector('.user-menu');
+
+            if (!menu) {
+                return;
+            }
+
+            const isHidden = menu.classList.contains('hidden');
+
+            closeMenus();
+
+            if (isHidden) {
+                menu.classList.remove('hidden');
+            }
+
+            return;
         }
 
-        const parts =
-            value.split(/\s+/).filter(Boolean);
+        const action = event.target.closest('[data-user-action]');
 
-        if (parts.length === 1) {
-            return parts[0]
-                .substring(0, 2)
-                .toUpperCase();
+        if (!action) {
+            return;
         }
 
-        return (
-            parts[0].charAt(0) +
-            parts[parts.length - 1].charAt(0)
-        ).toUpperCase();
+        const userId = action.dataset.userId;
+        const userAction = action.dataset.userAction;
+
+        closeMenus();
+
+        if (userAction === 'status') {
+            handleStatusAction(userId);
+        }
+
+        if (userAction === 'reset-password') {
+            handleResetPassword(userId);
+        }
+    }
+
+    // Handle delete refresh
+    function handleDeleteRefresh() {
+        loadUsers(currentPage);
     }
 
     // Escape HTML
     function escapeHtml(value) {
-        return String(value ?? '')
+        return String(value)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
@@ -1083,51 +587,68 @@ export async function init(panel) {
             .replace(/'/g, '&#039;');
     }
 
-    // Parse JSON response
-    async function parseJsonResponse(response) {
-        const contentType =
-            response.headers.get('content-type') || '';
+    // Get initials
+    function getInitials(value) {
+        const words = String(value).trim().split(/\s+/).filter(Boolean);
 
-        if (!contentType.includes('application/json')) {
-            const text = await response.text();
-
-            console.error(
-                'UserManagement: Expected JSON but received:',
-                text
-            );
-
-            throw new Error(
-                'The server returned an unexpected response.'
-            );
+        if (words.length === 0) {
+            return 'U';
         }
 
-        return await response.json();
+        if (words.length === 1) {
+            return words[0].substring(0, 2).toUpperCase();
+        }
+
+        return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
     }
 
-    // Error message
+    // Parse JSON response
+    async function parseJsonResponse(response) {
+        const text = await response.text();
+
+        try {
+            return text ? JSON.parse(text) : {};
+        } catch {
+            throw new Error(
+                response.status === 419
+                    ? 'Your session has expired. Please refresh the page.'
+                    : 'The server returned an invalid response.'
+            );
+        }
+    }
+
+    // Get API error message
     function getErrorMessage(data, fallback) {
-        if (
-            data &&
-            typeof data.message === 'string'
-        ) {
+        if (data?.message) {
             return data.message;
         }
 
-        if (
-            data &&
-            data.errors &&
-            typeof data.errors === 'object'
-        ) {
-            const messages = Object
-                .values(data.errors)
-                .flat()
-                .filter(Boolean);
+        if (data?.errors) {
+            const firstError = Object.values(data.errors).flat()[0];
 
-            if (messages.length > 0) {
-                return messages.join(' ');
+            if (firstError) {
+                return firstError;
             }
         }
 
         return fallback;
     }
+
+    // Initialize events
+    function initEvents() {
+        userSearch?.addEventListener('input', handleSearch);
+        statusFilter?.addEventListener('change', () => loadUsers(1));
+        pagination?.addEventListener('click', handlePagination);
+        userGrid.addEventListener('click', handleActions);
+        panel.addEventListener('click', event => {
+            if (!event.target.closest('[data-user-menu-button]') && !event.target.closest('.user-menu')) {
+                closeMenus();
+            }
+        });
+        panel.addEventListener('user-management:active-deleted', handleDeleteRefresh);
+    }
+
+    initTabs();
+    initEvents();
+    await loadUsers(1);
 }

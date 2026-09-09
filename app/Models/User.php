@@ -5,19 +5,18 @@ namespace App\Models;
 use App\Models\Role;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $table = 'users';
-
     protected $primaryKey = 'user_id';
-
     public $incrementing = true;
-
     protected $keyType = 'int';
+    const DELETED_AT = 'delete_at';
 
     protected $fillable = [
         'username',
@@ -34,15 +33,11 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'delete_at' => 'datetime',
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ROLES
-    |--------------------------------------------------------------------------
-    */
-
+    // Get user's roles
     public function roles()
     {
         return $this->belongsToMany(
@@ -53,24 +48,14 @@ class User extends Authenticatable
         )->withPivot('created_at');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CHECK SINGLE ROLE
-    |--------------------------------------------------------------------------
-    */
-
+    // Check if user has a role
     public function hasRoleId(int $roleId): bool
     {
         return $this->roles
             ->contains('role_id', $roleId);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CHECK MULTIPLE ROLES
-    |--------------------------------------------------------------------------
-    */
-
+    // Check if user has any role
     public function hasAnyRoleId(array $roleIds): bool
     {
         return $this->roles
@@ -78,3 +63,4 @@ class User extends Authenticatable
             ->isNotEmpty();
     }
 }
+

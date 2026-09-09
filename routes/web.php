@@ -107,6 +107,18 @@ Route::middleware('auth')->group(function () {
             [UserManagementController::class, 'users']
         )->name('api.admin.users');
 
+        // GET DELETED USERS
+         Route::get(
+            '/api/admin/users/deleted',
+            [UserManagementController::class, 'deletedUsers']
+         )->name('api.admin.users.deleted');
+
+         // FORCE DELETE USER
+        Route::delete(
+            '/api/admin/users/force-delete/{userId}',
+            [UserManagementController::class, 'forceDeleteUser']
+        )->name('api.admin.users.force-delete');
+
 
         // ACTIVATE / DISABLE USER
         Route::patch(
@@ -120,6 +132,13 @@ Route::middleware('auth')->group(function () {
             '/api/admin/users/{user}/password',
             [UserManagementController::class, 'resetPassword']
         )->name('api.admin.users.password');
+
+        // DELETE USER
+        Route::delete(
+        '/api/admin/users/{user}',
+        [UserManagementController::class, 'deleteUser']
+        )->name('api.admin.users.delete');
+
 
     });
 
