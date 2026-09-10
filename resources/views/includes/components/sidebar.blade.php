@@ -229,11 +229,21 @@
 
     <!-- Footer -->
     <div class="p-3 border-t border-gray-200 dark:border-gray-500 bg-gray-50 dark:bg-gray-600 shrink-0">
+<!-- Theme Toggle -->
+    <button id="themeToggleButton" type="button" class="group w-full flex items-center justify-between gap-3 px-3 py-2.5 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors mb-1 cursor-pointer text-left">
+    <div class="flex items-center gap-3 min-w-0">
+        <i id="themeToggleIcon" class="fa-solid fa-moon text-gray-500 dark:text-gray-300 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
-        <!-- Theme Toggle -->
-        <button id="themeToggleButton" type="button" class="w-full flex items-center gap-3 px-3 py-2.5 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors mb-1 cursor-pointer text-left">
-            <i id="themeToggleIcon" class="fa-solid fa-moon text-gray-500 dark:text-gray-300 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-            <span id="themeToggleText" class="sidebar-text whitespace-nowrap font-medium text-sm select-none">Dark Mode</span>
+        <span id="themeToggleText" class="sidebar-text whitespace-nowrap font-medium text-sm select-none">
+            Dark Mode
+        </span>
+    </div>
+
+    <div id="themeToggleSwitch" class="theme-switch relative w-10 h-5 bg-gray-300 dark:bg-gray-500 group-hover:bg-gray-400 rounded-full shrink-0 transition-colors duration-300 pointer-events-none">
+        <div id="themeToggleKnob" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300"></div>
+    </div>
+</button>
+
         </button>
 
         <!-- Settings -->
@@ -261,5 +271,21 @@
 <style>
     #sidebar.sidebar-mini .dropdown-chevron {
         display: none !important;
+    }
+
+    /* Theme Toggle - Minimized Sidebar */
+    #sidebar.sidebar-mini #themeToggleButton {
+        justify-content: center !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    #sidebar.sidebar-mini #themeToggleButton > div:first-child {
+        display: none !important;
+    }
+
+    #sidebar.sidebar-mini #themeToggleButton .theme-switch {
+        display: block !important;
+        margin: 0 auto !important;
     }
 </style>

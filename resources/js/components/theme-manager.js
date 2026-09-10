@@ -11,21 +11,31 @@ function applyTheme(theme) {
     updateThemeUI(theme === 'dark');
 }
 
-// Update the theme button UI
 function updateThemeUI(isDark) {
     const icon = document.getElementById('themeToggleIcon');
     const text = document.getElementById('themeToggleText');
+    const knob = document.getElementById('themeToggleKnob');
 
-    if (!icon || !text) return;
+    if (icon) {
+        if (isDark) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+        } else {
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
+        }
+    }
 
-    if (isDark) {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-        text.textContent = 'Light Mode';
-    } else {
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
-        text.textContent = 'Dark Mode';
+    if (text) {
+        text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
+
+    if (knob) {
+        if (isDark) {
+            knob.classList.add('translate-x-5');
+        } else {
+            knob.classList.remove('translate-x-5');
+        }
     }
 }
 
