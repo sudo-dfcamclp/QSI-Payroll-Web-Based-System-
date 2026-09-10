@@ -1,3 +1,5 @@
+import { toggleTheme } from './theme-manager.js';
+
 document.addEventListener('DOMContentLoaded', () => {
 
     const sidebar = document.getElementById('sidebar');
@@ -12,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarOverlay = document.getElementById('sidebarOverlay');
 
     const desktopCollapseButton = document.getElementById('desktopCollapseButton');
+    const themeToggleButton = document.getElementById('themeToggleButton');
+
+    themeToggleButton?.addEventListener('click', toggleTheme);
 
     if (!sidebar) return;
 

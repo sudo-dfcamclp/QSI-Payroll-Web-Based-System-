@@ -20,6 +20,28 @@ export function initUserManagementDelete(panel) {
     let deletedUsers = [];
     let deletedCurrentPage = 1;
 
+    // Check dark mode
+    function isDarkMode() {
+        return document.documentElement.classList.contains('dark');
+    }
+
+    // Get SweetAlert theme
+    function getSwalTheme() {
+        return isDarkMode()
+            ? {
+                background: '#374151',
+                color: '#f3f4f6',
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#4b5563'
+            }
+            : {
+                background: '#ffffff',
+                color: '#1f2937',
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#6b7280'
+            };
+    }
+
     // Load deleted users
     async function loadDeletedUsers(page = 1) {
         deletedCurrentPage = page;
@@ -73,27 +95,27 @@ export function initUserManagementDelete(panel) {
         const initials = getInitials(user.username || user.email || 'U');
 
         return `
-            <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5" data-user-card data-user-type="deleted" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
+            <div class="relative bg-white dark:bg-gray-700 rounded-2xl border border-gray-100 dark:border-gray-600 shadow-sm p-5" data-user-card data-user-type="deleted" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-11 h-11 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-semibold shrink-0">
+                        <div class="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center font-semibold shrink-0">
                             ${initials}
                         </div>
                         <div class="min-w-0">
-                            <h3 class="text-sm font-semibold text-gray-800 truncate">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                                 ${username}
                             </h3>
-                            <p class="text-xs text-gray-500 truncate mt-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-300 truncate mt-1">
                                 ${email}
                             </p>
                         </div>
                     </div>
                     <div class="relative">
-                        <button type="button" class="deleted-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition cursor-pointer" data-deleted-menu-button>
+                        <button type="button" class="deleted-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-100 transition cursor-pointer" data-deleted-menu-button>
                             <i class="fa-solid fa-ellipsis-vertical"></i>
                         </button>
-                        <div class="deleted-user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
-                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition cursor-pointer" data-deleted-action="force-delete" data-user-id="${escapeHtml(String(userId))}">
+                        <div class="deleted-user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white dark:bg-gray-700 rounded-xl border border-gray-100 dark:border-gray-600 shadow-lg overflow-hidden">
+                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer" data-deleted-action="force-delete" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid fa-trash w-4"></i>
                                 <span>Delete User</span>
                             </button>
@@ -101,7 +123,7 @@ export function initUserManagementDelete(panel) {
                     </div>
                 </div>
                 <div class="mt-5">
-                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-medium">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium">
                         <i class="fa-solid fa-trash-can"></i>
                         Deleted
                     </span>
@@ -123,7 +145,7 @@ export function initUserManagementDelete(panel) {
 
         deletedPagination.innerHTML = `
             <div class="flex items-center justify-between mt-6">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-300">
                     Showing ${escapeHtml(String(data.from || 0))} to ${escapeHtml(String(data.to || 0))} of ${escapeHtml(String(data.total || 0))} deleted users
                 </p>
                 <div class="flex items-center gap-2">
@@ -141,7 +163,7 @@ export function initUserManagementDelete(panel) {
 
         if (current > 1) {
             buttons.push(`
-                <button type="button" data-deleted-page="${current - 1}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                <button type="button" data-deleted-page="${current - 1}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
             `);
@@ -150,7 +172,7 @@ export function initUserManagementDelete(panel) {
         for (let page = 1; page <= last; page++) {
             if (page === 1 || page === last || Math.abs(page - current) <= 1) {
                 buttons.push(`
-                    <button type="button" data-deleted-page="${page}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border ${page === current ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition cursor-pointer">
+                    <button type="button" data-deleted-page="${page}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border ${page === current ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'} text-sm transition cursor-pointer">
                         ${page}
                     </button>
                 `);
@@ -159,7 +181,7 @@ export function initUserManagementDelete(panel) {
                 (page === current + 2 && current < last - 2)
             ) {
                 buttons.push(`
-                    <span class="w-9 h-9 flex items-center justify-center text-gray-400">
+                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 dark:text-gray-400">
                         ...
                     </span>
                 `);
@@ -168,7 +190,7 @@ export function initUserManagementDelete(panel) {
 
         if (current < last) {
             buttons.push(`
-                <button type="button" data-deleted-page="${current + 1}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                <button type="button" data-deleted-page="${current + 1}" class="deleted-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
             `);
@@ -188,6 +210,8 @@ export function initUserManagementDelete(panel) {
         const username = card.dataset.username || 'this user';
 
         if (window.Swal) {
+            const theme = getSwalTheme();
+
             const result = await Swal.fire({
                 title: 'Delete User?',
                 text: `${username} will be moved to Deleted Users.`,
@@ -195,7 +219,10 @@ export function initUserManagementDelete(panel) {
                 showCancelButton: true,
                 confirmButtonText: 'Delete User',
                 cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc2626'
+                background: theme.background,
+                color: theme.color,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: theme.cancelButtonColor
             });
 
             if (!result.isConfirmed) {
@@ -225,12 +252,18 @@ export function initUserManagementDelete(panel) {
             panel.dispatchEvent(new CustomEvent('user-management:active-deleted'));
 
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Deleted',
                     text: data.message || 'User account deleted successfully.',
                     icon: 'success',
                     timer: 1500,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor,
+                    cancelButtonColor: theme.cancelButtonColor
                 });
             }
         } catch (error) {
@@ -249,6 +282,8 @@ export function initUserManagementDelete(panel) {
         const username = card.dataset.username || 'this user';
 
         if (window.Swal) {
+            const theme = getSwalTheme();
+
             const result = await Swal.fire({
                 title: 'Permanently Delete User?',
                 html: `This will permanently delete <strong>${escapeHtml(username)}</strong>.<br>This action cannot be undone.`,
@@ -256,7 +291,10 @@ export function initUserManagementDelete(panel) {
                 showCancelButton: true,
                 confirmButtonText: 'Permanently Delete',
                 cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc2626'
+                background: theme.background,
+                color: theme.color,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: theme.cancelButtonColor
             });
 
             if (!result.isConfirmed) {
@@ -286,12 +324,18 @@ export function initUserManagementDelete(panel) {
             await loadDeletedUsers(deletedCurrentPage);
 
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Permanently Deleted',
                     text: data.message || 'User account permanently deleted.',
                     icon: 'success',
                     timer: 1500,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor,
+                    cancelButtonColor: theme.cancelButtonColor
                 });
             }
         } catch (error) {
@@ -429,10 +473,16 @@ export function initUserManagementDelete(panel) {
     // Show delete error
     function showError(message) {
         if (window.Swal) {
+            const theme = getSwalTheme();
+
             Swal.fire({
                 title: 'Error',
                 text: message,
-                icon: 'error'
+                icon: 'error',
+                background: theme.background,
+                color: theme.color,
+                confirmButtonColor: theme.confirmButtonColor,
+                cancelButtonColor: theme.cancelButtonColor
             });
         } else {
             window.alert(message);

@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex items-center justify-center min-h-[300px]">
                 <div class="text-center">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-green-600 mb-4"></i>
-                    <p class="text-gray-500">
+                    <p class="text-gray-500 dark:text-gray-300">
                         Loading ${escapeHtml(tabTitle)}...
                     </p>
                 </div>
@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex items-center justify-center min-h-[300px]">
                 <div class="text-center">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-green-600 mb-4"></i>
-                    <p class="text-gray-500">
+                    <p class="text-gray-500 dark:text-gray-300">
                         Loading ${escapeHtml(tabTitle)}...
                     </p>
                 </div>
@@ -907,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.type = 'button';
 
         button.className =
-            'tab-item flex items-center gap-3 px-5 py-4 text-base font-semibold text-gray-500 border-b-2 border-transparent hover:text-green-600 hover:bg-green-50 cursor-pointer whitespace-nowrap transition-colors select-none';
+            'tab-item flex items-center gap-3 px-5 py-4 text-base font-semibold text-gray-500 dark:text-gray-300 border-b-2 border-transparent hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer whitespace-nowrap transition-colors select-none';
 
         button.dataset.tabId = tabId;
         button.dataset.tabTitle = tabTitle;
@@ -919,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="pointer-events-none">
                 ${escapeHtml(tabTitle)}
             </span>
-            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-400 hover:text-red-500" title="Close tab">
+            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-500 text-gray-400 hover:text-red-400" title="Close tab">
                 <i class="fa-solid fa-xmark text-xs pointer-events-none"></i>
             </span>
         `;
@@ -942,11 +942,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 tab.classList.remove(
                     'active',
                     'text-green-600',
+                    'text-green-400',
                     'border-green-600'
                 );
 
                 tab.classList.add(
-                    'text-gray-500',
+                    'text-gray-400',
                     'border-transparent'
                 );
             }
@@ -970,14 +971,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (selectedTab) {
             selectedTab.classList.remove(
-                'text-gray-500',
+                'text-gray-400',
                 'border-transparent'
             );
 
             selectedTab.classList.add(
                 'active',
-                'text-green-600',
-                'border-green-600'
+                'text-green-400',
+                'border-green-500'
             );
         }
 
@@ -1039,14 +1040,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             panel.innerHTML = `
                 <div class="container mx-auto px-6 py-10">
-                    <div class="bg-white border border-red-200 rounded-xl p-8 text-center">
+                    <div class="bg-white dark:bg-gray-700 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
                         <div class="text-red-500 text-4xl mb-4">
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
-                        <h2 class="text-xl font-semibold text-gray-800 mb-2">
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
                             Unable to Load Page
                         </h2>
-                        <p class="text-gray-500 mb-4">
+                        <p class="text-gray-500 dark:text-gray-300 mb-4">
                             The ${escapeHtml(tabTitle)} page could not be loaded.
                         </p>
                         <button type="button" onclick="location.reload()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">

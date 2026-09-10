@@ -7,15 +7,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | CURRENT USER PERMISSIONS
-    |--------------------------------------------------------------------------
-    | Returns the currently authenticated user's identity and
-    | allowed tabs for the Tab Manager.
-    |--------------------------------------------------------------------------
-    */
-
+    // Return current user permissions
     public function permissions()
     {
         $user = Auth::user();
@@ -27,59 +19,87 @@ class AuthController extends Controller
             ], 401);
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | GET USER ROLES
-        |--------------------------------------------------------------------------
-        */
-
+        // Get all role IDs assigned to the current user
         $roleIds = $user->roles
             ->pluck('role_id')
+            ->map(fn ($roleId) => (int) $roleId)
             ->values()
             ->toArray();
-
 
         /*
         |--------------------------------------------------------------------------
         | ALLOWED TABS
         |--------------------------------------------------------------------------
-        | Role ID 1 = super_admin
+        | Permissions are ADDITIVE.
         |
-        | For now:
-        | - super_admin gets all registered tabs
-        | - other roles get employee tabs only
+        | If a user has multiple roles, the permissions of ALL roles
+        | will be combined.
         |
-        | We will make this more scalable when we build the
-        | proper role/permission management system.
+        | Example:
+        | HR + Payroll
+        |
+        | HR:
+        |   employee-info
+        |
+        | Payroll:
+        |   employee-payroll
+        |   first-last-cutoff
+        |
+        | Final:
+        |   employee-info
+        |   employee-payroll
+        |   first-last-cutoff
         |--------------------------------------------------------------------------
         */
 
-        if (in_array(1, $roleIds, true)) {
+        $allowedTabs = [];
 
-            $allowedTabs = [
+        // Super Admin
+        if (in_array(1, $roleIds, true)) {
+            $allowedTabs = array_merge($allowedTabs, [
                 'employee-info',
                 'employee-deduction',
+                'employee-payroll',
+                'first-last-cutoff',
                 'user-management',
                 'role-management',
                 'system-settings',
-            ];
-
-        } else {
-
-            $allowedTabs = [
-                'employee-info',
-                'employee-deduction',
-            ];
-
+            ]);
         }
 
+        // Payroll
+        if (in_array(2, $roleIds, true)) {
+            $allowedTabs = array_merge($allowedTabs, [
+                'employee-payroll',
+                'first-last-cutoff',
+            ]);
+        }
+
+        // Admin
+        if (in_array(3, $roleIds, true)) {
+            $allowedTabs = array_merge($allowedTabs, [
+                'employee-info',
+                'employee-deduction',
+            ]);
+        }
+
+        // HR
+        if (in_array(4, $roleIds, true)) {
+            $allowedTabs = array_merge($allowedTabs, [
+                'employee-info',
+            ]);
+        }
 
         /*
         |--------------------------------------------------------------------------
-        | RESPONSE
+        | REMOVE DUPLICATE TABS
+        |--------------------------------------------------------------------------
+        | If two roles provide the same permission, only one entry
+        | will be returned.
         |--------------------------------------------------------------------------
         */
+
+        $allowedTabs = array_values(array_unique($allowedTabs));
 
         return response()->json([
             'success' => true,
@@ -88,17 +108,13 @@ class AuthController extends Controller
                 'user_id' => $user->user_id,
             ],
 
+            'roles' => $roleIds,
+
             'allowed_tabs' => $allowedTabs,
         ]);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOGOUT
-    |--------------------------------------------------------------------------
-    */
-
+    // Logout authenticated user
     public function logout(Request $request)
     {
         Auth::logout();
@@ -109,3 +125,4 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 }
+

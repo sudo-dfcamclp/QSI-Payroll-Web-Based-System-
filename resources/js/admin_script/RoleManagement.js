@@ -22,6 +22,26 @@ export function init(panel){
     });
 }
 
+function isDarkMode(){
+    return document.documentElement.classList.contains('dark');
+}
+
+function getSwalTheme(){
+    return isDarkMode()
+        ?{
+            background:'#374151',
+            color:'#f3f4f6',
+            confirmButtonColor:'#16a34a',
+            cancelButtonColor:'#4b5563'
+        }
+        :{
+            background:'#ffffff',
+            color:'#1f2937',
+            confirmButtonColor:'#16a34a',
+            cancelButtonColor:'#6b7280'
+        };
+}
+
 async function loadRoles(panel){
     const rolesUrl=document.querySelector('meta[name="role-management-roles-url"]')?.getAttribute('content');
     const roleFilter=panel.querySelector('.role-filter');
@@ -160,12 +180,9 @@ function renderUsers(panel,users,paginationData){
     if(!users.length){
         empty.classList.remove('hidden');
         empty.classList.add('flex');
-
         grid.classList.add('hidden');
         grid.innerHTML='';
-
         renderPagination(panel,null);
-
         return;
     }
 
@@ -198,21 +215,21 @@ function renderPagination(panel,data){
     const total=Number(data.total)||0;
 
     pagination.innerHTML=`
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-5 mt-5 border-t border-gray-100">
-            <p class="text-sm text-gray-500">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-5 mt-5 border-t border-gray-100 dark:border-gray-600">
+            <p class="text-sm text-gray-500 dark:text-gray-300">
                 Showing
-                <span class="font-medium text-gray-700">${from}</span>
+                <span class="font-medium text-gray-700 dark:text-gray-100">${from}</span>
                 to
-                <span class="font-medium text-gray-700">${to}</span>
+                <span class="font-medium text-gray-700 dark:text-gray-100">${to}</span>
                 of
-                <span class="font-medium text-gray-700">${total}</span>
+                <span class="font-medium text-gray-700 dark:text-gray-100">${total}</span>
                 users
             </p>
 
             <div class="flex items-center gap-2">
                 <button
                     type="button"
-                    class="role-pagination-button cursor-pointer px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    class="role-pagination-button cursor-pointer px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-500 text-sm font-medium text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     data-page="${currentPage-1}"
                     ${currentPage<=1?'disabled':''}
                 >
@@ -226,7 +243,7 @@ function renderPagination(panel,data){
 
                 <button
                     type="button"
-                    class="role-pagination-button cursor-pointer px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    class="role-pagination-button cursor-pointer px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-500 text-sm font-medium text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     data-page="${currentPage+1}"
                     ${currentPage>=lastPage?'disabled':''}
                 >
@@ -271,7 +288,7 @@ function createPageButtons(currentPage,lastPage){
     return pages.map(page=>{
         if(page==='...'){
             return `
-                <span class="px-2 text-sm text-gray-400">
+                <span class="px-2 text-sm text-gray-400 dark:text-gray-400">
                     ...
                 </span>
             `;
@@ -285,7 +302,7 @@ function createPageButtons(currentPage,lastPage){
                 class="role-pagination-button cursor-pointer w-9 h-9 rounded-lg text-sm font-medium transition ${
                     active
                         ?'bg-green-600 text-white'
-                        :'text-gray-600 hover:bg-gray-50 border border-transparent'
+                        :'text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-transparent'
                 }"
                 data-page="${page}"
             >
@@ -305,32 +322,32 @@ function createUserCard(user){
             </span>
         `).join('')
         :`
-            <span class="text-sm text-gray-400">
+            <span class="text-sm text-gray-400 dark:text-gray-300">
                 No Role
             </span>
         `;
 
     const accessClass=user.access==='Full Access'
-        ?'bg-green-50 text-green-700'
-        :'bg-gray-100 text-gray-600';
+        ?'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+        :'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-200';
 
     return `
         <div
-            class="relative bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition"
+            class="relative bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl p-5 shadow-sm hover:shadow-md transition"
             data-user-id="${escapeHtml(String(user.user_id))}"
         >
             <div class="flex items-start justify-between gap-4">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-11 h-11 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-semibold shrink-0">
+                    <div class="w-11 h-11 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-semibold shrink-0">
                         ${escapeHtml(getInitials(user.username))}
                     </div>
 
                     <div class="min-w-0">
-                        <h3 class="text-sm font-semibold text-gray-800 truncate">
+                        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                             ${escapeHtml(user.username)}
                         </h3>
 
-                        <p class="text-xs text-gray-500 truncate mt-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-300 truncate mt-1">
                             ${escapeHtml(user.email)}
                         </p>
                     </div>
@@ -339,7 +356,7 @@ function createUserCard(user){
                 <div class="relative shrink-0">
                     <button
                         type="button"
-                        class="role-menu-button cursor-pointer w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                        class="role-menu-button cursor-pointer w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition"
                         data-user-id="${user.user_id}"
                         title="More options"
                     >
@@ -347,33 +364,33 @@ function createUserCard(user){
                     </button>
 
                     <div
-                        class="role-menu hidden absolute right-0 top-9 z-20 w-40 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+                        class="role-menu hidden absolute right-0 top-9 z-20 w-40 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden"
                         data-menu-user-id="${user.user_id}"
                     >
                         <button
                             type="button"
-                            class="role-permission-button cursor-pointer w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            class="role-permission-button cursor-pointer w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2 transition"
                             data-user-id="${user.user_id}"
                         >
-                            <i class="fa-solid fa-key text-gray-400 w-4 pointer-events-none"></i>
+                            <i class="fa-solid fa-key text-gray-400 dark:text-gray-300 w-4 pointer-events-none"></i>
                             Permission
                         </button>
 
                         <button
                             type="button"
-                            class="role-set-button cursor-pointer w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            class="role-set-button cursor-pointer w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2 transition"
                             data-user-id="${user.user_id}"
                         >
-                            <i class="fa-solid fa-user-shield text-gray-400 w-4 pointer-events-none"></i>
+                            <i class="fa-solid fa-user-shield text-gray-400 dark:text-gray-300 w-4 pointer-events-none"></i>
                             Set Role
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-5 pt-4 border-t border-gray-100">
+            <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-600">
                 <div class="mb-4">
-                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                    <p class="text-xs font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wide mb-2">
                         Role
                     </p>
 
@@ -383,7 +400,7 @@ function createUserCard(user){
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    <p class="text-xs font-medium text-gray-400 dark:text-gray-300 uppercase tracking-wide">
                         Access
                     </p>
 
@@ -400,18 +417,18 @@ function getRoleBadge(roleName){
     const normalized=String(roleName||'').toLowerCase();
 
     if(normalized==='payroll'){
-        return 'bg-blue-50 text-blue-700';
+        return 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
     }
 
     if(normalized==='hr'){
-        return 'bg-purple-50 text-purple-700';
+        return 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
     }
 
     if(normalized==='admin'){
-        return 'bg-orange-50 text-orange-700';
+        return 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
     }
 
-    return 'bg-gray-100 text-gray-700';
+    return 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200';
 }
 
 async function openPermissionModal(userId,panel){
@@ -419,6 +436,8 @@ async function openPermissionModal(userId,panel){
         console.error('SweetAlert2 is not loaded.');
         return;
     }
+
+    const theme=getSwalTheme();
 
     const rolesUrl=document.querySelector('meta[name="role-management-roles-url"]')?.getAttribute('content');
 
@@ -432,7 +451,11 @@ async function openPermissionModal(userId,panel){
         Swal.fire({
             icon:'error',
             title:'Configuration Error',
-            text:'Role management URLs are missing.'
+            text:'Role management URLs are missing.',
+            background:theme.background,
+            color:theme.color,
+            confirmButtonColor:theme.confirmButtonColor,
+            cancelButtonColor:theme.cancelButtonColor
         });
 
         return;
@@ -448,6 +471,7 @@ async function openPermissionModal(userId,panel){
                 },
                 credentials:'same-origin'
             }),
+
             fetch(userRolesUrl,{
                 method:'GET',
                 headers:{
@@ -474,8 +498,8 @@ async function openPermissionModal(userId,panel){
         );
 
         const roleRows=(rolesData.roles||[]).map(role=>`
-            <label class="cursor-pointer flex items-center justify-between px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-                <span class="text-sm font-medium text-gray-700 cursor-pointer">
+            <label class="cursor-pointer flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-100 cursor-pointer">
                     ${escapeHtml(formatRoleName(role.role_name))}
                 </span>
 
@@ -491,10 +515,10 @@ async function openPermissionModal(userId,panel){
         await Swal.fire({
             title:'Permissions',
             html:`
-                <div class="text-left border border-gray-200 rounded-lg overflow-hidden">
+                <div class="text-left border border-gray-200 dark:border-gray-500 rounded-lg overflow-hidden">
                     ${
                         roleRows||
-                        '<div class="px-4 py-5 text-sm text-gray-500 text-center">No roles available.</div>'
+                        '<div class="px-4 py-5 text-sm text-gray-500 dark:text-gray-300 text-center">No roles available.</div>'
                     }
                 </div>
 
@@ -502,7 +526,7 @@ async function openPermissionModal(userId,panel){
                     <button
                         type="button"
                         id="role-cancel-button"
-                        class="cursor-pointer px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        class="cursor-pointer px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-500 text-sm font-medium text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition"
                     >
                         Cancel
                     </button>
@@ -510,17 +534,20 @@ async function openPermissionModal(userId,panel){
                     <button
                         type="button"
                         id="role-save-button"
-                        class="cursor-pointer px-4 py-2 rounded-lg bg-green-600 text-sm font-medium text-white hover:bg-green-700"
+                        class="cursor-pointer px-4 py-2 rounded-lg bg-green-600 text-sm font-medium text-white hover:bg-green-700 transition"
                     >
                         Save Changes
                     </button>
                 </div>
             `,
+            background:theme.background,
+            color:theme.color,
             showConfirmButton:false,
             showCloseButton:true,
             width:500,
             allowOutsideClick:true,
             allowEscapeKey:true,
+
             didOpen:popup=>{
                 const saveButton=popup.querySelector('#role-save-button');
                 const cancelButton=popup.querySelector('#role-cancel-button');
@@ -549,10 +576,16 @@ async function openPermissionModal(userId,panel){
     }catch(error){
         console.error('Permission Modal:',error);
 
+        const theme=getSwalTheme();
+
         Swal.fire({
             icon:'error',
             title:'Error',
-            text:error.message||'Unable to load roles.'
+            text:error.message||'Unable to load roles.',
+            background:theme.background,
+            color:theme.color,
+            confirmButtonColor:theme.confirmButtonColor,
+            cancelButtonColor:theme.cancelButtonColor
         });
     }
 }
@@ -658,6 +691,8 @@ function showToast(message,icon='success'){
         return;
     }
 
+    const theme=getSwalTheme();
+
     Swal.fire({
         toast:true,
         position:'top-end',
@@ -665,7 +700,11 @@ function showToast(message,icon='success'){
         title:message,
         showConfirmButton:false,
         timer:2500,
-        timerProgressBar:true
+        timerProgressBar:true,
+        background:theme.background,
+        color:theme.color,
+        confirmButtonColor:theme.confirmButtonColor,
+        cancelButtonColor:theme.cancelButtonColor
     });
 }
 
@@ -773,12 +812,17 @@ function openSetRoleModal(userId){
         return;
     }
 
+    const theme=getSwalTheme();
+
     Swal.fire({
         icon:'info',
         title:'Set Role',
         text:'Role assignment is managed through the Permission option.',
         confirmButtonText:'OK',
-        confirmButtonColor:'#16a34a'
+        background:theme.background,
+        color:theme.color,
+        confirmButtonColor:theme.confirmButtonColor,
+        cancelButtonColor:theme.cancelButtonColor
     });
 }
 
@@ -790,7 +834,7 @@ function getCsrfToken(){
 
 function formatRoleName(roleName){
     return String(roleName||'')
-        .replace(/[\_-]+/g,' ')
+        .replace(/[_-]+/g,' ')
         .replace(/\b\w/g,char=>char.toUpperCase());
 }
 

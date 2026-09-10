@@ -27,6 +27,28 @@ export async function init(panel) {
 
     const deleteManager = initUserManagementDelete(panel);
 
+    // Get current theme
+    function isDarkMode() {
+        return document.documentElement.classList.contains('dark');
+    }
+
+    // Get SweetAlert theme
+    function getSwalTheme() {
+        return isDarkMode()
+            ? {
+                background: '#374151',
+                color: '#f3f4f6',
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#4b5563'
+            }
+            : {
+                background: '#ffffff',
+                color: '#1f2937',
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#6b7280'
+            };
+    }
+
     // Load active users
     async function loadUsers(page = 1) {
         currentPage = page;
@@ -91,7 +113,7 @@ export async function init(panel) {
 
         pagination.innerHTML = `
             <div class="flex items-center justify-between mt-6">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-300">
                     Showing ${escapeHtml(String(data.from || 0))} to ${escapeHtml(String(data.to || 0))} of ${escapeHtml(String(data.total || 0))} users
                 </p>
                 <div class="flex items-center gap-2">
@@ -109,7 +131,7 @@ export async function init(panel) {
 
         if (current > 1) {
             buttons.push(`
-                <button type="button" data-page="${current - 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                <button type="button" data-page="${current - 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer">
                     <i class="fa-solid fa-chevron-left text-xs"></i>
                 </button>
             `);
@@ -118,7 +140,7 @@ export async function init(panel) {
         for (let page = 1; page <= last; page++) {
             if (page === 1 || page === last || Math.abs(page - current) <= 1) {
                 buttons.push(`
-                    <button type="button" data-page="${page}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border ${page === current ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'} text-sm transition cursor-pointer">
+                    <button type="button" data-page="${page}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border ${page === current ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'} text-sm transition cursor-pointer">
                         ${page}
                     </button>
                 `);
@@ -127,7 +149,7 @@ export async function init(panel) {
                 (page === current + 2 && current < last - 2)
             ) {
                 buttons.push(`
-                    <span class="w-9 h-9 flex items-center justify-center text-gray-400">
+                    <span class="w-9 h-9 flex items-center justify-center text-gray-400 dark:text-gray-400">
                         ...
                     </span>
                 `);
@@ -136,7 +158,7 @@ export async function init(panel) {
 
         if (current < last) {
             buttons.push(`
-                <button type="button" data-page="${current + 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                <button type="button" data-page="${current + 1}" class="user-page-button w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer">
                     <i class="fa-solid fa-chevron-right text-xs"></i>
                 </button>
             `);
@@ -153,49 +175,49 @@ export async function init(panel) {
         const status = String(user.status || 'pending').toLowerCase();
         const initials = getInitials(user.username || user.email || 'U');
 
-        let statusClass = 'bg-yellow-50 text-yellow-700';
+        let statusClass = 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
         let statusIcon = 'fa-clock';
 
         if (status === 'active') {
-            statusClass = 'bg-green-50 text-green-700';
+            statusClass = 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300';
             statusIcon = 'fa-circle-check';
         }
 
         if (status === 'disabled') {
-            statusClass = 'bg-red-50 text-red-700';
+            statusClass = 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300';
             statusIcon = 'fa-circle-xmark';
         }
 
         return `
-            <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-5" data-user-card data-user-type="active" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
+            <div class="relative bg-white dark:bg-gray-700 rounded-2xl border border-gray-100 dark:border-gray-600 shadow-sm p-5" data-user-card data-user-type="active" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center font-semibold shrink-0">
+                        <div class="w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-semibold shrink-0">
                             ${initials}
                         </div>
                         <div class="min-w-0">
-                            <h3 class="text-sm font-semibold text-gray-800 truncate">
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                                 ${username}
                             </h3>
-                            <p class="text-xs text-gray-500 truncate mt-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-300 truncate mt-1">
                                 ${email}
                             </p>
                         </div>
                     </div>
                     <div class="relative">
-                        <button type="button" class="user-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition cursor-pointer" data-user-menu-button>
+                        <button type="button" class="user-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-100 transition cursor-pointer" data-user-menu-button>
                             <i class="fa-solid fa-ellipsis-vertical"></i>
                         </button>
-                        <div class="user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden">
-                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer" data-user-action="status" data-user-id="${escapeHtml(String(userId))}">
+                        <div class="user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white dark:bg-gray-700 rounded-xl border border-gray-100 dark:border-gray-600 shadow-lg overflow-hidden">
+                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer" data-user-action="status" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid ${status === 'active' ? 'fa-user-slash' : 'fa-user-check'} w-4"></i>
                                 <span>${status === 'active' ? 'Disable User' : 'Activate User'}</span>
                             </button>
-                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer" data-user-action="reset-password" data-user-id="${escapeHtml(String(userId))}">
+                            <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer" data-user-action="reset-password" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid fa-key w-4"></i>
                                 <span>Reset Password</span>
                             </button>
-                            <button type="button" class="user-delete-action w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition cursor-pointer" data-user-action="delete" data-user-id="${escapeHtml(String(userId))}">
+                            <button type="button" class="user-delete-action w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer" data-user-action="delete" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid fa-trash w-4"></i>
                                 <span>Delete User</span>
                             </button>
@@ -293,11 +315,17 @@ export async function init(panel) {
         const actionText = nextStatus === 'active' ? 'activate' : 'disable';
 
         if (window.Swal) {
+            const theme = getSwalTheme();
+
             const result = await Swal.fire({
                 title: `${nextStatus === 'active' ? 'Activate' : 'Disable'} User?`,
                 text: `Are you sure you want to ${actionText} ${user.username}?`,
                 icon: 'question',
+                background: theme.background,
+                color: theme.color,
                 showCancelButton: true,
+                confirmButtonColor: theme.confirmButtonColor,
+                cancelButtonColor: theme.cancelButtonColor,
                 confirmButtonText: nextStatus === 'active' ? 'Activate' : 'Disable',
                 cancelButtonText: 'Cancel'
             });
@@ -335,20 +363,30 @@ export async function init(panel) {
             await loadUsers(currentPage);
 
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Success',
                     text: data.message || 'User status updated successfully.',
                     icon: 'success',
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor,
                     timer: 1500,
                     showConfirmButton: false
                 });
             }
         } catch (error) {
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Error',
                     text: error.message,
-                    icon: 'error'
+                    icon: 'error',
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor
                 });
             } else {
                 window.alert(error.message);
@@ -368,13 +406,19 @@ export async function init(panel) {
         let confirmedPassword = '';
 
         if (window.Swal) {
+            const theme = getSwalTheme();
+
             const result = await Swal.fire({
                 title: 'Reset Password',
                 html: `
                     <input id="resetPassword" type="password" class="swal2-input" placeholder="New password">
                     <input id="resetPasswordConfirm" type="password" class="swal2-input" placeholder="Confirm password">
                 `,
+                background: theme.background,
+                color: theme.color,
                 showCancelButton: true,
+                confirmButtonColor: theme.confirmButtonColor,
+                cancelButtonColor: theme.cancelButtonColor,
                 confirmButtonText: 'Reset Password',
                 cancelButtonText: 'Cancel',
                 preConfirm: () => {
@@ -442,20 +486,30 @@ export async function init(panel) {
             }
 
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Success',
                     text: data.message || 'User password reset successfully.',
                     icon: 'success',
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor,
                     timer: 1500,
                     showConfirmButton: false
                 });
             }
         } catch (error) {
             if (window.Swal) {
+                const theme = getSwalTheme();
+
                 await Swal.fire({
                     title: 'Error',
                     text: error.message,
-                    icon: 'error'
+                    icon: 'error',
+                    background: theme.background,
+                    color: theme.color,
+                    confirmButtonColor: theme.confirmButtonColor
                 });
             } else {
                 window.alert(error.message);
@@ -467,11 +521,11 @@ export async function init(panel) {
     function initTabs() {
         if (activeUserTab) {
             activeUserTab.addEventListener('click', async () => {
-                activeUserTab.classList.add('text-green-600', 'font-semibold');
-                activeUserTab.classList.remove('text-gray-500', 'font-medium');
+                activeUserTab.classList.add('text-green-600', 'dark:text-green-400', 'font-semibold');
+                activeUserTab.classList.remove('text-gray-500', 'dark:text-gray-300', 'font-medium');
 
-                deletedUserTab?.classList.remove('text-green-600', 'font-semibold');
-                deletedUserTab?.classList.add('text-gray-500', 'font-medium');
+                deletedUserTab?.classList.remove('text-green-600', 'dark:text-green-400', 'font-semibold');
+                deletedUserTab?.classList.add('text-gray-500', 'dark:text-gray-300', 'font-medium');
 
                 activeUserTab.querySelector('span')?.classList.remove('hidden');
                 deletedUserTab?.querySelector('span')?.classList.add('hidden');
@@ -485,11 +539,11 @@ export async function init(panel) {
 
         if (deletedUserTab) {
             deletedUserTab.addEventListener('click', async () => {
-                deletedUserTab.classList.add('text-green-600', 'font-semibold');
-                deletedUserTab.classList.remove('text-gray-500', 'font-medium');
+                deletedUserTab.classList.add('text-green-600', 'dark:text-green-400', 'font-semibold');
+                deletedUserTab.classList.remove('text-gray-500', 'dark:text-gray-300', 'font-medium');
 
-                activeUserTab?.classList.remove('text-green-600', 'font-semibold');
-                activeUserTab?.classList.add('text-gray-500', 'font-medium');
+                activeUserTab?.classList.remove('text-green-600', 'dark:text-green-400', 'font-semibold');
+                activeUserTab?.classList.add('text-gray-500', 'dark:text-gray-300', 'font-medium');
 
                 deletedUserTab.querySelector('span')?.classList.remove('hidden');
                 activeUserTab?.querySelector('span')?.classList.add('hidden');
@@ -640,11 +694,13 @@ export async function init(panel) {
         statusFilter?.addEventListener('change', () => loadUsers(1));
         pagination?.addEventListener('click', handlePagination);
         userGrid.addEventListener('click', handleActions);
+
         panel.addEventListener('click', event => {
             if (!event.target.closest('[data-user-menu-button]') && !event.target.closest('.user-menu')) {
                 closeMenus();
             }
         });
+
         panel.addEventListener('user-management:active-deleted', handleDeleteRefresh);
     }
 
