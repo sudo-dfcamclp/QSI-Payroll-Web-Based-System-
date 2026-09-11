@@ -919,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="pointer-events-none">
                 ${escapeHtml(tabTitle)}
             </span>
-            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-500 text-gray-400 hover:text-red-400" title="Close tab">
+            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-400 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Close tab">
                 <i class="fa-solid fa-xmark text-xs pointer-events-none"></i>
             </span>
         `;

@@ -16,19 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const desktopCollapseButton = document.getElementById('desktopCollapseButton');
     const themeToggleButton = document.getElementById('themeToggleButton');
 
+    const SIDEBAR_STORAGE_KEY = 'qsi_sidebar_mini';
+
     themeToggleButton?.addEventListener('click', toggleTheme);
 
     if (!sidebar) return;
 
-    let isMini = false;
+    let isMini = localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
     let isMobileOpen = true;
 
     const isMobile = () => window.innerWidth < 768;
 
-    // ==========================================
-    // RESPONSIVE CONTENT
-    // ==========================================
-
+    // Update main content position.
     function updateMainContent() {
 
         if (!mainContent) return;
@@ -43,10 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : '280px';
     }
 
-    // ==========================================
-    // CLOSE DROPDOWNS
-    // ==========================================
-
+    // Close all dropdown menus.
     function closeAllDropdowns() {
 
         document.querySelectorAll('.dropdown-menu').forEach(menu => {
@@ -60,10 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // EXPAND DESKTOP SIDEBAR
-    // ==========================================
-
+    // Expand the desktop sidebar.
     function expandDesktopSidebar() {
 
         sidebar.style.width = '280px';
@@ -105,18 +98,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isMini = false;
 
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, 'false');
+
         updateMainContent();
     }
 
-    // ==========================================
-    // COLLAPSE DESKTOP SIDEBAR
-    // ==========================================
-
+    // Collapse the desktop sidebar.
     function collapseDesktopSidebar() {
 
         if (isMobile()) return;
 
         isMini = true;
+
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, 'true');
 
         sidebar.style.width = '80px';
 
@@ -160,10 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMainContent();
     }
 
-    // ==========================================
-    // DESKTOP COLLAPSE BUTTON
-    // ==========================================
-
+    // Handle the desktop collapse button.
     if (desktopCollapseButton) {
 
         desktopCollapseButton.addEventListener('click', () => {
@@ -178,10 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
-    // ==========================================
-    // MOBILE OPEN
-    // ==========================================
-
+    // Open the mobile sidebar.
     function openMobileSidebar() {
 
         if (!isMobile()) return;
@@ -201,10 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMainContent();
     }
 
-    // ==========================================
-    // MOBILE CLOSE
-    // ==========================================
-
+    // Close the mobile sidebar.
     function closeMobileSidebar() {
 
         if (!isMobile()) return;
@@ -227,10 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMainContent();
     }
 
-    // ==========================================
-    // MOBILE BUTTON
-    // ==========================================
-
+    // Handle the mobile menu button.
     mobileMenuButton?.addEventListener(
         'click',
         openMobileSidebar
@@ -246,10 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeMobileSidebar
     );
 
-    // ==========================================
-    // SEARCH
-    // ==========================================
-
+    // Handle the mini sidebar search.
     searchMini?.addEventListener('click', () => {
 
         if (isMobile()) {
@@ -276,10 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
-    // ==========================================
-    // LOGO
-    // ==========================================
-
+    // Handle the sidebar logo.
     const logoButton =
         sidebar.querySelector('.sidebar-logo');
 
@@ -291,10 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
-    // ==========================================
-    // DROPDOWNS
-    // ==========================================
-
+    // Handle dropdown buttons.
     document.querySelectorAll(
         '.dropdown-container > button'
     ).forEach(button => {
@@ -322,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
+    // Toggle a dropdown menu.
     function toggleDropdown(container) {
 
         const menu =
@@ -384,10 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
-    // ==========================================
-    // RESPONSIVE
-    // ==========================================
-
+    // Handle responsive sidebar layout.
     function handleResponsiveLayout() {
 
         if (isMobile()) {
@@ -444,9 +415,79 @@ document.addEventListener('DOMContentLoaded', () => {
             desktopCollapseButton?.classList.remove('hidden');
 
             if (isMini) {
+
                 sidebar.classList.add('sidebar-mini');
+
+                document.querySelectorAll(
+                    '.sidebar-text'
+                ).forEach(el => {
+                    el.classList.add('hidden');
+                });
+
+                document.querySelectorAll(
+                    '.sidebar-nav-link, .dropdown-container > button'
+                ).forEach(el => {
+                    el.classList.remove('gap-3');
+                    el.classList.add('justify-center');
+                });
+
+                document.querySelectorAll(
+                    '.sidebar-nav-link i:first-child, .dropdown-container > button > i:first-child'
+                ).forEach(icon => {
+                    icon.classList.add('mx-auto');
+                });
+
+                document.querySelectorAll('.sidebar-separator').forEach(el => {
+                    el.classList.add('mx-3');
+                });
+
+                searchExpanded?.classList.add('hidden');
+
+                searchMini?.classList.remove('hidden');
+                searchMini?.classList.add('flex');
+
+                if (collapseIcon) {
+                    collapseIcon.classList.remove('fa-chevron-left');
+                    collapseIcon.classList.add('fa-chevron-right');
+                }
+
             } else {
+
                 sidebar.classList.remove('sidebar-mini');
+
+                document.querySelectorAll(
+                    '.sidebar-text'
+                ).forEach(el => {
+                    el.classList.remove('hidden');
+                });
+
+                document.querySelectorAll(
+                    '.sidebar-nav-link, .dropdown-container > button'
+                ).forEach(el => {
+                    el.classList.add('gap-3');
+                    el.classList.remove('justify-center');
+                });
+
+                document.querySelectorAll(
+                    '.sidebar-nav-link i:first-child, .dropdown-container > button > i:first-child'
+                ).forEach(icon => {
+                    icon.classList.remove('mx-auto');
+                });
+
+                document.querySelectorAll('.sidebar-separator').forEach(el => {
+                    el.classList.remove('mx-3');
+                });
+
+                searchExpanded?.classList.remove('hidden');
+
+                searchMini?.classList.add('hidden');
+                searchMini?.classList.remove('flex');
+
+                if (collapseIcon) {
+                    collapseIcon.classList.remove('fa-chevron-right');
+                    collapseIcon.classList.add('fa-chevron-left');
+                }
+
             }
 
             isMobileOpen = true;
@@ -455,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMainContent();
     }
 
+    // Watch for responsive layout changes.
     window.addEventListener(
         'resize',
         handleResponsiveLayout

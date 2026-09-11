@@ -30,6 +30,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         | ALLOWED TABS
         |--------------------------------------------------------------------------
+        |
         | Permissions are ADDITIVE.
         |
         | If a user has multiple roles, the permissions of ALL roles
@@ -53,6 +54,12 @@ class AuthController extends Controller
         */
 
         $allowedTabs = [];
+
+        // Settings
+        // Available to every authenticated user.
+        $allowedTabs = array_merge($allowedTabs, [
+            'settings',
+        ]);
 
         // Super Admin
         if (in_array(1, $roleIds, true)) {
@@ -94,6 +101,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         | REMOVE DUPLICATE TABS
         |--------------------------------------------------------------------------
+        |
         | If two roles provide the same permission, only one entry
         | will be returned.
         |--------------------------------------------------------------------------
@@ -125,4 +133,3 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 }
-

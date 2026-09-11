@@ -84,6 +84,20 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | SETTINGS
+    |--------------------------------------------------------------------------
+    |
+    | General account settings available to all authenticated users.
+    |
+    */
+
+    Route::get('/includes/setting', function () {
+    return view('includes.setting');
+    })->name('setting');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | USER MANAGEMENT
     |--------------------------------------------------------------------------
     |
@@ -107,13 +121,15 @@ Route::middleware('auth')->group(function () {
             [UserManagementController::class, 'users']
         )->name('api.admin.users');
 
+
         // GET DELETED USERS
-         Route::get(
+        Route::get(
             '/api/admin/users/deleted',
             [UserManagementController::class, 'deletedUsers']
-         )->name('api.admin.users.deleted');
+        )->name('api.admin.users.deleted');
 
-         // FORCE DELETE USER
+
+        // FORCE DELETE USER
         Route::delete(
             '/api/admin/users/force-delete/{userId}',
             [UserManagementController::class, 'forceDeleteUser']
@@ -133,59 +149,59 @@ Route::middleware('auth')->group(function () {
             [UserManagementController::class, 'resetPassword']
         )->name('api.admin.users.password');
 
+
         // DELETE USER
         Route::delete(
-        '/api/admin/users/{user}',
-        [UserManagementController::class, 'deleteUser']
+            '/api/admin/users/{user}',
+            [UserManagementController::class, 'deleteUser']
         )->name('api.admin.users.delete');
-
 
     });
 
 
     /*
-|--------------------------------------------------------------------------
-| ROLE MANAGEMENT
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | ROLE MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
 
-Route::middleware('can:manage-roles')->group(function () {
+    Route::middleware('can:manage-roles')->group(function () {
 
-    // ROLE MANAGEMENT PAGE
-    Route::get(
-        '/admin/role-management',
-        [RoleManagementController::class, 'index']
-    )->name('RoleManagement');
-
-
-    // GET USERS WITH ROLES
-    Route::get(
-        '/api/admin/role-management/users',
-        [RoleManagementController::class, 'users']
-    )->name('api.admin.role-management.users');
+        // ROLE MANAGEMENT PAGE
+        Route::get(
+            '/admin/role-management',
+            [RoleManagementController::class, 'index']
+        )->name('RoleManagement');
 
 
-    // GET AVAILABLE ROLES
-    Route::get(
-        '/api/admin/role-management/roles',
-        [RoleManagementController::class, 'roles']
-    )->name('api.admin.role-management.roles');
+        // GET USERS WITH ROLES
+        Route::get(
+            '/api/admin/role-management/users',
+            [RoleManagementController::class, 'users']
+        )->name('api.admin.role-management.users');
 
 
-    // GET USER ASSIGNED ROLES
-    Route::get(
-        '/api/admin/role-management/users/{user}/roles',
-        [RoleManagementController::class, 'userRoles']
-    )->name('api.admin.role-management.user-roles');
+        // GET AVAILABLE ROLES
+        Route::get(
+            '/api/admin/role-management/roles',
+            [RoleManagementController::class, 'roles']
+        )->name('api.admin.role-management.roles');
 
 
-    // ASSIGN / REMOVE USER ROLE
-    Route::patch(
-        '/api/admin/role-management/users/{user}/roles',
-        [RoleManagementController::class, 'updateRole']
-    )->name('api.admin.role-management.update-role');
+        // GET USER ASSIGNED ROLES
+        Route::get(
+            '/api/admin/role-management/users/{user}/roles',
+            [RoleManagementController::class, 'userRoles']
+        )->name('api.admin.role-management.user-roles');
 
-});
+
+        // ASSIGN / REMOVE USER ROLE
+        Route::patch(
+            '/api/admin/role-management/users/{user}/roles',
+            [RoleManagementController::class, 'updateRole']
+        )->name('api.admin.role-management.update-role');
+
+    });
 
 
     /*
