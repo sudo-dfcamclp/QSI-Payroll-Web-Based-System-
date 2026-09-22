@@ -16,12 +16,14 @@ class User extends Authenticatable
     protected $primaryKey = 'user_id';
     public $incrementing = true;
     protected $keyType = 'int';
+
     const DELETED_AT = 'delete_at';
 
     protected $fillable = [
         'username',
         'email',
         'password',
+        'profile',
     ];
 
     protected $hidden = [
@@ -63,4 +65,3 @@ class User extends Authenticatable
             ->isNotEmpty();
     }
 }
-

@@ -45,6 +45,7 @@ class UserManagementController extends Controller
                 'user_id',
                 'username',
                 'email',
+                'profile',
                 'status',
                 'created_at',
                 'updated_at',
@@ -88,6 +89,7 @@ class UserManagementController extends Controller
                 'user_id',
                 'username',
                 'email',
+                'profile',
                 'status',
                 'delete_at',
             ])
@@ -141,6 +143,7 @@ class UserManagementController extends Controller
                 'user_id' => $user->user_id,
                 'username' => $user->username,
                 'email' => $user->email,
+                'profile' => $user->profile,
                 'status' => $user->status,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,

@@ -87,6 +87,7 @@ class AuthController extends Controller
             $allowedTabs = array_merge($allowedTabs, [
                 'employee-info',
                 'employee-deduction',
+                'ClientMaster',
             ]);
         }
 

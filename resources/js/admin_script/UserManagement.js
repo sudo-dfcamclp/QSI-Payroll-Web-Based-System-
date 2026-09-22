@@ -49,6 +49,28 @@ export async function init(panel) {
             };
     }
 
+    // Show SweetAlert toast notification
+    function showToast(message, icon = 'success') {
+        if (!window.Swal) {
+            window.alert(message);
+            return;
+        }
+
+        const theme = getSwalTheme();
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon,
+            title: message,
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true,
+            background: theme.background,
+            color: theme.color
+        });
+    }
+
     // Load active users
     async function loadUsers(page = 1) {
         currentPage = page;
@@ -175,6 +197,34 @@ export async function init(panel) {
         const status = String(user.status || 'pending').toLowerCase();
         const initials = getInitials(user.username || user.email || 'U');
 
+        // Profile picture
+        const profile = String(user.profile || '').trim();
+
+        let profileDisplay = '';
+
+        if (profile) {
+            const profileUrl = `/payroll/public/storage/${profile}`;
+
+            profileDisplay = `
+                <img
+                    src="${escapeHtml(profileUrl)}"
+                    alt="${username}"
+                    class="w-11 h-11 rounded-xl object-cover shrink-0"
+                    loading="lazy"
+                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+                >
+                <div class="hidden w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 items-center justify-center font-semibold shrink-0">
+                    ${initials}
+                </div>
+            `;
+        } else {
+            profileDisplay = `
+                <div class="w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-semibold shrink-0">
+                    ${initials}
+                </div>
+            `;
+        }
+
         let statusClass = 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
         let statusIcon = 'fa-clock';
 
@@ -192,8 +242,8 @@ export async function init(panel) {
             <div class="relative bg-white dark:bg-gray-700 rounded-2xl border border-gray-100 dark:border-gray-600 shadow-sm p-5" data-user-card data-user-type="active" data-user-id="${escapeHtml(String(userId))}" data-username="${username}">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-semibold shrink-0">
-                            ${initials}
+                        <div class="shrink-0">
+                            ${profileDisplay}
                         </div>
                         <div class="min-w-0">
                             <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
@@ -204,19 +254,23 @@ export async function init(panel) {
                             </p>
                         </div>
                     </div>
+
                     <div class="relative">
                         <button type="button" class="user-menu-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-100 transition cursor-pointer" data-user-menu-button>
                             <i class="fa-solid fa-ellipsis-vertical"></i>
                         </button>
+
                         <div class="user-menu hidden absolute right-0 top-9 z-20 w-48 bg-white dark:bg-gray-700 rounded-xl border border-gray-100 dark:border-gray-600 shadow-lg overflow-hidden">
                             <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer" data-user-action="status" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid ${status === 'active' ? 'fa-user-slash' : 'fa-user-check'} w-4"></i>
                                 <span>${status === 'active' ? 'Disable User' : 'Activate User'}</span>
                             </button>
+
                             <button type="button" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition cursor-pointer" data-user-action="reset-password" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid fa-key w-4"></i>
                                 <span>Reset Password</span>
                             </button>
+
                             <button type="button" class="user-delete-action w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer" data-user-action="delete" data-user-id="${escapeHtml(String(userId))}">
                                 <i class="fa-solid fa-trash w-4"></i>
                                 <span>Delete User</span>
@@ -224,6 +278,7 @@ export async function init(panel) {
                         </div>
                     </div>
                 </div>
+
                 <div class="mt-5">
                     <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${statusClass}">
                         <i class="fa-solid ${statusIcon}"></i>
@@ -314,6 +369,7 @@ export async function init(panel) {
         const nextStatus = user.status === 'active' ? 'disabled' : 'active';
         const actionText = nextStatus === 'active' ? 'activate' : 'disable';
 
+        // Keep confirmation dialog centered.
         if (window.Swal) {
             const theme = getSwalTheme();
 
@@ -362,35 +418,17 @@ export async function init(panel) {
 
             await loadUsers(currentPage);
 
-            if (window.Swal) {
-                const theme = getSwalTheme();
-
-                await Swal.fire({
-                    title: 'Success',
-                    text: data.message || 'User status updated successfully.',
-                    icon: 'success',
-                    background: theme.background,
-                    color: theme.color,
-                    confirmButtonColor: theme.confirmButtonColor,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            }
+            // Success notification appears in the upper-right corner.
+            showToast(
+                data.message || 'User status updated successfully.',
+                'success'
+            );
         } catch (error) {
-            if (window.Swal) {
-                const theme = getSwalTheme();
-
-                await Swal.fire({
-                    title: 'Error',
-                    text: error.message,
-                    icon: 'error',
-                    background: theme.background,
-                    color: theme.color,
-                    confirmButtonColor: theme.confirmButtonColor
-                });
-            } else {
-                window.alert(error.message);
-            }
+            // Error notification appears in the upper-right corner.
+            showToast(
+                error.message || 'Unable to update user status.',
+                'error'
+            );
         }
     }
 
@@ -405,6 +443,7 @@ export async function init(panel) {
         let password = '';
         let confirmedPassword = '';
 
+        // Keep password form centered.
         if (window.Swal) {
             const theme = getSwalTheme();
 
@@ -485,35 +524,17 @@ export async function init(panel) {
                 throw new Error(getErrorMessage(data, 'Unable to reset user password.'));
             }
 
-            if (window.Swal) {
-                const theme = getSwalTheme();
-
-                await Swal.fire({
-                    title: 'Success',
-                    text: data.message || 'User password reset successfully.',
-                    icon: 'success',
-                    background: theme.background,
-                    color: theme.color,
-                    confirmButtonColor: theme.confirmButtonColor,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            }
+            // Success notification appears in the upper-right corner.
+            showToast(
+                data.message || 'User password reset successfully.',
+                'success'
+            );
         } catch (error) {
-            if (window.Swal) {
-                const theme = getSwalTheme();
-
-                await Swal.fire({
-                    title: 'Error',
-                    text: error.message,
-                    icon: 'error',
-                    background: theme.background,
-                    color: theme.color,
-                    confirmButtonColor: theme.confirmButtonColor
-                });
-            } else {
-                window.alert(error.message);
-            }
+            // Error notification appears in the upper-right corner.
+            showToast(
+                error.message || 'Unable to reset user password.',
+                'error'
+            );
         }
     }
 
