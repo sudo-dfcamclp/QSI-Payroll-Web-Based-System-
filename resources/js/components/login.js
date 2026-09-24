@@ -1,4 +1,3 @@
-
 import Swal from 'sweetalert2';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,11 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
 
     function updateHeight(view) {
+
         if (!view) {
             return;
         }
 
         authContent.style.height = `${view.scrollHeight}px`;
+
     }
 
     // =========================================================
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'translate-x-0',
             'opacity-100'
         );
+
     });
 
     // =========================================================
@@ -125,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'translate-x-0',
             'opacity-100'
         );
+
     });
 
     // =========================================================
@@ -153,7 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 'aria-label',
                 showPassword ? 'Hide password' : 'Show password'
             );
+
         });
+
     }
 
     // =========================================================
@@ -167,7 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
 
             await login();
+
         });
+
     }
 
     // =========================================================
@@ -196,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             usernameInput?.focus();
 
             return;
+
         }
 
         if (!password) {
@@ -210,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             passwordInput?.focus();
 
             return;
+
         }
 
         // -----------------------------------------------------
@@ -225,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
 
             const response = await fetch('/payroll/public/api/login', {
+
                 method: 'POST',
 
                 headers: {
@@ -240,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     password: password,
                     remember: remember
                 })
+
             });
 
             const data = await parseJsonResponse(response);
@@ -251,18 +262,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok && data.success) {
 
                 await Swal.fire({
+                    position: 'top-end',
                     icon: 'success',
-                    title: 'Login Successful',
-                    text: data.message || 'You have successfully signed in.',
-                    confirmButtonColor: '#0a5d3c',
+                    title: 'Login Successfully',
+                    showConfirmButton: false,
                     timer: 1500,
-                    timerProgressBar: true,
-                    showConfirmButton: false
+                    toast: true,
+                    customClass: {
+                        popup: 'login-success-toast'
+                    }
                 });
 
                 window.location.href = data.redirect || '/dashboard';
 
                 return;
+
             }
 
             // -------------------------------------------------
@@ -279,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 return;
+
             }
 
             // -------------------------------------------------
@@ -295,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 return;
+
             }
 
             throw new Error(
@@ -321,7 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 false,
                 'Sign In'
             );
+
         }
+
     }
 
     // =========================================================
@@ -335,7 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
 
             await register();
+
         });
+
     }
 
     // =========================================================
@@ -365,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerUsername?.focus();
 
             return;
+
         }
 
         if (!email) {
@@ -379,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerEmail?.focus();
 
             return;
+
         }
 
         if (!isValidEmail(email)) {
@@ -393,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerEmail?.focus();
 
             return;
+
         }
 
         if (!password) {
@@ -407,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerPassword?.focus();
 
             return;
+
         }
 
         if (password.length < 8) {
@@ -421,6 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerPassword?.focus();
 
             return;
+
         }
 
         if (!passwordConfirmation) {
@@ -435,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmPassword?.focus();
 
             return;
+
         }
 
         if (password !== passwordConfirmation) {
@@ -449,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmPassword?.focus();
 
             return;
+
         }
 
         // -----------------------------------------------------
@@ -464,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
 
             const response = await fetch('/payroll/public/api/register', {
+
                 method: 'POST',
 
                 headers: {
@@ -480,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     password: password,
                     password_confirmation: passwordConfirmation
                 })
+
             });
 
             const data = await parseJsonResponse(response);
@@ -520,10 +549,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 showLogin.click();
 
                 setTimeout(() => {
+
                     usernameInput?.focus();
+
                 }, 550);
 
                 return;
+
             }
 
             // -------------------------------------------------
@@ -540,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 return;
+
             }
 
             // -------------------------------------------------
@@ -570,7 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 false,
                 'Create Account'
             );
+
         }
+
     }
 
     // =========================================================
@@ -586,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return token
             ? token.getAttribute('content') || ''
             : '';
+
     }
 
     // =========================================================
@@ -599,6 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (contentType.includes('application/json')) {
 
             return await response.json();
+
         }
 
         const text = await response.text();
@@ -618,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(
                 'Authentication endpoint was not found. Check your Laravel routes.'
             );
+
         }
 
         if (response.status === 419) {
@@ -625,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(
                 'Your session or CSRF token has expired. Please refresh the page and try again.'
             );
+
         }
 
         if (response.status >= 500) {
@@ -632,11 +671,13 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(
                 'Laravel encountered a server error. Check the Laravel error log.'
             );
+
         }
 
         throw new Error(
             `Server returned an unexpected response (HTTP ${response.status}).`
         );
+
     }
 
     // =========================================================
@@ -657,11 +698,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (Array.isArray(errors) && errors.length > 0) {
 
                     return errors[0];
+
                 }
+
             }
+
         }
 
         return data?.message || 'Please check the information you entered.';
+
     }
 
     // =========================================================
@@ -671,6 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function isValidEmail(email) {
 
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
     }
 
     // =========================================================
@@ -680,7 +726,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function setButtonLoading(button, loading, text) {
 
         if (!button) {
+
             return;
+
         }
 
         if (loading) {
@@ -696,15 +744,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 button.dataset.originalText =
                     button.innerHTML;
+
             }
 
             button.innerHTML = `
+
                 <svg
                     class="h-4 w-4 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                 >
+
                     <circle
                         class="opacity-25"
                         cx="12"
@@ -719,10 +770,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                     ></path>
+
                 </svg>
 
                 ${text}
+
             `;
+
         }
         else {
 
@@ -737,7 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.dataset.originalText || text;
 
             delete button.dataset.originalText;
+
         }
+
     }
 
     // =========================================================
@@ -754,6 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? registerView
                 : loginView
         );
-    });
-});
 
+    });
+
+});

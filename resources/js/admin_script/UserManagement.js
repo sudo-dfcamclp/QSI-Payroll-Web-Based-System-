@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 import { initUserManagementDelete } from './UserManagementDelete';
 
 export async function init(panel) {
@@ -51,11 +52,6 @@ export async function init(panel) {
 
     // Show SweetAlert toast notification
     function showToast(message, icon = 'success') {
-        if (!window.Swal) {
-            window.alert(message);
-            return;
-        }
-
         const theme = getSwalTheme();
 
         Swal.fire({
@@ -370,26 +366,22 @@ export async function init(panel) {
         const actionText = nextStatus === 'active' ? 'activate' : 'disable';
 
         // Keep confirmation dialog centered.
-        if (window.Swal) {
-            const theme = getSwalTheme();
+        const theme = getSwalTheme();
 
-            const result = await Swal.fire({
-                title: `${nextStatus === 'active' ? 'Activate' : 'Disable'} User?`,
-                text: `Are you sure you want to ${actionText} ${user.username}?`,
-                icon: 'question',
-                background: theme.background,
-                color: theme.color,
-                showCancelButton: true,
-                confirmButtonColor: theme.confirmButtonColor,
-                cancelButtonColor: theme.cancelButtonColor,
-                confirmButtonText: nextStatus === 'active' ? 'Activate' : 'Disable',
-                cancelButtonText: 'Cancel'
-            });
+        const result = await Swal.fire({
+            title: `${nextStatus === 'active' ? 'Activate' : 'Disable'} User?`,
+            text: `Are you sure you want to ${actionText} ${user.username}?`,
+            icon: 'question',
+            background: theme.background,
+            color: theme.color,
+            showCancelButton: true,
+            confirmButtonColor: theme.confirmButtonColor,
+            cancelButtonColor: theme.cancelButtonColor,
+            confirmButtonText: nextStatus === 'active' ? 'Activate' : 'Disable',
+            cancelButtonText: 'Cancel'
+        });
 
-            if (!result.isConfirmed) {
-                return;
-            }
-        } else if (!window.confirm(`Are you sure you want to ${actionText} ${user.username}?`)) {
+        if (!result.isConfirmed) {
             return;
         }
 
@@ -444,57 +436,41 @@ export async function init(panel) {
         let confirmedPassword = '';
 
         // Keep password form centered.
-        if (window.Swal) {
-            const theme = getSwalTheme();
+        const theme = getSwalTheme();
 
-            const result = await Swal.fire({
-                title: 'Reset Password',
-                html: `
-                    <input id="resetPassword" type="password" class="swal2-input" placeholder="New password">
-                    <input id="resetPasswordConfirm" type="password" class="swal2-input" placeholder="Confirm password">
-                `,
-                background: theme.background,
-                color: theme.color,
-                showCancelButton: true,
-                confirmButtonColor: theme.confirmButtonColor,
-                cancelButtonColor: theme.cancelButtonColor,
-                confirmButtonText: 'Reset Password',
-                cancelButtonText: 'Cancel',
-                preConfirm: () => {
-                    password = document.querySelector('#resetPassword')?.value || '';
-                    confirmedPassword = document.querySelector('#resetPasswordConfirm')?.value || '';
+        const result = await Swal.fire({
+            title: 'Reset Password',
+            html: `
+                <input id="resetPassword" type="password" class="swal2-input" placeholder="New password">
+                <input id="resetPasswordConfirm" type="password" class="swal2-input" placeholder="Confirm password">
+            `,
+            background: theme.background,
+            color: theme.color,
+            showCancelButton: true,
+            confirmButtonColor: theme.confirmButtonColor,
+            cancelButtonColor: theme.cancelButtonColor,
+            confirmButtonText: 'Reset Password',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                password = document.querySelector('#resetPassword')?.value || '';
+                confirmedPassword = document.querySelector('#resetPasswordConfirm')?.value || '';
 
-                    if (password.length < 8) {
-                        Swal.showValidationMessage('Password must be at least 8 characters.');
-                        return false;
-                    }
-
-                    if (password !== confirmedPassword) {
-                        Swal.showValidationMessage('Passwords do not match.');
-                        return false;
-                    }
-
-                    return true;
+                if (password.length < 8) {
+                    Swal.showValidationMessage('Password must be at least 8 characters.');
+                    return false;
                 }
-            });
 
-            if (!result.isConfirmed) {
-                return;
+                if (password !== confirmedPassword) {
+                    Swal.showValidationMessage('Passwords do not match.');
+                    return false;
+                }
+
+                return true;
             }
-        } else {
-            password = window.prompt('Enter new password:') || '';
+        });
 
-            if (password.length < 8) {
-                window.alert('Password must be at least 8 characters.');
-                return;
-            }
-
-            confirmedPassword = window.prompt('Confirm new password:') || '';
-
-            if (password !== confirmedPassword) {
-                window.alert('Passwords do not match.');
-                return;
-            }
+        if (!result.isConfirmed) {
+            return;
         }
 
         await resetUserPassword(userId, password, confirmedPassword);

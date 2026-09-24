@@ -1,3 +1,4 @@
+import Swal from 'sweetalert2';
 export function init(panel){
 
     loadRoles(panel);
