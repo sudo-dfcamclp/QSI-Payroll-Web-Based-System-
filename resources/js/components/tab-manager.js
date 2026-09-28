@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // PAGE JAVASCRIPT REGISTRY
     // =========================================================
     const PAGE_SCRIPTS = {
-        'employee-info': () => import('../employee_script/employee-info.js'),
-        'employee-deduction': () => import('../pages/employee-deduction.js'),
-        'employee-payroll': () => import('../employee_script/employee-payroll.js'),
+        'employee-info': () => import('../employee_script/EmployeeInfo.js'),
+        'employee-deduction': () => import('../employee_script/EmployeeDeduction.js'),
+        'employee-payroll': () => import('../employee_script/EmployeePayroll.js'),
         'user-management': () => import('../admin_script/UserManagement.js'),
         'role-management': () => import('../admin_script/RoleManagement.js'),
         'system-settings': () => import('../admin_script/SystemSetting.js'),

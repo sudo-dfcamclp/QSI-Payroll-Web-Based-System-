@@ -37,6 +37,11 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-info');
     })->name('employee.info');
 
+        // Client master page
+    Route::get('/employee/client-master', function () {
+        return view('employee.client-master');
+    })->name('client.master');
+
     // Employee deduction page
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');

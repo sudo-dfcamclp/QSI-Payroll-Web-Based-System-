@@ -68,6 +68,7 @@ class AuthController extends Controller
                 'employee-deduction',
                 'employee-payroll',
                 'first-last-cutoff',
+                'client-master',
                 'user-management',
                 'role-management',
                 'system-settings',
@@ -87,7 +88,7 @@ class AuthController extends Controller
             $allowedTabs = array_merge($allowedTabs, [
                 'employee-info',
                 'employee-deduction',
-                'ClientMaster',
+                'client-master',
             ]);
         }
 

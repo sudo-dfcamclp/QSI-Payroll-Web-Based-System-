@@ -12,7 +12,7 @@
 }
 @font-face {
     font-family: 'Inter';
-    src: url('/payroll/public/font/InterVariable.woff2') format('woff2');
+    src: url('../fonts/InterVariable.woff2') format('woff2');
     font-weight: 100 900;
     font-style: normal;
     font-display: swap;

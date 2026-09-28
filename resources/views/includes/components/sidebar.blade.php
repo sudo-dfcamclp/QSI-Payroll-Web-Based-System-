@@ -107,11 +107,11 @@
 
                 <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
 
+                    <a href="{{ route('client.master') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/client-master') }}" data-tab-id="client-master" data-tab-title="Client Info" data-tab-icon="fa-solid fa-building">Client Info</a>
+
                     <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/deduction-type') }}" data-tab-id="deduction-type" data-tab-title="Deduction Type" data-tab-icon="fa-solid fa-shield">Deduction Type</a>
 
                     <a href="{{ route('employee.deduction') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/employee-deduction') }}" data-tab-id="employee-deduction" data-tab-title="Employee Deduction" data-tab-icon="fa-solid fa-user-minus">Employee Deduction</a>
-
-                    <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/client-master') }}" data-tab-id="client-master" data-tab-title="Client Master" data-tab-icon="fa-solid fa-building">Client Master</a>
 
                 </div>
 
@@ -255,13 +255,13 @@
         <a class="tab-link flex items-center gap-3 px-3 py-2.5 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors mb-1 cursor-pointer"
            data-page="{{ url('/includes/setting') }}"
            data-tab-id="settings"
-           data-tab-title="Settings"
+           data-tab-title="Profile Settings"
            data-tab-icon="fa-solid fa-gear">
 
             <i class="fa-solid fa-gear text-gray-500 dark:text-gray-300 text-lg shrink-0 w-5 text-center pointer-events-none"></i>
 
             <span class="sidebar-text whitespace-nowrap font-medium text-sm select-none">
-                Settings
+                Profile Settings
             </span>
 
         </a>
