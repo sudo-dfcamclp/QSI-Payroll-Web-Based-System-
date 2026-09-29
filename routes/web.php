@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -7,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ClientMasterController;
 
 // Login page
 Route::get('/login', function () {
@@ -37,17 +37,30 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-info');
     })->name('employee.info');
 
-        // Client master page
+    // Client master page
     Route::get('/employee/client-master', function () {
         return view('employee.client-master');
     })->name('client.master');
+
+    // Client master API
+    Route::get('/api/client-master/search', [ClientMasterController::class, 'search'])
+        ->name('api.client-master.search');
+
+    Route::get('/api/client-master/{client:client_id}', [ClientMasterController::class, 'show'])
+        ->name('api.client-master.show');
+
+    Route::post('/api/client-master', [ClientMasterController::class, 'store'])
+        ->name('api.client-master.store');
+
+    Route::put('/api/client-master/{client:client_id}', [ClientMasterController::class, 'update'])
+        ->name('api.client-master.update');
 
     // Employee deduction page
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
 
-        // Employee payroll page
+    // Employee payroll page
     Route::get('/employee/employee-payroll', function () {
         return view('employee.employee-payroll');
     })->name('employee.payroll');

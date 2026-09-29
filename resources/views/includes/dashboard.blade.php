@@ -34,7 +34,7 @@
                 <div id="tabList" class="flex items-center overflow-x-auto">
 
                     <!-- Dashboard Tab -->
-                    <button type="button" class="tab-item active flex items-center gap-3 px-5 py-4 text-base font-semibold text-green-600 border-b-2 border-green-600 whitespace-nowrap hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors" data-tab-id="dashboard" data-tab-title="Dashboard" data-tab-icon="fa-solid fa-display" data-page="/dashboard">
+                    <button type="button" class="tab-item active flex items-center gap-3 px-5 py-4 text-base font-semibold text-green-600 border-b-2 border-green-600 whitespace-nowrap hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors cursor-pointer" data-tab-id="dashboard" data-tab-title="Dashboard" data-tab-icon="fa-solid fa-display" data-page="/dashboard">
 
                         <i class="fa-solid fa-display text-lg"></i>
 

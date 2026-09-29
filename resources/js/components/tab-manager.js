@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // PAGE JAVASCRIPT REGISTRY
     // =========================================================
     const PAGE_SCRIPTS = {
+        'client-master': () => import('../employee_script/ClientMaster.js'),
         'employee-info': () => import('../employee_script/EmployeeInfo.js'),
         'employee-deduction': () => import('../employee_script/EmployeeDeduction.js'),
         'employee-payroll': () => import('../employee_script/EmployeePayroll.js'),
@@ -909,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.type = 'button';
 
         button.className =
-            'tab-item flex items-center gap-3 px-5 py-4 text-base font-semibold text-gray-500 dark:text-gray-300 border-b-2 border-transparent hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer whitespace-nowrap transition-colors select-none';
+            'tab-item flex items-center gap-3 px-5 py-4 text-base font-semibold text-gray-500 dark:text-gray-300 border-b-2 border-transparent hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-600 whitespace-nowrap transition-colors select-none cursor-pointer';
 
         button.dataset.tabId = tabId;
         button.dataset.tabTitle = tabTitle;
@@ -921,7 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="pointer-events-none">
                 ${escapeHtml(tabTitle)}
             </span>
-            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-400 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Close tab">
+            <span class="tab-close ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-400 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 " title="Close tab">
                 <i class="fa-solid fa-xmark text-xs pointer-events-none"></i>
             </span>
         `;
