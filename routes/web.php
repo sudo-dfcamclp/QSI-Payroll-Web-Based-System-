@@ -7,6 +7,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ClientMasterController;
+use App\Http\Controllers\EmployeeMasterController;
 
 // Login page
 Route::get('/login', function () {
@@ -36,6 +37,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/employee/employee-info', function () {
         return view('employee.employee-info');
     })->name('employee.info');
+
+    // Employee master API
+    Route::get('/api/employee-master/search', [EmployeeMasterController::class, 'search'])
+        ->name('api.employee-master.search');
+
+    Route::get('/api/employee-master/clients', [EmployeeMasterController::class, 'clients'])
+        ->name('api.employee-master.clients');
+
+    Route::get('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'show'])
+        ->name('api.employee-master.show');
+
+    Route::post('/api/employee-master', [EmployeeMasterController::class, 'store'])
+        ->name('api.employee-master.store');
+
+    Route::put('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'update'])
+        ->name('api.employee-master.update');
+
+    // Contract monitoring page
+    Route::get('/employee/contract-monitoring', function () {
+        return view('employee.contract-monitoring');
+    })->name('contract.monitoring');
 
     // Client master page
     Route::get('/employee/client-master', function () {

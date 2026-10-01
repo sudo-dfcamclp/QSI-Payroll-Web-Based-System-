@@ -79,8 +79,22 @@ export async function init(panel) {
     };
 
     let editing = false;
+    let creating = false;
     let currentClientId = null;
     let originalData = {};
+    let searchTimeout = null;
+    let highlightedIndex = -1;
+
+    if (searchInput) {
+        searchInput.setAttribute('role', 'combobox');
+        searchInput.setAttribute('aria-autocomplete', 'list');
+        searchInput.setAttribute('aria-expanded', 'false');
+        searchInput.setAttribute('aria-controls', 'clientSearchList');
+    }
+
+    if (searchList) {
+        searchList.setAttribute('role', 'listbox');
+    }
 
     const inputClasses = {
         normal: [
@@ -136,6 +150,39 @@ export async function init(panel) {
     }
 
     function setButtonState() {
+        if (editing && creating) {
+            editButton.innerHTML = '<i class="fa-solid fa-xmark mr-2"></i>Cancel';
+
+            editButton.classList.remove(
+                'bg-green-600',
+                'hover:bg-green-700'
+            );
+
+            editButton.classList.add(
+                'bg-red-500',
+                'hover:bg-red-600'
+            );
+
+            saveButton.disabled = false;
+
+            saveButton.classList.remove(
+                'bg-gray-300',
+                'dark:bg-gray-600',
+                'text-gray-500',
+                'dark:text-gray-400',
+                'cursor-not-allowed'
+            );
+
+            saveButton.classList.add(
+                'bg-green-600',
+                'hover:bg-green-700',
+                'text-white',
+                'cursor-pointer'
+            );
+
+            return;
+        }
+
         if (editing) {
             editButton.innerHTML = '<i class="fa-solid fa-xmark mr-2"></i>Cancel';
 
@@ -169,7 +216,11 @@ export async function init(panel) {
             return;
         }
 
-        editButton.innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i>Edit';
+        if (currentClientId) {
+            editButton.innerHTML = '<i class="fa-solid fa-pen-to-square mr-2"></i>Edit';
+        } else {
+            editButton.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Add Client';
+        }
 
         editButton.classList.remove(
             'bg-red-500',
@@ -230,6 +281,42 @@ export async function init(panel) {
         });
     }
 
+    function clearFormData() {
+        Object.values(allFields).forEach(field => {
+            if (!field) return;
+
+            if (field.type === 'checkbox') {
+                field.checked = false;
+            } else {
+                field.value = '';
+            }
+        });
+
+        if (configFields.payroll_frequency) {
+            configFields.payroll_frequency.value = 'semi_monthly';
+        }
+
+        if (configFields.agency_fee_basis) {
+            configFields.agency_fee_basis.value = 'agency_rate';
+        }
+
+        if (configFields.billing_schedule) {
+            configFields.billing_schedule.value = '';
+        }
+
+        if (configFields.billing_template) {
+            configFields.billing_template.value = '';
+        }
+
+        if (configFields.pickup_dtr) {
+            configFields.pickup_dtr.value = 'Not configured';
+        }
+
+        if (configFields.salary_release) {
+            configFields.salary_release.value = 'Not configured';
+        }
+    }
+
     function saveOriginalData() {
         originalData = getFormData();
     }
@@ -238,8 +325,30 @@ export async function init(panel) {
         setFormData(originalData);
     }
 
-    function enterEditMode() {
+    function enterAddMode() {
+        clearFormData();
+
+        currentClientId = null;
+        creating = true;
         editing = true;
+
+        saveOriginalData();
+
+        setFieldState(true);
+        setButtonState();
+
+        fields.client_name?.focus();
+    }
+
+    function enterEditMode() {
+        if (!currentClientId) {
+            enterAddMode();
+            return;
+        }
+
+        creating = false;
+        editing = true;
+
         setFieldState(true);
         setButtonState();
     }
@@ -249,19 +358,31 @@ export async function init(panel) {
 
         const result = await Swal.fire({
             icon: 'question',
-            title: 'Cancel Editing?',
+            title: creating ? 'Cancel Adding Client?' : 'Cancel Editing?',
             text: 'Any unsaved changes will be discarded.',
             showCancelButton: true,
             confirmButtonText: 'Yes, Cancel',
-            cancelButtonText: 'Continue Editing',
+            cancelButtonText: 'Continue',
             confirmButtonColor: '#dc2626'
         });
 
         if (!result.isConfirmed) return;
 
-        restoreOriginalData();
+        if (creating) {
+            clearFormData();
+            currentClientId = null;
+            creating = false;
+            editing = false;
 
-        editing = false;
+            if (searchInput) {
+                searchInput.value = '';
+            }
+
+            saveOriginalData();
+        } else {
+            restoreOriginalData();
+            editing = false;
+        }
 
         setFieldState(false);
         setButtonState();
@@ -334,7 +455,7 @@ export async function init(panel) {
             night_differential_rate: data.night_differential_rate,
             special_holiday_overtime_rate: data.special_holiday_overtime_rate,
             special_holiday_rest_day_rate: data.special_holiday_rest_day_rate,
-            special_holiday_rest_day_overtime_rate: data.special_holiday_rest_day_overtime_rate,
+            special_holiday_rest_day_overtime_rate: data.special_holiday_rest_day_over_time_rate,
             legal_holiday_overtime_rate: data.legal_holiday_overtime_rate,
             legal_holiday_rest_day_rate: data.legal_holiday_rest_day_rate,
             legal_holiday_rest_day_overtime_rate: data.legal_holiday_rest_day_overtime_rate,
@@ -410,12 +531,17 @@ export async function init(panel) {
                 ...(result.data?.payroll_config || {})
             });
 
-            saveOriginalData();
-
+            creating = false;
             editing = false;
+
+            saveOriginalData();
 
             setFieldState(false);
             setButtonState();
+
+            if (searchInput) {
+                searchInput.value = result.data?.client?.client_name || data.client_name || '';
+            }
 
             await Swal.fire({
                 icon: 'success',
@@ -438,6 +564,20 @@ export async function init(panel) {
     }
 
     async function loadClient(clientId) {
+        if (editing) {
+            const result = await Swal.fire({
+                icon: 'question',
+                title: creating ? 'Cancel New Client?' : 'Discard Changes?',
+                text: 'You have unsaved changes. Do you want to load another client?',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Continue',
+                cancelButtonText: 'Stay Here',
+                confirmButtonColor: '#dc2626'
+            });
+
+            if (!result.isConfirmed) return;
+        }
+
         try {
             const response = await fetch(
                 `/payroll/public/api/client-master/${clientId}`,
@@ -488,7 +628,7 @@ export async function init(panel) {
             });
 
             currentClientId = client.client_id;
-
+            creating = false;
             editing = false;
 
             setFieldState(false);
@@ -497,9 +637,11 @@ export async function init(panel) {
 
             if (searchInput) {
                 searchInput.value = client.client_name || '';
+                searchInput.setAttribute('aria-expanded', 'false');
             }
 
             searchResults.classList.add('hidden');
+            resetHighlightedResult();
         } catch (error) {
             console.error('Load client error:', error);
 
@@ -511,13 +653,79 @@ export async function init(panel) {
         }
     }
 
+    function updateHighlightedResult() {
+        const results = searchList?.querySelectorAll('[data-client-id]') || [];
+
+        results.forEach((result, index) => {
+            const isHighlighted = index === highlightedIndex;
+
+            result.classList.toggle('bg-gray-100', isHighlighted);
+            result.classList.toggle('dark:bg-gray-600', isHighlighted);
+
+            result.setAttribute(
+                'aria-selected',
+                isHighlighted ? 'true' : 'false'
+            );
+
+            if (isHighlighted) {
+                searchInput?.setAttribute(
+                    'aria-activedescendant',
+                    result.id
+                );
+
+                result.scrollIntoView({
+                    block: 'nearest'
+                });
+            }
+        });
+
+        if (highlightedIndex < 0) {
+            searchInput?.removeAttribute('aria-activedescendant');
+        }
+    }
+
+    function resetHighlightedResult() {
+        highlightedIndex = -1;
+
+        if (searchList) {
+            searchList.querySelectorAll('[data-client-id]').forEach(result => {
+                result.classList.remove(
+                    'bg-gray-100',
+                    'dark:bg-gray-600'
+                );
+
+                result.setAttribute('aria-selected', 'false');
+            });
+        }
+
+        searchInput?.removeAttribute('aria-activedescendant');
+    }
+
+    async function selectHighlightedResult() {
+        const results = searchList?.querySelectorAll('[data-client-id]') || [];
+
+        if (
+            highlightedIndex < 0 ||
+            highlightedIndex >= results.length
+        ) {
+            return;
+        }
+
+        const selectedResult = results[highlightedIndex];
+
+        await loadClient(selectedResult.dataset.clientId);
+    }
+
     async function searchClients(query) {
+        resetHighlightedResult();
+
         if (!query.trim()) {
             if (searchList) {
                 searchList.innerHTML = '';
             }
 
             searchResults.classList.add('hidden');
+            searchInput?.setAttribute('aria-expanded', 'false');
             return;
         }
 
@@ -552,14 +760,18 @@ export async function init(panel) {
                 `;
 
                 searchResults.classList.remove('hidden');
+                searchInput?.setAttribute('aria-expanded', 'true');
                 return;
             }
 
             searchList.innerHTML = clients.map(client => `
                 <button
                     type="button"
+                    id="clientSearchOption${client.client_id}"
                     data-client-id="${client.client_id}"
-                    class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                    role="option"
+                    aria-selected="false"
+                    class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer">
                     <div class="font-medium text-sm text-gray-800 dark:text-white">
                         ${escapeHtml(client.client_name || '')}
                     </div>
@@ -570,8 +782,14 @@ export async function init(panel) {
             `).join('');
 
             searchResults.classList.remove('hidden');
+            searchInput?.setAttribute('aria-expanded', 'true');
 
-            searchList.querySelectorAll('[data-client-id]').forEach(button => {
+            searchList.querySelectorAll('[data-client-id]').forEach((button, index) => {
+                button.addEventListener('mouseenter', () => {
+                    highlightedIndex = index;
+                    updateHighlightedResult();
+                });
+
                 button.addEventListener('click', async event => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -589,6 +807,7 @@ export async function init(panel) {
             `;
 
             searchResults.classList.remove('hidden');
+            searchInput?.setAttribute('aria-expanded', 'true');
         }
     }
 
@@ -601,10 +820,11 @@ export async function init(panel) {
             .replaceAll("'", '&#039;');
     }
 
-    let searchTimeout = null;
-
     searchInput?.addEventListener('input', () => {
         clearTimeout(searchTimeout);
+
+        searchInput.removeAttribute('aria-activedescendant');
+        highlightedIndex = -1;
 
         searchTimeout = setTimeout(() => {
             searchClients(searchInput.value);
@@ -617,6 +837,64 @@ export async function init(panel) {
         }
     });
 
+    searchInput?.addEventListener('keydown', async event => {
+        const results = searchList?.querySelectorAll('[data-client-id]') || [];
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+
+            searchResults.classList.add('hidden');
+            searchInput.setAttribute('aria-expanded', 'false');
+            resetHighlightedResult();
+            return;
+        }
+
+        if (!results.length) return;
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+
+            if (searchResults.classList.contains('hidden')) {
+                searchResults.classList.remove('hidden');
+                searchInput.setAttribute('aria-expanded', 'true');
+            }
+
+            highlightedIndex++;
+
+            if (highlightedIndex >= results.length) {
+                highlightedIndex = 0;
+            }
+
+            updateHighlightedResult();
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+
+            if (searchResults.classList.contains('hidden')) {
+                searchResults.classList.remove('hidden');
+                searchInput.setAttribute('aria-expanded', 'true');
+            }
+
+            highlightedIndex--;
+
+            if (highlightedIndex < 0) {
+                highlightedIndex = results.length - 1;
+            }
+
+            updateHighlightedResult();
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            if (highlightedIndex >= 0) {
+                event.preventDefault();
+                await selectHighlightedResult();
+            }
+        }
+    });
+
     document.addEventListener('click', event => {
         if (!panel.contains(event.target)) return;
 
@@ -626,21 +904,33 @@ export async function init(panel) {
             event.target !== searchInput
         ) {
             searchResults.classList.add('hidden');
+            searchInput?.setAttribute('aria-expanded', 'false');
+            resetHighlightedResult();
         }
     });
 
-    editButton?.addEventListener('click', () => {
+    editButton?.addEventListener('click', async () => {
         if (editing) {
-            cancelEdit();
+            await cancelEdit();
             return;
         }
 
-        enterEditMode();
+        if (currentClientId) {
+            enterEditMode();
+        } else {
+            enterAddMode();
+        }
     });
 
     saveButton?.addEventListener('click', saveClient);
 
+    clearFormData();
+
+    currentClientId = null;
+    creating = false;
+    editing = false;
+
     setFieldState(false);
-    setButtonState();
     saveOriginalData();
+    setButtonState();
 }

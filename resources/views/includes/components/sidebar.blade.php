@@ -90,6 +90,9 @@
 
                 <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
                     <a href="{{ route('employee.info') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/employee-info') }}" data-tab-id="employee-info" data-tab-title="Employee Info" data-tab-icon="fa-regular fa-user">Employee Info</a>
+
+                    <a href="{{ route('contract.monitoring') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/contract-monitoring') }}" data-tab-id="contract-monitoring" data-tab-title="Contract Monitoring" data-tab-icon="fa-regular fa-user">Contract Monitoring</a>
+                
                 </div>
 
             </div>

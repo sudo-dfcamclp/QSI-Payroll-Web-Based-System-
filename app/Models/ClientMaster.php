@@ -29,4 +29,9 @@ class ClientMaster extends Model
     {
         return $this->hasOne(ClientPayrollConfig::class, 'client_id', 'client_id');
     }
+
+    public function employees()
+    {
+        return $this->hasMany(EmployeeMaster::class, 'client_id', 'client_id');
+    }
 }

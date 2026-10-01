@@ -41,6 +41,7 @@ class AuthController extends Controller
         |
         | HR:
         |   employee-info
+        |   contract-monitoring
         |
         | Payroll:
         |   employee-payroll
@@ -48,6 +49,7 @@ class AuthController extends Controller
         |
         | Final:
         |   employee-info
+        |   contract-monitoring
         |   employee-payroll
         |   first-last-cutoff
         |--------------------------------------------------------------------------
@@ -68,6 +70,7 @@ class AuthController extends Controller
                 'employee-deduction',
                 'employee-payroll',
                 'first-last-cutoff',
+                'contract-monitoring',
                 'client-master',
                 'user-management',
                 'role-management',
@@ -88,6 +91,7 @@ class AuthController extends Controller
             $allowedTabs = array_merge($allowedTabs, [
                 'employee-info',
                 'employee-deduction',
+                'contract-monitoring',
                 'client-master',
             ]);
         }
@@ -96,6 +100,7 @@ class AuthController extends Controller
         if (in_array(4, $roleIds, true)) {
             $allowedTabs = array_merge($allowedTabs, [
                 'employee-info',
+                'contract-monitoring',
             ]);
         }
 
