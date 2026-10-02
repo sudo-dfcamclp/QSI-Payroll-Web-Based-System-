@@ -361,35 +361,40 @@
                     <input type="date" name="end_contract" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
                 </div> 
  
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Rate Basis:</label> 
-                    <select name="rate_basis" disabled class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
-                        <option value="">Select Rate Basis</option> 
-                        <option value="Daily">Daily</option> 
-                        <option value="Monthly">Monthly</option> 
-                        <option value="Hourly">Hourly</option> 
-                    </select> 
-                </div> 
- 
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Month No:</label> 
-                    <input type="number" name="month_no" placeholder="Month No." readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
-                </div> 
- 
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Hourly Rate:</label> 
-                    <input type="number" step="0.01" name="hourly_rate" placeholder="Hourly Rate" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
-                </div> 
- 
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Daily Rate:</label> 
-                    <input type="number" step="0.01" name="daily_rate" placeholder="Daily Rate" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
-                </div> 
- 
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Monthly Rate:</label> 
-                    <input type="number" step="0.01" name="monthly_rate" placeholder="Monthly Rate" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 transition-all cursor-not-allowed opacity-60"> 
-                </div> 
+                <!-- Rate Basis -->
+                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Rate Basis:</label>
+                    <select name="rate_basis" disabled class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60">
+                        <option value="">Select Rate Basis</option>
+                        <option value="Daily">Daily</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Hourly">Hourly</option>
+                    </select>
+                </div>
+
+                <!-- Month No -->
+                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Month No:</label>
+                    <input type="number" name="month_no" placeholder="Month No" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60">
+                </div>
+
+                <!-- Hourly Rate -->
+                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Hourly Rate:</label>
+                    <input type="number" step="0.01" name="hourly_rate" placeholder="Automatically computed" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60">
+                </div>
+
+                <!-- Daily Rate -->
+                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Daily Rate:</label>
+                    <input type="number" step="0.01" name="daily_rate" placeholder="Daily Rate" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60">
+                </div>
+
+                <!-- Monthly Rate -->
+                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Monthly Rate:</label>
+                    <input type="number" step="0.01" name="monthly_rate" placeholder="Automatically computed" readonly class="employee-field w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 transition-all cursor-not-allowed opacity-60">
+                </div>
  
                 <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
                     <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Date Reg:</label> 

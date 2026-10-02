@@ -59,11 +59,7 @@ class EmployeeMaster extends Model
         'date_resigned',
         'start_contract',
         'end_contract',
-        'rate_basis',
         'month_no',
-        'hourly_rate',
-        'daily_rate',
-        'monthly_rate',
         'date_reg',
         'date_prob',
         'insurance_no',
@@ -86,9 +82,6 @@ class EmployeeMaster extends Model
         'date_prob' => 'date',
         'weight' => 'decimal:2',
         'height' => 'decimal:2',
-        'hourly_rate' => 'decimal:2',
-        'daily_rate' => 'decimal:2',
-        'monthly_rate' => 'decimal:2',
         'agency_fee' => 'decimal:2',
         'expanded_tax' => 'decimal:2',
         'allowance' => 'decimal:2',
@@ -98,5 +91,10 @@ class EmployeeMaster extends Model
     public function client()
     {
         return $this->belongsTo(ClientMaster::class, 'client_id', 'client_id');
+    }
+
+    public function basicRates()
+    {
+        return $this->hasMany(EmployeeBasicRate::class, 'emp_id', 'emp_id');
     }
 }

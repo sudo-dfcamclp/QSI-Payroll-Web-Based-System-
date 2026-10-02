@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientMaster;
+use App\Models\EmployeeBasicRate;
 use App\Models\EmployeeMaster;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class EmployeeMasterController extends Controller
@@ -63,6 +65,22 @@ class EmployeeMasterController extends Controller
             ->limit(20)
             ->get();
 
+        $clients->transform(function ($client) {
+            $config = DB::table('client_payroll_config')
+                ->where('client_id', $client->client_id)
+                ->first();
+
+            return [
+                'client_id' => $client->client_id,
+                'client_name' => $client->client_name,
+                'payroll_config' => $config ? [
+                    'hours_per_day' => $config->hours_per_day,
+                    'working_days_per_month' => $config->working_days_per_month,
+                    'working_days_per_year' => $config->working_days_per_year,
+                ] : null,
+            ];
+        });
+
         return response()->json([
             'data' => $clients
         ]);
@@ -70,7 +88,7 @@ class EmployeeMasterController extends Controller
 
     public function show($emp_id)
     {
-        $employee = EmployeeMaster::with('client')->findOrFail($emp_id);
+        $employee = EmployeeMaster::with(['client', 'basicRates'])->findOrFail($emp_id);
 
         return response()->json([
             'data' => $this->formatEmployee($employee)
@@ -80,14 +98,29 @@ class EmployeeMasterController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateEmployee($request);
+        $rate = $this->validateRate($request);
+
+        $rate = $this->computeRates(
+            $rate,
+            $validated['client_id'] ?? null
+        );
 
         if ($request->hasFile('profile_photo')) {
             $validated['profile_photo'] = $request->file('profile_photo')
                 ->store('employee-profiles', 'public');
         }
 
-        $employee = EmployeeMaster::create($validated);
-        $employee->load('client');
+        $employee = DB::transaction(function () use ($validated, $rate) {
+            $employee = EmployeeMaster::create($validated);
+
+            $rate['emp_id'] = $employee->emp_id;
+
+            EmployeeBasicRate::create($rate);
+
+            return $employee;
+        });
+
+        $employee->load(['client', 'basicRates']);
 
         return response()->json([
             'message' => 'Employee created successfully.',
@@ -99,6 +132,12 @@ class EmployeeMasterController extends Controller
     {
         $employee = EmployeeMaster::findOrFail($emp_id);
         $validated = $this->validateEmployee($request);
+        $rate = $this->validateRate($request);
+
+        $rate = $this->computeRates(
+            $rate,
+            $validated['client_id'] ?? null
+        );
 
         if ($request->hasFile('profile_photo')) {
             if ($employee->profile_photo) {
@@ -109,9 +148,23 @@ class EmployeeMasterController extends Controller
                 ->store('employee-profiles', 'public');
         }
 
-        $employee->update($validated);
+        DB::transaction(function () use ($employee, $validated, $rate) {
+            $employee->update($validated);
+
+            $employeeRate = $employee->basicRates()
+                ->latest('rate_id')
+                ->first();
+
+            if ($employeeRate) {
+                $employeeRate->update($rate);
+            } else {
+                $rate['emp_id'] = $employee->emp_id;
+                EmployeeBasicRate::create($rate);
+            }
+        });
+
         $employee->refresh();
-        $employee->load('client');
+        $employee->load(['client', 'basicRates']);
 
         return response()->json([
             'message' => 'Employee updated successfully.',
@@ -123,11 +176,131 @@ class EmployeeMasterController extends Controller
     {
         $data = $employee->toArray();
 
+        $rate = $employee->basicRates()
+            ->latest('rate_id')
+            ->first();
+
+        $data['rate_basis'] = $rate?->rate_basis;
+        $data['hourly_rate'] = $rate?->hourly_rate;
+        $data['daily_rate'] = $rate?->daily_rate;
+        $data['monthly_rate'] = $rate?->monthly_rate;
+        $data['effective_date'] = $rate?->effective_date?->format('Y-m-d');
+        $data['end_date'] = $rate?->end_date?->format('Y-m-d');
+
+        $config = null;
+
+        if ($employee->client_id) {
+            $config = DB::table('client_payroll_config')
+                ->where('client_id', $employee->client_id)
+                ->first();
+        }
+
+        $data['payroll_config'] = $config ? [
+            'hours_per_day' => $config->hours_per_day,
+            'working_days_per_month' => $config->working_days_per_month,
+            'working_days_per_year' => $config->working_days_per_year,
+        ] : null;
+
         $data['profile_photo_url'] = $employee->profile_photo
             ? asset('storage/' . ltrim($employee->profile_photo, '/'))
             : null;
 
         return $data;
+    }
+
+    private function computeRates(array $rate, $clientId): array
+    {
+        $basis = $rate['rate_basis'] ?? '';
+
+        if ($basis === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'rate_basis' => 'Please select a rate basis.'
+            ]);
+        }
+
+        if (!$clientId) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'client_id' => 'Assign a client with payroll config before entering a rate.'
+            ]);
+        }
+
+        $config = DB::table('client_payroll_config')
+            ->where('client_id', $clientId)
+            ->first();
+
+        if (!$config) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'client_id' => 'Assign a client with payroll config before entering a rate.'
+            ]);
+        }
+
+        $hoursPerDay = (float) $config->hours_per_day;
+        $workingDaysPerMonth = (float) $config->working_days_per_month;
+        $workingDaysPerYear = (float) $config->working_days_per_year;
+
+        if ($hoursPerDay <= 0 || $workingDaysPerMonth <= 0 || $workingDaysPerYear <= 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'client_id' => 'The selected client payroll configuration has invalid working hours or working days.'
+            ]);
+        }
+
+        $hourlyRate = isset($rate['hourly_rate']) && $rate['hourly_rate'] !== ''
+            ? (float) $rate['hourly_rate']
+            : null;
+
+        $dailyRate = isset($rate['daily_rate']) && $rate['daily_rate'] !== ''
+            ? (float) $rate['daily_rate']
+            : null;
+
+        $monthlyRate = isset($rate['monthly_rate']) && $rate['monthly_rate'] !== ''
+            ? (float) $rate['monthly_rate']
+            : null;
+
+        switch (strtolower($basis)) {
+            case 'hourly':
+                if ($hourlyRate === null || $hourlyRate <= 0) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'hourly_rate' => 'Please enter a valid hourly rate.'
+                    ]);
+                }
+
+                $dailyRate = $hourlyRate * $hoursPerDay;
+                $monthlyRate = $hourlyRate * $hoursPerDay * $workingDaysPerMonth;
+                break;
+
+            case 'daily':
+                if ($dailyRate === null || $dailyRate <= 0) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'daily_rate' => 'Please enter a valid daily rate.'
+                    ]);
+                }
+
+                $hourlyRate = $dailyRate / $hoursPerDay;
+                $monthlyRate = $dailyRate * $workingDaysPerMonth;
+                break;
+
+            case 'monthly':
+                if ($monthlyRate === null || $monthlyRate <= 0) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'monthly_rate' => 'Please enter a valid monthly rate.'
+                    ]);
+                }
+
+                $dailyRate = ($monthlyRate * 12) / $workingDaysPerYear;
+                $hourlyRate = $dailyRate / $hoursPerDay;
+                break;
+
+            default:
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'rate_basis' => 'Invalid rate basis.'
+                ]);
+        }
+
+        $rate['hourly_rate'] = round($hourlyRate, 2);
+        $rate['daily_rate'] = round($dailyRate, 2);
+        $rate['monthly_rate'] = round($monthlyRate, 2);
+
+        return $rate;
     }
 
     private function validateEmployee(Request $request)
@@ -156,7 +329,6 @@ class EmployeeMasterController extends Controller
             'city' => ['nullable', 'string', 'max:150'],
             'town' => ['nullable', 'string', 'max:150'],
             'contact' => ['nullable', 'string', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:50'],
             'primary_education' => ['nullable', 'string', 'max:255'],
             'secondary_education' => ['nullable', 'string', 'max:255'],
             'college' => ['nullable', 'string', 'max:255'],
@@ -177,11 +349,7 @@ class EmployeeMasterController extends Controller
             'date_resigned' => ['nullable', 'date'],
             'start_contract' => ['nullable', 'date'],
             'end_contract' => ['nullable', 'date'],
-            'rate_basis' => ['nullable', 'string', 'max:50'],
             'month_no' => ['nullable', 'integer'],
-            'hourly_rate' => ['nullable', 'numeric'],
-            'daily_rate' => ['nullable', 'numeric'],
-            'monthly_rate' => ['nullable', 'numeric'],
             'date_reg' => ['nullable', 'date'],
             'date_prob' => ['nullable', 'date'],
             'insurance_no' => ['nullable', 'string', 'max:100'],
@@ -197,6 +365,16 @@ class EmployeeMasterController extends Controller
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120'
             ],
+        ]);
+    }
+
+    private function validateRate(Request $request)
+    {
+        return $request->validate([
+            'rate_basis' => ['required', 'string', 'in:Daily,Monthly,Hourly'],
+            'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+            'daily_rate' => ['nullable', 'numeric', 'min:0'],
+            'monthly_rate' => ['nullable', 'numeric', 'min:0'],
         ]);
     }
 }

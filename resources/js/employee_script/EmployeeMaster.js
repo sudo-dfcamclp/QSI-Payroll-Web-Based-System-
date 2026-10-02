@@ -22,6 +22,10 @@ export async function init(panel) {
     const clientDropdown = panel.querySelector('#employeeClientDropdown');
     const clientList = panel.querySelector('#employeeClientList');
     const clientIcon = panel.querySelector('#employeeClientIcon');
+    const rateBasisField = panel.querySelector('[name="rate_basis"]');
+    const hourlyRateField = panel.querySelector('[name="hourly_rate"]');
+    const dailyRateField = panel.querySelector('[name="daily_rate"]');
+    const monthlyRateField = panel.querySelector('[name="monthly_rate"]');
 
     if (!form) {
         console.error('Employee Master form was not found.');
@@ -33,6 +37,8 @@ export async function init(panel) {
     let originalData = {};
     let originalClientDisplayName = '';
     let currentClientDisplayName = '';
+    let currentClientPayrollConfig = null;
+    let originalClientPayrollConfig = null;
     let searchTimer = null;
     let clientSearchTimer = null;
     let searchItems = [];
@@ -136,30 +142,35 @@ export async function init(panel) {
         }
 
         currentClientDisplayName = '';
+        currentClientPayrollConfig = null;
 
         hideClientDropdown();
 
         if (clientList) {
             clientList.innerHTML = '';
         }
+
+        clearComputedRates();
     }
 
-        function populateClient(employee) {
-            const clientField = getField('client_id');
-            const clientName = getClientName(employee);
-            const clientId = employee?.client_id ?? '';
+    function populateClient(employee) {
+        const clientField = getField('client_id');
+        const clientName = getClientName(employee);
+        const clientId = employee?.client_id ?? '';
 
-            if (clientField) {
-                clientField.value = clientId;
-                clientField.disabled = false;
-            }
-
-            updateClientDisplay(clientName);
-
-            if (clientIdDisplay) {
-                clientIdDisplay.value = clientId;
-            }
+        if (clientField) {
+            clientField.value = clientId;
+            clientField.disabled = false;
         }
+
+        updateClientDisplay(clientName);
+
+        if (clientIdDisplay) {
+            clientIdDisplay.value = clientId;
+        }
+
+        currentClientPayrollConfig = employee?.payroll_config || null;
+    }
 
     function populateForm(employee) {
         if (!employee) {
@@ -253,6 +264,7 @@ export async function init(panel) {
         updateEmployeeHeader(employee);
         saveOriginalData();
         updateCounter();
+        updateRateFieldState();
     }
 
     function updateEmployeeHeader(employee) {
@@ -290,6 +302,8 @@ export async function init(panel) {
         originalData = getFormDataObject();
         originalClientDisplayName = '';
         currentClientDisplayName = '';
+        currentClientPayrollConfig = null;
+        originalClientPayrollConfig = null;
 
         clearClient();
 
@@ -306,6 +320,8 @@ export async function init(panel) {
             employeeSubtitle.textContent = 'Employee: New Employee';
         }
 
+        clearComputedRates();
+        updateRateFieldState();
         updateCounter();
     }
 
@@ -321,6 +337,12 @@ export async function init(panel) {
             const isHidden = field.type === 'hidden';
             const isEmployeeId = field.name === 'emp_id';
             const isClientId = field.name === 'client_id';
+            const isRateField = [
+                'rate_basis',
+                'hourly_rate',
+                'daily_rate',
+                'monthly_rate'
+            ].includes(field.name);
 
             field.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
 
@@ -334,6 +356,14 @@ export async function init(panel) {
                 field.disabled = false;
                 field.classList.add('cursor-not-allowed');
                 field.classList.add('opacity-60');
+                return;
+            }
+
+            if (isRateField) {
+                field.disabled = false;
+                field.readOnly = !enabled;
+                field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
+                field.classList.toggle('opacity-60', !enabled);
                 return;
             }
 
@@ -365,6 +395,8 @@ export async function init(panel) {
             clientInput.classList.toggle('opacity-60', !enabled);
             clientInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
         }
+
+        updateRateFieldState();
 
         if (!enabled) {
             hideClientDropdown();
@@ -416,6 +448,13 @@ export async function init(panel) {
                 employeeId.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
                 employeeId.classList.add('cursor-not-allowed');
             }
+
+            if (rateBasisField) {
+                rateBasisField.value = 'Daily';
+            }
+
+            clearComputedRates();
+            updateRateFieldState();
         }
 
         updateButtons();
@@ -516,6 +555,9 @@ export async function init(panel) {
     function saveOriginalData() {
         originalData = getFormDataObject();
         originalClientDisplayName = currentClientDisplayName;
+        originalClientPayrollConfig = currentClientPayrollConfig
+            ? { ...currentClientPayrollConfig }
+            : null;
     }
 
     function restoreOriginalData() {
@@ -523,7 +565,17 @@ export async function init(panel) {
             setFieldValue(key, value);
         });
 
+        currentClientPayrollConfig = originalClientPayrollConfig
+            ? { ...originalClientPayrollConfig }
+            : null;
+
         updateClientDisplay(originalClientDisplayName);
+
+        if (clientIdDisplay) {
+            clientIdDisplay.value = getField('client_id')?.value || '';
+        }
+
+        updateRateFieldState();
     }
 
     function hasChanges() {
@@ -1007,11 +1059,16 @@ export async function init(panel) {
 
         clientList.innerHTML =
             clients.map(client => {
+                const config = client.payroll_config || {};
+
                 return `
                     <button
                         type="button"
                         data-client-id="${escapeHtml(client.client_id)}"
                         data-client-name="${escapeHtml(client.client_name)}"
+                        data-hours-per-day="${escapeHtml(config.hours_per_day ?? '')}"
+                        data-working-days-per-month="${escapeHtml(config.working_days_per_month ?? '')}"
+                        data-working-days-per-year="${escapeHtml(config.working_days_per_year ?? '')}"
                         class="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="w-9 h-9 shrink-0 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
@@ -1043,7 +1100,12 @@ export async function init(panel) {
 
                         selectClient(
                             button.dataset.clientId,
-                            button.dataset.clientName
+                            button.dataset.clientName,
+                            {
+                                hours_per_day: button.dataset.hoursPerDay,
+                                working_days_per_month: button.dataset.workingDaysPerMonth,
+                                working_days_per_year: button.dataset.workingDaysPerYear
+                            }
                         );
                     }
                 );
@@ -1135,7 +1197,7 @@ export async function init(panel) {
         clientIcon?.classList.remove('rotate-180');
     }
 
-    function selectClient(clientId, clientName) {
+    function selectClient(clientId, clientName, payrollConfig = null) {
         const clientField = getField('client_id');
 
         if (!clientField || !clientInput) {
@@ -1148,42 +1210,46 @@ export async function init(panel) {
         clientInput.value = clientName || '';
 
         currentClientDisplayName = clientName || '';
+        currentClientPayrollConfig = payrollConfig;
 
         if (clientIdDisplay) {
             clientIdDisplay.value = clientId || '';
         }
 
+        clearComputedRates();
+        updateRateFieldState();
         hideClientDropdown();
     }
 
-        function handleClientSearchInput() {
-            if (
-                mode === 'view' ||
-                clientInput?.disabled
-            ) {
-                return;
-            }
-
-            const clientField = getField('client_id');
-
-            if (clientField) {
-                clientField.value = '';
-            }
-
-            if (clientIdDisplay) {
-                clientIdDisplay.value = '';
-            }
-
-            currentClientDisplayName = '';
-
-            clearTimeout(clientSearchTimer);
-
-            showClientDropdown();
-
-            clientSearchTimer = setTimeout(() => {
-                loadClients(clientInput?.value || '');
-            }, 250);
+    function handleClientSearchInput() {
+        if (
+            mode === 'view' ||
+            clientInput?.disabled
+        ) {
+            return;
         }
+
+        const clientField = getField('client_id');
+
+        if (clientField) {
+            clientField.value = '';
+        }
+
+        if (clientIdDisplay) {
+            clientIdDisplay.value = '';
+        }
+
+        currentClientDisplayName = '';
+        currentClientPayrollConfig = null;
+
+        clearTimeout(clientSearchTimer);
+
+        showClientDropdown();
+
+        clientSearchTimer = setTimeout(() => {
+            loadClients(clientInput?.value || '');
+        }, 250);
+    }
 
     async function handleClientInputFocus() {
         if (
@@ -1208,6 +1274,216 @@ export async function init(panel) {
 
             return;
         }
+    }
+
+    function clearComputedRates() {
+        if (hourlyRateField) {
+            hourlyRateField.value = '';
+        }
+
+        if (monthlyRateField) {
+            monthlyRateField.value = '';
+        }
+    }
+
+    function getPayrollConfig() {
+        if (!currentClientPayrollConfig) {
+            return null;
+        }
+
+        const hoursPerDay =
+            Number(
+                currentClientPayrollConfig.hours_per_day
+            );
+
+        const workingDaysPerMonth =
+            Number(
+                currentClientPayrollConfig.working_days_per_month
+            );
+
+        if (
+            !Number.isFinite(hoursPerDay) ||
+            !Number.isFinite(workingDaysPerMonth) ||
+            hoursPerDay <= 0 ||
+            workingDaysPerMonth <= 0
+        ) {
+            return null;
+        }
+
+        return {
+            hoursPerDay,
+            workingDaysPerMonth
+        };
+    }
+
+    function formatRate(value) {
+        const number = Number(value);
+
+        if (!Number.isFinite(number)) {
+            return '';
+        }
+
+        return number.toFixed(2);
+    }
+
+    function updateRateFieldState() {
+        const editable =
+            mode === 'edit' ||
+            mode === 'add';
+
+        if (rateBasisField) {
+            rateBasisField.value = 'Daily';
+            rateBasisField.disabled = !editable;
+
+            rateBasisField.classList.remove(
+                'cursor-pointer',
+                'cursor-not-allowed'
+            );
+
+            rateBasisField.classList.add(
+                editable
+                    ? 'cursor-pointer'
+                    : 'cursor-not-allowed'
+            );
+
+            rateBasisField.classList.toggle(
+                'opacity-60',
+                !editable
+            );
+        }
+
+        if (dailyRateField) {
+            dailyRateField.disabled = false;
+            dailyRateField.readOnly = !editable;
+
+            dailyRateField.classList.remove(
+                'cursor-text',
+                'cursor-not-allowed'
+            );
+
+            dailyRateField.classList.add(
+                editable
+                    ? 'cursor-text'
+                    : 'cursor-not-allowed'
+            );
+
+            dailyRateField.classList.toggle(
+                'opacity-60',
+                !editable
+            );
+        }
+
+        [hourlyRateField, monthlyRateField].forEach(field => {
+            if (!field) {
+                return;
+            }
+
+            field.disabled = false;
+            field.readOnly = true;
+
+            field.classList.remove(
+                'cursor-text',
+                'cursor-not-allowed'
+            );
+
+            field.classList.add(
+                'cursor-not-allowed'
+            );
+
+            field.classList.add('opacity-60');
+        });
+    }
+
+    function calculateRates(showError = true) {
+        const dailyRate =
+            Number(
+                dailyRateField?.value
+            );
+
+        if (
+            !Number.isFinite(dailyRate) ||
+            dailyRate <= 0
+        ) {
+            if (hourlyRateField) {
+                hourlyRateField.value = '';
+            }
+
+            if (monthlyRateField) {
+                monthlyRateField.value = '';
+            }
+
+            return false;
+        }
+
+        const config =
+            getPayrollConfig();
+
+        if (!config) {
+            if (hourlyRateField) {
+                hourlyRateField.value = '';
+            }
+
+            if (monthlyRateField) {
+                monthlyRateField.value = '';
+            }
+
+            if (showError) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Payroll Configuration Required',
+                    text: 'Assign a client with payroll config before entering a rate.',
+                    confirmButtonColor: '#0a5d3c'
+                });
+            }
+
+            return false;
+        }
+
+        const hourlyRate =
+            dailyRate /
+            config.hoursPerDay;
+
+        const monthlyRate =
+            dailyRate *
+            config.workingDaysPerMonth;
+
+        if (hourlyRateField) {
+            hourlyRateField.value =
+                formatRate(hourlyRate);
+        }
+
+        if (monthlyRateField) {
+            monthlyRateField.value =
+                formatRate(monthlyRate);
+        }
+
+        return true;
+    }
+
+    function handleRateBasisChange() {
+        if (
+            mode !== 'edit' &&
+            mode !== 'add'
+        ) {
+            return;
+        }
+
+        if (rateBasisField) {
+            rateBasisField.value = 'Daily';
+        }
+
+        updateRateFieldState();
+    }
+
+    function handleDailyRateBlur() {
+        if (
+            mode !== 'edit' &&
+            mode !== 'add'
+        ) {
+            return;
+        }
+
+        calculateRates(true);
     }
 
     function buildFormData() {
@@ -1274,6 +1550,38 @@ export async function init(panel) {
 
         const isNew =
             mode === 'add';
+
+        if (!getField('client_id')?.value) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Company Required',
+                text: 'Please assign a company with payroll configuration before entering a rate.',
+                confirmButtonColor: '#0a5d3c'
+            });
+
+            return;
+        }
+
+        if (!dailyRateField?.value) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Daily Rate Required',
+                text: 'Please enter the Daily Rate.',
+                confirmButtonColor: '#0a5d3c'
+            });
+
+            dailyRateField?.focus();
+
+            return;
+        }
+
+        if (!calculateRates(true)) {
+            return;
+        }
+
+        if (rateBasisField) {
+            rateBasisField.value = 'Daily';
+        }
 
         const csrfToken =
             document.querySelector(
@@ -1459,7 +1767,9 @@ export async function init(panel) {
 
         setMode('add');
 
-        getField('first_name')?.focus({ preventScroll: true });
+        getField('first_name')?.focus({
+            preventScroll: true
+        });
     }
 
     async function startEdit() {
@@ -1472,6 +1782,11 @@ export async function init(panel) {
 
         originalClientDisplayName =
             currentClientDisplayName;
+
+        originalClientPayrollConfig =
+            currentClientPayrollConfig
+                ? { ...currentClientPayrollConfig }
+                : null;
 
         setMode('edit');
     }
@@ -1656,6 +1971,16 @@ export async function init(panel) {
         handleClientInputKeydown
     );
 
+    rateBasisField?.addEventListener(
+        'change',
+        handleRateBasisChange
+    );
+
+    dailyRateField?.addEventListener(
+        'blur',
+        handleDailyRateBlur
+    );
+
     document.addEventListener(
         'click',
         event => {
@@ -1775,3 +2100,4 @@ export async function init(panel) {
 
     saveOriginalData();
 }
+
