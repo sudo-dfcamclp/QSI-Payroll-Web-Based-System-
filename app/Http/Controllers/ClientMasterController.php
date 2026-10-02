@@ -11,31 +11,42 @@ class ClientMasterController extends Controller
     public function search(Request $request)
     {
         $search = trim($request->input('search', ''));
+        $perPage = 20;
 
         $clients = ClientMaster::query()
-            ->when($search, function ($query) use ($search) {
-                $query->where('client_name', 'like', "%{$search}%")
-                    ->orWhere('client_contact', 'like', "%{$search}%")
-                    ->orWhere('client_contact2', 'like', "%{$search}%");
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('client_name', 'like', "%{$search}%")
+                        ->orWhere('client_contact', 'like', "%{$search}%")
+                        ->orWhere('client_contact2', 'like', "%{$search}%");
+                });
             })
             ->orderBy('client_name')
-            ->limit(20)
-            ->get([
-                'client_id',
-                'client_name',
-                'client_contact',
-                'client_contact2'
-            ]);
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $clients
+            'data' => $clients->items(),
+            'pagination' => [
+                'current_page' => $clients->currentPage(),
+                'last_page' => $clients->lastPage(),
+                'per_page' => $clients->perPage(),
+                'total' => $clients->total(),
+                'from' => $clients->firstItem(),
+                'to' => $clients->lastItem()
+            ]
         ]);
     }
 
     public function show(ClientMaster $client)
     {
         $client->load('payrollConfig');
+
+        if ($client->payrollConfig) {
+            $client->payrollConfig->payroll_frequency = $this->normalizePayrollFrequency(
+                $client->payrollConfig->payroll_frequency
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -70,7 +81,7 @@ class ClientMasterController extends Controller
             'account_no' => 'nullable|string|max:100',
 
             'payroll_config' => 'nullable|array',
-            'payroll_config.payroll_frequency' => 'nullable|string|max:50',
+            'payroll_config.payroll_frequency' => 'required|string|max:50',
             'payroll_config.working_days_per_cutoff' => 'nullable|numeric',
             'payroll_config.working_days_per_year' => 'nullable|numeric',
             'payroll_config.working_days_per_month' => 'nullable|numeric',
@@ -145,6 +156,10 @@ class ClientMasterController extends Controller
 
             $configData = $validated['payroll_config'] ?? [];
 
+            $configData['payroll_frequency'] = $this->normalizePayrollFrequency(
+                $configData['payroll_frequency'] ?? 'semi_monthly'
+            );
+
             if ($client) {
                 $client->update($clientData);
             } else {
@@ -158,6 +173,12 @@ class ClientMasterController extends Controller
 
             $client->load('payrollConfig');
 
+            if ($client->payrollConfig) {
+                $client->payrollConfig->payroll_frequency = $this->normalizePayrollFrequency(
+                    $client->payrollConfig->payroll_frequency
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => $client->wasRecentlyCreated
@@ -167,4 +188,19 @@ class ClientMasterController extends Controller
             ]);
         });
     }
+
+    private function normalizePayrollFrequency(?string $frequency): string
+    {
+        $value = strtolower(trim((string) $frequency));
+
+        return match ($value) {
+            'semi-monthly',
+            'semi monthly',
+            'semi_monthly' => 'semi_monthly',
+            'weekly' => 'weekly',
+            'monthly' => 'monthly',
+            default => 'semi_monthly'
+        };
+    }
 }
+
