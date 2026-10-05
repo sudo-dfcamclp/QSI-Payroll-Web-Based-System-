@@ -33,6 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/auth/permissions', [AuthController::class, 'permissions'])
         ->name('api.auth.permissions');
 
+    // =========================================================
+    // EMPLOYEE INFORMATION
+    // =========================================================
+
     // Employee information page
     Route::get('/employee/employee-info', function () {
         return view('employee.employee-info');
@@ -54,10 +58,17 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'update'])
         ->name('api.employee-master.update');
 
-    // Contract monitoring page
+    // =========================================================
+    // CONTRACT MONITORING
+    // =========================================================
+
     Route::get('/employee/contract-monitoring', function () {
         return view('employee.contract-monitoring');
     })->name('contract.monitoring');
+
+    // =========================================================
+    // CLIENT MASTER
+    // =========================================================
 
     // Client master page
     Route::get('/employee/client-master', function () {
@@ -77,15 +88,31 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/client-master/{client:client_id}', [ClientMasterController::class, 'update'])
         ->name('api.client-master.update');
 
-    // Employee deduction page
+    // Archive client
+    // This does NOT permanently delete the client.
+    // ClientMasterController@destroy changes status to "archived".
+    Route::delete('/api/client-master/{client:client_id}', [ClientMasterController::class, 'destroy'])
+        ->name('api.client-master.destroy');
+
+    // =========================================================
+    // EMPLOYEE DEDUCTION
+    // =========================================================
+
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
 
-    // Employee payroll page
+    // =========================================================
+    // EMPLOYEE PAYROLL
+    // =========================================================
+
     Route::get('/employee/employee-payroll', function () {
         return view('employee.employee-payroll');
     })->name('employee.payroll');
+
+    // =========================================================
+    // SETTINGS
+    // =========================================================
 
     // Settings page
     Route::get('/includes/setting', function () {
@@ -112,7 +139,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/settings/password', [SettingController::class, 'changePassword'])
         ->name('api.settings.password.update');
 
-    // User management routes with MIDDLE WARE
+    // =========================================================
+    // USER MANAGEMENT
+    // =========================================================
+
     Route::middleware('can:manage-users')->group(function () {
 
         // User management page
@@ -144,7 +174,10 @@ Route::middleware('auth')->group(function () {
             ->name('api.admin.users.delete');
     });
 
-    // Role management routes WITH MIDDLE WARE
+    // =========================================================
+    // ROLE MANAGEMENT
+    // =========================================================
+
     Route::middleware('can:manage-roles')->group(function () {
 
         // Role management page
@@ -168,7 +201,11 @@ Route::middleware('auth')->group(function () {
             ->name('api.admin.role-management.update-role');
     });
 
-    // Logout API
+    // =========================================================
+    // LOGOUT
+    // =========================================================
+
     Route::post('/api/logout', [AuthController::class, 'logout'])
         ->name('api.logout');
 });
+

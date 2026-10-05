@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // PAGE JAVASCRIPT REGISTRY
     // =========================================================
     const PAGE_SCRIPTS = {
-        'client-master': () => import('../employee_script/ClientMaster.js'),
+        'client-master': () => import('../employee_script/ClientMaster/index.js'),
         'employee-info': () => import('../employee_script/EmployeeMaster.js'),
         'employee-deduction': () => import('../employee_script/EmployeeDeduction.js'),
         'employee-payroll': () => import('../employee_script/EmployeePayroll.js'),

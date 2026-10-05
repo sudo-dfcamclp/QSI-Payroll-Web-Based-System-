@@ -3,12 +3,25 @@ import Swal from 'sweetalert2';
 export async function init(panel) {
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-    const clientIdDisplay = panel.querySelector('#employeeClientIdDisplay');
+    const listingView = panel.querySelector('#employeeListingView');
+    const formView = panel.querySelector('#employeeFormView');
+    const employeeList = panel.querySelector('#employeeList');
+    const employeeListSearch = panel.querySelector('#employeeListSearch');
+    const employeeListSearchResults = panel.querySelector('#employeeListSearchResults');
+    const employeeListSearchList = panel.querySelector('#employeeListSearchList');
+    const employeeAddButton = panel.querySelector('#employeeAddButton');
+    const employeeListCounter = panel.querySelector('#employeeListCounter');
+    const employeePreviousPageButton = panel.querySelector('#employeePreviousPageButton');
+    const employeeNextPageButton = panel.querySelector('#employeeNextPageButton');
+    const employeePageIndicator = panel.querySelector('#employeePageIndicator');
+    const employeeBackButton = panel.querySelector('#employeeBackButton');
+    const employeeSortButton = panel.querySelector('#employeeSortButton');
+
     const form = panel.querySelector('#employeeForm');
+    const clientIdDisplay = panel.querySelector('#employeeClientIdDisplay');
     const searchInput = panel.querySelector('#employeeSearch');
     const searchResults = panel.querySelector('#employeeSearchResults');
     const searchList = panel.querySelector('#employeeSearchList');
-    const addButton = panel.querySelector('#employeeAddButton');
     const editButton = panel.querySelector('#employeeEditButton');
     const saveButton = panel.querySelector('#employeeSaveButton');
     const cancelButton = panel.querySelector('#employeeCancelButton');
@@ -32,6 +45,15 @@ export async function init(panel) {
         return;
     }
 
+    const API = {
+        list: '/payroll/public/api/employee-master/search',
+        search: '/payroll/public/api/employee-master/search',
+        clients: '/payroll/public/api/employee-master/clients',
+        store: '/payroll/public/api/employee-master',
+        show: empId => `/payroll/public/api/employee-master/${empId}`,
+        update: empId => `/payroll/public/api/employee-master/${empId}`
+    };
+
     let mode = 'view';
     let currentEmployeeId = null;
     let originalData = {};
@@ -44,38 +66,823 @@ export async function init(panel) {
     let searchItems = [];
     let currentSearchIndex = -1;
     let highlightedIndex = -1;
+    let employeeListPage = 1;
+    let employeeListLastPage = 1;
+    let employeeListTotal = 0;
+    let employeeSort = 'name';
+    let employeeSortDirection = 'asc';
+    let employeeStatus = 'active';
 
-    const API = {
-        search: '/payroll/public/api/employee-master/search',
-        clients: '/payroll/public/api/employee-master/clients',
-        store: '/payroll/public/api/employee-master',
-        show: empId => `/payroll/public/api/employee-master/${empId}`,
-        update: empId => `/payroll/public/api/employee-master/${empId}`
-    };
-
-    if (searchInput) {
-        searchInput.setAttribute('role', 'combobox');
-        searchInput.setAttribute('aria-autocomplete', 'list');
-        searchInput.setAttribute('aria-expanded', 'false');
-        searchInput.setAttribute('aria-controls', 'employeeSearchList');
+    function showListingView() {
+        listingView?.classList.remove('hidden');
+        formView?.classList.add('hidden');
     }
 
-    if (searchList) {
-        searchList.setAttribute('role', 'listbox');
+    function showFormView() {
+        listingView?.classList.add('hidden');
+        formView?.classList.remove('hidden');
     }
 
-    form.addEventListener('submit', event => {
-        event.preventDefault();
-    });
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function getEmployeeFullName(employee) {
+        const firstName = [
+            employee.first_name,
+            employee.middle_name,
+            employee.suffix_name
+        ].filter(Boolean).join(' ');
+
+        return [
+            employee.last_name,
+            firstName
+        ].filter(Boolean).join(', ');
+    }
+
+    function getEmployeeDisplayName(employee) {
+        return [
+            employee.first_name,
+            employee.middle_name,
+            employee.last_name,
+            employee.suffix_name
+        ].filter(Boolean).join(' ');
+    }
+
+    function updateEmployeeListPagination(pagination) {
+        const currentPage = Number(pagination?.current_page || 1);
+        const lastPage = Number(pagination?.last_page || 1);
+        const total = Number(pagination?.total || 0);
+        const from = Number(pagination?.from || 0);
+        const to = Number(pagination?.to || 0);
+
+        employeeListPage = currentPage;
+        employeeListLastPage = lastPage;
+        employeeListTotal = total;
+
+        if (employeeListCounter) {
+            employeeListCounter.textContent =
+                total > 0
+                    ? `${from}-${to} of ${total}`
+                    : '0 of 0';
+        }
+
+        if (employeePageIndicator) {
+            employeePageIndicator.textContent =
+                `Page ${currentPage} of ${lastPage}`;
+        }
+
+        if (employeePreviousPageButton) {
+            employeePreviousPageButton.disabled = currentPage <= 1;
+            employeePreviousPageButton.classList.toggle(
+                'opacity-50',
+                currentPage <= 1
+            );
+            employeePreviousPageButton.classList.toggle(
+                'cursor-not-allowed',
+                currentPage <= 1
+            );
+            employeePreviousPageButton.classList.toggle(
+                'cursor-pointer',
+                currentPage > 1
+            );
+        }
+
+        if (employeeNextPageButton) {
+            employeeNextPageButton.disabled =
+                currentPage >= lastPage;
+
+            employeeNextPageButton.classList.toggle(
+                'opacity-50',
+                currentPage >= lastPage
+            );
+
+            employeeNextPageButton.classList.toggle(
+                'cursor-not-allowed',
+                currentPage >= lastPage
+            );
+
+            employeeNextPageButton.classList.toggle(
+                'cursor-pointer',
+                currentPage < lastPage
+            );
+        }
+    }
+
+    function closeEmployeeSortMenu() {
+        panel.querySelector('#employeeSortMenu')?.remove();
+        employeeSortButton?.setAttribute('aria-expanded', 'false');
+    }
+
+    function createEmployeeSortMenu() {
+        closeEmployeeSortMenu();
+
+        if (!employeeSortButton) return;
+
+        const menu = document.createElement('div');
+
+        menu.id = 'employeeSortMenu';
+
+        menu.className = [
+            'absolute',
+            'right-0',
+            'top-full',
+            'mt-2',
+            'w-52',
+            'z-50',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1'
+        ].join(' ');
+
+        const createMenuButton = (
+            label,
+            onClick,
+            active = false
+        ) => {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+
+            button.className = [
+                'w-full',
+                'flex',
+                'items-center',
+                'justify-between',
+                'px-3',
+                'py-2',
+                'text-sm',
+                'text-left',
+                'text-gray-700',
+                'dark:text-gray-200',
+                'hover:bg-gray-50',
+                'dark:hover:bg-gray-600',
+                'transition-colors',
+                'cursor-pointer'
+            ].join(' ');
+
+            button.innerHTML = `
+                <span>${escapeHtml(label)}</span>
+                ${
+                    active
+                        ? '<i class="fa-solid fa-check text-green-600 dark:text-green-400 text-xs"></i>'
+                        : ''
+                }
+            `;
+
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                onClick();
+            });
+
+            return button;
+        };
+
+        // =========================================================
+        // STATUS
+        // =========================================================
+
+        const statusWrapper = document.createElement('div');
+
+        statusWrapper.className = 'relative';
+
+        const statusButton = document.createElement('button');
+
+        statusButton.type = 'button';
+
+        statusButton.className = [
+            'w-full',
+            'flex',
+            'items-center',
+            'justify-between',
+            'px-3',
+            'py-2',
+            'text-sm',
+            'text-left',
+            'text-gray-700',
+            'dark:text-gray-200',
+            'hover:bg-gray-50',
+            'dark:hover:bg-gray-600',
+            'transition-colors',
+            'cursor-pointer'
+        ].join(' ');
+
+        statusButton.innerHTML = `
+            <span>Status</span>
+            <i class="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
+        `;
+
+        const statusMenu = document.createElement('div');
+
+        statusMenu.className = [
+            'absolute',
+            'right-full',
+            'top-0',
+            'mr-1',
+            'w-40',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1',
+            'hidden'
+        ].join(' ');
+
+        const statusOptions = [
+            { label: 'Active', value: 'active' },
+            { label: 'Disabled', value: 'disabled' }
+        ];
+
+        statusOptions.forEach(option => {
+            statusMenu.appendChild(
+                createMenuButton(
+                    option.label,
+                    () => {
+                        employeeStatus = option.value;
+                        employeeListPage = 1;
+
+                        closeEmployeeSortMenu();
+
+                        loadEmployeeList(
+                            employeeListSearch?.value || '',
+                            1
+                        );
+                    },
+                    employeeStatus === option.value
+                )
+            );
+        });
+
+        statusWrapper.appendChild(statusButton);
+        statusWrapper.appendChild(statusMenu);
+
+        statusWrapper.addEventListener(
+            'mouseenter',
+            () => {
+                statusMenu.classList.remove('hidden');
+            }
+        );
+
+        statusWrapper.addEventListener(
+            'mouseleave',
+            () => {
+                statusMenu.classList.add('hidden');
+            }
+        );
+
+        statusButton.addEventListener(
+            'click',
+            event => {
+                event.preventDefault();
+                event.stopPropagation();
+                statusMenu.classList.toggle('hidden');
+            }
+        );
+
+        menu.appendChild(statusWrapper);
+
+        // =========================================================
+        // DIVIDER
+        // =========================================================
+
+        const divider = document.createElement('div');
+
+        divider.className =
+            'my-1 border-t border-gray-100 dark:border-gray-600';
+
+        menu.appendChild(divider);
+
+        // =========================================================
+        // DEFAULT NAME
+        // =========================================================
+
+        menu.appendChild(
+            createMenuButton(
+                'Default Name',
+                () => {
+                    employeeSort = 'name';
+                    employeeSortDirection = 'asc';
+                    employeeListPage = 1;
+
+                    closeEmployeeSortMenu();
+
+                    loadEmployeeList(
+                        employeeListSearch?.value || '',
+                        1
+                    );
+                },
+                employeeSort === 'name' &&
+                employeeSortDirection === 'asc'
+            )
+        );
+
+        // =========================================================
+        // LATEST TO OLDEST
+        // =========================================================
+
+        menu.appendChild(
+            createMenuButton(
+                'Latest to Oldest',
+                () => {
+                    employeeSort = 'latest';
+                    employeeSortDirection = 'desc';
+                    employeeListPage = 1;
+
+                    closeEmployeeSortMenu();
+
+                    loadEmployeeList(
+                        employeeListSearch?.value || '',
+                        1
+                    );
+                },
+                employeeSort === 'latest' &&
+                employeeSortDirection === 'desc'
+            )
+        );
+
+        // =========================================================
+        // OLDEST TO LATEST
+        // =========================================================
+
+        menu.appendChild(
+            createMenuButton(
+                'Oldest to Latest',
+                () => {
+                    employeeSort = 'oldest';
+                    employeeSortDirection = 'asc';
+                    employeeListPage = 1;
+
+                    closeEmployeeSortMenu();
+
+                    loadEmployeeList(
+                        employeeListSearch?.value || '',
+                        1
+                    );
+                },
+                employeeSort === 'oldest' &&
+                employeeSortDirection === 'asc'
+            )
+        );
+
+        // =========================================================
+        // BY LETTER
+        // =========================================================
+
+        const letterWrapper = document.createElement('div');
+
+        letterWrapper.className = 'relative';
+
+        const letterButton = document.createElement('button');
+
+        letterButton.type = 'button';
+
+        letterButton.className = [
+            'w-full',
+            'flex',
+            'items-center',
+            'justify-between',
+            'px-3',
+            'py-2',
+            'text-sm',
+            'text-left',
+            'text-gray-700',
+            'dark:text-gray-200',
+            'hover:bg-gray-50',
+            'dark:hover:bg-gray-600',
+            'transition-colors',
+            'cursor-pointer'
+        ].join(' ');
+
+        letterButton.innerHTML = `
+            <span>By Letter</span>
+            <i class="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
+        `;
+
+        const letterMenu = document.createElement('div');
+
+        letterMenu.className = [
+            'absolute',
+            'right-full',
+            'top-0',
+            'mr-1',
+            'w-40',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1',
+            'hidden'
+        ].join(' ');
+
+        const letterOptions = [
+            { label: 'A to Z', direction: 'asc' },
+            { label: 'Z to A', direction: 'desc' }
+        ];
+
+        letterOptions.forEach(option => {
+            letterMenu.appendChild(
+                createMenuButton(
+                    option.label,
+                    () => {
+                        employeeSort = 'letter';
+                        employeeSortDirection = option.direction;
+                        employeeListPage = 1;
+
+                        closeEmployeeSortMenu();
+
+                        loadEmployeeList(
+                            employeeListSearch?.value || '',
+                            1
+                        );
+                    },
+                    employeeSort === 'letter' &&
+                    employeeSortDirection === option.direction
+                )
+            );
+        });
+
+        letterWrapper.appendChild(letterButton);
+        letterWrapper.appendChild(letterMenu);
+
+        letterWrapper.addEventListener(
+            'mouseenter',
+            () => {
+                letterMenu.classList.remove('hidden');
+            }
+        );
+
+        letterWrapper.addEventListener(
+            'mouseleave',
+            () => {
+                letterMenu.classList.add('hidden');
+            }
+        );
+
+        letterButton.addEventListener(
+            'click',
+            event => {
+                event.preventDefault();
+                event.stopPropagation();
+                letterMenu.classList.toggle('hidden');
+            }
+        );
+
+        menu.appendChild(letterWrapper);
+
+        // =========================================================
+        // APPEND MENU
+        // =========================================================
+
+        const parent = employeeSortButton.parentElement;
+
+        if (!parent) return;
+
+        if (getComputedStyle(parent).position === 'static') {
+            parent.classList.add('relative');
+        }
+
+        parent.appendChild(menu);
+
+        employeeSortButton.setAttribute(
+            'aria-expanded',
+            'true'
+        );
+    }
+
+    function renderEmployeeList(employees) {
+        if (!employeeList) {
+            return;
+        }
+
+        if (!employees.length) {
+            employeeList.innerHTML = `
+                <div class="px-5 py-12 text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users-slash text-gray-400 dark:text-gray-300"></i>
+                    </div>
+
+                    <div class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        No employees found
+                    </div>
+
+                    <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Try a different search term.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        employeeList.innerHTML = employees.map(employee => {
+            const fullName =
+                getEmployeeDisplayName(employee) ||
+                'Unnamed Employee';
+
+            const clientName =
+                employee.client_name ||
+                employee.client?.client_name ||
+                '';
+
+            return `
+                <div
+                    class="employee-list-row relative group grid grid-cols-[80px_minmax(0,1fr)_44px] sm:grid-cols-[100px_minmax(0,1fr)_52px] items-center min-h-[52px] px-4 sm:px-5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-green-200 dark:hover:border-green-800 hover:shadow-sm transition-all duration-150 cursor-pointer"
+                    data-employee-id="${escapeHtml(employee.emp_id)}">
+
+                    <div class="min-w-0 text-left">
+                        <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                            #${escapeHtml(employee.emp_id || '')}
+                        </div>
+                    </div>
+
+                    <div class="min-w-0 pr-3 text-left">
+                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                            ${escapeHtml(fullName)}
+                        </div>
+
+                        <div class="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                            ${employee.badge_no ? `Badge: ${escapeHtml(employee.badge_no)}` : ''}
+                            ${employee.badge_no && clientName ? ' • ' : ''}
+                            ${clientName ? escapeHtml(clientName) : ''}
+                        </div>
+                    </div>
+
+                    <div class="relative flex justify-end">
+                        <button
+                            type="button"
+                            class="employee-context-button w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                            data-employee-id="${escapeHtml(employee.emp_id)}"
+                            aria-label="Employee actions"
+                            aria-expanded="false">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+
+                        <div
+                            class="employee-context-menu hidden absolute right-0 top-9 z-50 w-36 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+                            <button
+                                type="button"
+                                class="employee-archive-button w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left cursor-pointer"
+                                data-employee-id="${escapeHtml(employee.emp_id)}">
+                                <i class="fa-solid fa-box-archive w-4"></i>
+                                <span>Archive</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        employeeList
+            .querySelectorAll('.employee-list-row')
+            .forEach(row => {
+                row.addEventListener('click', event => {
+                    if (
+                        event.target.closest('.employee-context-button') ||
+                        event.target.closest('.employee-context-menu')
+                    ) {
+                        return;
+                    }
+
+                    loadEmployeeFromList(
+                        row.dataset.employeeId
+                    );
+                });
+            });
+
+        employeeList
+        .querySelectorAll('.employee-context-button')
+        .forEach(button => {
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const row = button.closest('.employee-list-row');
+                const menu = row?.querySelector('.employee-context-menu');
+
+                if (!menu) {
+                    return;
+                }
+
+                employeeList
+                    .querySelectorAll('.employee-context-menu')
+                    .forEach(otherMenu => {
+                        if (otherMenu !== menu) {
+                            otherMenu.classList.add('hidden');
+                        }
+                    });
+
+                const isHidden = menu.classList.contains('hidden');
+
+                menu.classList.toggle('hidden', !isHidden);
+
+                button.setAttribute(
+                    'aria-expanded',
+                    isHidden ? 'true' : 'false'
+                );
+            });
+        });
+
+        employeeList
+        .querySelectorAll('.employee-archive-button')
+        .forEach(button => {
+            button.addEventListener('click', async event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const employeeId =
+                    button.dataset.employeeId;
+
+                const employee =
+                    employees.find(
+                        item =>
+                            String(item.emp_id) ===
+                            String(employeeId)
+                    );
+
+                const employeeName =
+                    employee
+                        ? getEmployeeDisplayName(employee)
+                        : `Employee ${employeeId}`;
+
+                const row =
+                    button.closest('.employee-list-row');
+
+                const menu =
+                    row?.querySelector('.employee-context-menu');
+
+                menu?.classList.add('hidden');
+
+                const isDarkMode =
+                    document.documentElement.classList.contains('dark');
+
+                const result = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Archive Employee?',
+                    text: `${employeeName} will be moved to the employee archive.`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Archive',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true,
+                    confirmButtonColor: '#dc2626',
+                    background: isDarkMode ? '#374151' : '#ffffff',
+                    color: isDarkMode ? '#f9fafb' : '#1f2937',
+                    customClass: {
+                        popup: 'rounded-xl border border-gray-200 dark:border-gray-600',
+                        title: 'text-gray-800 dark:text-white',
+                        htmlContainer: 'text-gray-600 dark:text-gray-300',
+                        confirmButton: 'rounded-lg px-4 py-2',
+                        cancelButton: 'rounded-lg px-4 py-2'
+                    }
+                });
+
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                console.log(
+                    'Archive employee:',
+                    employeeId
+                );
+
+                // Archive API will be added here later.
+            });
+        });
+    }
+
+        async function loadEmployeeList(search = '', page = 1) {
+        if (!employeeList) {
+            return;
+        }
+
+        employeeList.innerHTML = `
+            <div class="px-5 py-12 text-center">
+                <i class="fa-solid fa-spinner fa-spin text-green-600 text-xl"></i>
+
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-3">
+                    Loading employees...
+                </div>
+            </div>
+        `;
+
+        try {
+            const params = new URLSearchParams();
+
+            if (search.trim()) {
+                params.set('q', search.trim());
+            }
+
+            params.set('page', String(page));
+            params.set('sort', employeeSort);
+            params.set('direction', employeeSortDirection);
+            params.set('status', employeeStatus);
+
+            const response = await fetch(
+                `${API.list}?${params.toString()}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message ||
+                    'Unable to load employees.'
+                );
+            }
+
+            const employees = Array.isArray(result.data)
+                ? result.data
+                : [];
+
+            renderEmployeeList(employees);
+
+            updateEmployeeListPagination(
+                result.pagination || {}
+            );
+
+            if (employeeListSearchResults) {
+                employeeListSearchResults.classList.add('hidden');
+            }
+
+        } catch (error) {
+            console.error(
+                'Employee list error:',
+                error
+            );
+
+            employeeList.innerHTML = `
+                <div class="px-5 py-12 text-center">
+                    <i class="fa-solid fa-circle-exclamation text-red-500 text-xl"></i>
+
+                    <div class="text-sm text-red-500 dark:text-red-400 mt-3">
+                        Unable to load employees.
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function handleEmployeeListSearch() {
+        clearTimeout(searchTimer);
+
+        const query = employeeListSearch?.value || '';
+
+        searchTimer = setTimeout(() => {
+            loadEmployeeList(query, 1);
+        }, 300);
+    }
+
+    async function loadEmployeeFromList(employeeId) {
+        if (!employeeId) {
+            return;
+        }
+
+        showFormView();
+
+        await loadEmployee(employeeId);
+
+        if (searchInput) {
+            searchInput.value =
+                getEmployeeDisplayName({
+                    first_name: getField('first_name')?.value,
+                    middle_name: getField('middle_name')?.value,
+                    last_name: getField('last_name')?.value,
+                    suffix_name: getField('suffix_name')?.value
+                });
+        }
+    }
 
     function getFields() {
-        return Array.from(panel.querySelectorAll('[name]')).filter(field => {
+        return Array.from(form.querySelectorAll('[name]')).filter(field => {
             return field.name !== 'employeeSearch';
         });
     }
 
     function getField(name) {
-        return panel.querySelector(`[name="${name}"]`);
+        return form.querySelector(`[name="${name}"]`);
     }
 
     function getFormDataObject() {
@@ -104,7 +911,10 @@ export async function init(panel) {
         }
 
         if (field.type === 'checkbox') {
-            field.checked = value === true || value === 1 || value === '1';
+            field.checked =
+                value === true ||
+                value === 1 ||
+                value === '1';
             return;
         }
 
@@ -112,17 +922,17 @@ export async function init(panel) {
     }
 
     function getClientName(employee) {
-        return employee?.client_name || employee?.client?.client_name || '';
+        return employee?.client_name ||
+            employee?.client?.client_name ||
+            '';
     }
 
     function updateClientDisplay(clientName) {
         currentClientDisplayName = clientName || '';
 
-        if (!clientInput) {
-            return;
+        if (clientInput) {
+            clientInput.value = clientName || '';
         }
-
-        clientInput.value = clientName || '';
     }
 
     function clearClient() {
@@ -169,7 +979,8 @@ export async function init(panel) {
             clientIdDisplay.value = clientId;
         }
 
-        currentClientPayrollConfig = employee?.payroll_config || null;
+        currentClientPayrollConfig =
+            employee?.payroll_config || null;
     }
 
     function populateForm(employee) {
@@ -253,7 +1064,8 @@ export async function init(panel) {
 
         if (profilePreview) {
             if (employee.profile_photo_url) {
-                profilePreview.src = employee.profile_photo_url;
+                profilePreview.src =
+                    employee.profile_photo_url;
                 profilePreview.classList.remove('hidden');
             } else {
                 profilePreview.removeAttribute('src');
@@ -273,7 +1085,8 @@ export async function init(panel) {
         }
 
         if (!employee) {
-            employeeSubtitle.textContent = 'Employee: None selected';
+            employeeSubtitle.textContent =
+                'Employee: None selected';
             return;
         }
 
@@ -284,7 +1097,8 @@ export async function init(panel) {
             employee.suffix_name
         ].filter(Boolean).join(' ');
 
-        employeeSubtitle.textContent = `Employee: ${fullName || 'Unnamed Employee'}`;
+        employeeSubtitle.textContent =
+            `Employee: ${fullName || 'Unnamed Employee'}`;
     }
 
     function clearForm() {
@@ -317,7 +1131,8 @@ export async function init(panel) {
         }
 
         if (employeeSubtitle) {
-            employeeSubtitle.textContent = 'Employee: New Employee';
+            employeeSubtitle.textContent =
+                'Employee: New Employee';
         }
 
         clearComputedRates();
@@ -344,7 +1159,11 @@ export async function init(panel) {
                 'monthly_rate'
             ].includes(field.name);
 
-            field.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
+            field.classList.remove(
+                'cursor-text',
+                'cursor-pointer',
+                'cursor-not-allowed'
+            );
 
             if (isHidden || isClientId) {
                 field.disabled = false;
@@ -362,8 +1181,15 @@ export async function init(panel) {
             if (isRateField) {
                 field.disabled = false;
                 field.readOnly = !enabled;
-                field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
-                field.classList.toggle('opacity-60', !enabled);
+                field.classList.add(
+                    enabled
+                        ? 'cursor-pointer'
+                        : 'cursor-not-allowed'
+                );
+                field.classList.toggle(
+                    'opacity-60',
+                    !enabled
+                );
                 return;
             }
 
@@ -371,29 +1197,61 @@ export async function init(panel) {
                 field.disabled = !enabled;
                 field.classList.remove('opacity-60');
                 field.classList.add('opacity-0');
-                field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
+                field.classList.add(
+                    enabled
+                        ? 'cursor-pointer'
+                        : 'cursor-not-allowed'
+                );
                 return;
             }
 
             if (isCheckbox || isSelect) {
                 field.disabled = !enabled;
-                field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
-                field.classList.toggle('opacity-60', !enabled);
+                field.classList.add(
+                    enabled
+                        ? 'cursor-pointer'
+                        : 'cursor-not-allowed'
+                );
+                field.classList.toggle(
+                    'opacity-60',
+                    !enabled
+                );
                 return;
             }
 
             field.disabled = false;
             field.readOnly = !enabled;
-            field.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
-            field.classList.toggle('opacity-60', !enabled);
+            field.classList.add(
+                enabled
+                    ? 'cursor-text'
+                    : 'cursor-not-allowed'
+            );
+            field.classList.toggle(
+                'opacity-60',
+                !enabled
+            );
         });
 
         if (clientInput) {
-            clientInput.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
+            clientInput.classList.remove(
+                'cursor-text',
+                'cursor-pointer',
+                'cursor-not-allowed'
+            );
+
             clientInput.disabled = !enabled;
             clientInput.readOnly = !enabled;
-            clientInput.classList.toggle('opacity-60', !enabled);
-            clientInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
+
+            clientInput.classList.toggle(
+                'opacity-60',
+                !enabled
+            );
+
+            clientInput.classList.add(
+                enabled
+                    ? 'cursor-text'
+                    : 'cursor-not-allowed'
+            );
         }
 
         updateRateFieldState();
@@ -403,19 +1261,29 @@ export async function init(panel) {
         }
     }
 
-    function setEditable(enabled) {
-        setFieldState(enabled);
-    }
-
     function setSearchEnabled(enabled) {
         if (!searchInput) {
             return;
         }
 
-        searchInput.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
+        searchInput.classList.remove(
+            'cursor-text',
+            'cursor-pointer',
+            'cursor-not-allowed'
+        );
+
         searchInput.disabled = !enabled;
-        searchInput.classList.toggle('opacity-60', !enabled);
-        searchInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
+
+        searchInput.classList.toggle(
+            'opacity-60',
+            !enabled
+        );
+
+        searchInput.classList.add(
+            enabled
+                ? 'cursor-text'
+                : 'cursor-not-allowed'
+        );
 
         if (!enabled) {
             hideSearchResults();
@@ -445,8 +1313,14 @@ export async function init(panel) {
                 employeeId.value = '';
                 employeeId.readOnly = true;
                 employeeId.disabled = false;
-                employeeId.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
-                employeeId.classList.add('cursor-not-allowed');
+                employeeId.classList.remove(
+                    'cursor-text',
+                    'cursor-pointer',
+                    'cursor-not-allowed'
+                );
+                employeeId.classList.add(
+                    'cursor-not-allowed'
+                );
             }
 
             if (rateBasisField) {
@@ -463,19 +1337,32 @@ export async function init(panel) {
 
     function updateButtons() {
         if (mode === 'view') {
-            addButton?.classList.remove('hidden');
+            employeeAddButton?.classList.remove('hidden');
             editButton?.classList.remove('hidden');
 
-            addButton?.removeAttribute('disabled');
+            employeeAddButton?.removeAttribute('disabled');
 
             if (currentEmployeeId) {
                 editButton?.removeAttribute('disabled');
-                editButton?.classList.remove('opacity-50', 'cursor-not-allowed');
-                editButton?.classList.add('cursor-pointer');
+                editButton?.classList.remove(
+                    'opacity-50',
+                    'cursor-not-allowed'
+                );
+                editButton?.classList.add(
+                    'cursor-pointer'
+                );
             } else {
-                editButton?.setAttribute('disabled', 'disabled');
-                editButton?.classList.add('opacity-50', 'cursor-not-allowed');
-                editButton?.classList.remove('cursor-pointer');
+                editButton?.setAttribute(
+                    'disabled',
+                    'disabled'
+                );
+                editButton?.classList.add(
+                    'opacity-50',
+                    'cursor-not-allowed'
+                );
+                editButton?.classList.remove(
+                    'cursor-pointer'
+                );
             }
 
             saveButton?.classList.add('hidden');
@@ -484,7 +1371,7 @@ export async function init(panel) {
             return;
         }
 
-        addButton?.classList.add('hidden');
+        employeeAddButton   ?.classList.add('hidden');
         editButton?.classList.add('hidden');
         saveButton?.classList.remove('hidden');
         cancelButton?.classList.remove('hidden');
@@ -494,7 +1381,6 @@ export async function init(panel) {
                 'bg-gray-600',
                 'hover:bg-gray-700'
             );
-
             cancelButton.classList.add(
                 'bg-red-600',
                 'hover:bg-red-700'
@@ -507,7 +1393,10 @@ export async function init(panel) {
             return;
         }
 
-        if (searchItems.length === 0 || currentSearchIndex < 0) {
+        if (
+            searchItems.length === 0 ||
+            currentSearchIndex < 0
+        ) {
             employeeCounter.textContent =
                 searchItems.length > 0
                     ? `0 of ${searchItems.length}`
@@ -535,55 +1424,91 @@ export async function init(panel) {
 
         const canNext =
             hasSelection &&
-            currentSearchIndex < searchItems.length - 1;
+            currentSearchIndex <
+                searchItems.length - 1;
 
         if (previousButton) {
             previousButton.disabled = !canPrevious;
-            previousButton.classList.toggle('opacity-50', !canPrevious);
-            previousButton.classList.toggle('cursor-not-allowed', !canPrevious);
-            previousButton.classList.toggle('cursor-pointer', canPrevious);
+            previousButton.classList.toggle(
+                'opacity-50',
+                !canPrevious
+            );
+            previousButton.classList.toggle(
+                'cursor-not-allowed',
+                !canPrevious
+            );
+            previousButton.classList.toggle(
+                'cursor-pointer',
+                canPrevious
+            );
         }
 
         if (nextButton) {
             nextButton.disabled = !canNext;
-            nextButton.classList.toggle('opacity-50', !canNext);
-            nextButton.classList.toggle('cursor-not-allowed', !canNext);
-            nextButton.classList.toggle('cursor-pointer', canNext);
+            nextButton.classList.toggle(
+                'opacity-50',
+                !canNext
+            );
+            nextButton.classList.toggle(
+                'cursor-not-allowed',
+                !canNext
+            );
+            nextButton.classList.toggle(
+                'cursor-pointer',
+                canNext
+            );
         }
     }
 
     function saveOriginalData() {
         originalData = getFormDataObject();
-        originalClientDisplayName = currentClientDisplayName;
-        originalClientPayrollConfig = currentClientPayrollConfig
-            ? { ...currentClientPayrollConfig }
-            : null;
+
+        originalClientDisplayName =
+            currentClientDisplayName;
+
+        originalClientPayrollConfig =
+            currentClientPayrollConfig
+                ? { ...currentClientPayrollConfig }
+                : null;
     }
 
     function restoreOriginalData() {
-        Object.entries(originalData).forEach(([key, value]) => {
-            setFieldValue(key, value);
-        });
+        Object.entries(originalData).forEach(
+            ([key, value]) => {
+                setFieldValue(key, value);
+            }
+        );
 
-        currentClientPayrollConfig = originalClientPayrollConfig
-            ? { ...originalClientPayrollConfig }
-            : null;
+        currentClientPayrollConfig =
+            originalClientPayrollConfig
+                ? { ...originalClientPayrollConfig }
+                : null;
 
-        updateClientDisplay(originalClientDisplayName);
+        updateClientDisplay(
+            originalClientDisplayName
+        );
 
         if (clientIdDisplay) {
-            clientIdDisplay.value = getField('client_id')?.value || '';
+            clientIdDisplay.value =
+                getField('client_id')?.value || '';
         }
 
         updateRateFieldState();
     }
 
     function hasChanges() {
-        const currentData = getFormDataObject();
+        const currentData =
+            getFormDataObject();
 
-        return Object.keys(originalData).some(key => {
-            return String(originalData[key] ?? '') !== String(currentData[key] ?? '');
-        });
+        return Object.keys(originalData).some(
+            key => {
+                return String(
+                    originalData[key] ?? ''
+                ) !== String(
+                    currentData[key] ?? ''
+                );
+            }
+        );
     }
 
     async function confirmCancel() {
@@ -604,39 +1529,15 @@ export async function init(panel) {
         return result.isConfirmed;
     }
 
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    }
-
-    function getEmployeeFullName(employee) {
-        return [
-            employee.last_name,
-            employee.first_name,
-            employee.middle_name,
-            employee.suffix_name
-        ].filter(Boolean).join(', ');
-    }
-
-    function getEmployeeDisplayName(employee) {
-        return [
-            employee.first_name,
-            employee.middle_name,
-            employee.last_name,
-            employee.suffix_name
-        ].filter(Boolean).join(' ');
-    }
-
     function updateHighlightedResult() {
         const results =
-            searchList?.querySelectorAll('[data-employee-id]') || [];
+            searchList?.querySelectorAll(
+                '[data-employee-id]'
+            ) || [];
 
         results.forEach((result, index) => {
-            const isHighlighted = index === highlightedIndex;
+            const isHighlighted =
+                index === highlightedIndex;
 
             result.classList.toggle(
                 'bg-gray-100',
@@ -650,7 +1551,9 @@ export async function init(panel) {
 
             result.setAttribute(
                 'aria-selected',
-                isHighlighted ? 'true' : 'false'
+                isHighlighted
+                    ? 'true'
+                    : 'false'
             );
 
             if (isHighlighted) {
@@ -677,7 +1580,9 @@ export async function init(panel) {
 
         if (searchList) {
             searchList
-                .querySelectorAll('[data-employee-id]')
+                .querySelectorAll(
+                    '[data-employee-id]'
+                )
                 .forEach(result => {
                     result.classList.remove(
                         'bg-gray-100',
@@ -743,48 +1648,52 @@ export async function init(panel) {
         }
 
         searchList.innerHTML =
-            searchItems.map((employee, index) => {
-                const fullName =
-                    getEmployeeFullName(employee);
+            searchItems.map(
+                (employee, index) => {
+                    const fullName =
+                        getEmployeeFullName(employee);
 
-                const displayName =
-                    getEmployeeDisplayName(employee);
+                    const displayName =
+                        getEmployeeDisplayName(
+                            employee
+                        );
 
-                const clientName =
-                    employee.client_name ||
-                    employee.client?.client_name ||
-                    '';
+                    const clientName =
+                        employee.client_name ||
+                        employee.client?.client_name ||
+                        '';
 
-                return `
-                    <button
-                        type="button"
-                        id="employeeSearchOption${employee.emp_id}"
-                        data-employee-id="${employee.emp_id}"
-                        data-index="${index}"
-                        role="option"
-                        aria-selected="false"
-                        class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <div class="font-medium text-sm text-gray-800 dark:text-white truncate">
-                                    ${escapeHtml(fullName || displayName || 'Unnamed Employee')}
+                    return `
+                        <button
+                            type="button"
+                            id="employeeSearchOption${employee.emp_id}"
+                            data-employee-id="${employee.emp_id}"
+                            data-index="${index}"
+                            role="option"
+                            aria-selected="false"
+                            class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="font-medium text-sm text-gray-800 dark:text-white truncate">
+                                        ${escapeHtml(fullName || displayName || 'Unnamed Employee')}
+                                    </div>
+
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        ID: ${escapeHtml(employee.emp_id || '')}
+                                        ${employee.badge_no ? ` • Badge: ${escapeHtml(employee.badge_no)}` : ''}
+                                    </div>
                                 </div>
 
-                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    ID: ${escapeHtml(employee.emp_id || '')}
-                                    ${employee.badge_no ? ` • Badge: ${escapeHtml(employee.badge_no)}` : ''}
-                                </div>
+                                ${clientName ? `
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 text-right shrink-0 max-w-[40%] truncate">
+                                        ${escapeHtml(clientName)}
+                                    </div>
+                                ` : ''}
                             </div>
-
-                            ${clientName ? `
-                                <div class="text-xs text-gray-500 dark:text-gray-400 text-right shrink-0 max-w-[40%] truncate">
-                                    ${escapeHtml(clientName)}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </button>
-                `;
-            }).join('');
+                        </button>
+                    `;
+                }
+            ).join('');
 
         showSearchResults();
 
@@ -819,7 +1728,8 @@ export async function init(panel) {
     }
 
     async function searchEmployees(query) {
-        const trimmedQuery = query.trim();
+        const trimmedQuery =
+            query.trim();
 
         resetHighlightedResult();
 
@@ -850,7 +1760,8 @@ export async function init(panel) {
                 }
             );
 
-            const result = await response.json();
+            const result =
+                await response.json();
 
             if (!response.ok) {
                 throw new Error(
@@ -891,43 +1802,6 @@ export async function init(panel) {
         }
     }
 
-    async function selectHighlightedResult() {
-        const results =
-            searchList?.querySelectorAll(
-                '[data-employee-id]'
-            ) || [];
-
-        if (
-            highlightedIndex < 0 ||
-            highlightedIndex >= results.length
-        ) {
-            return;
-        }
-
-        const selectedResult =
-            results[highlightedIndex];
-
-        const employeeId =
-            selectedResult.dataset.employeeId;
-
-        const selectedIndex =
-            Number(selectedResult.dataset.index);
-
-        if (!employeeId) {
-            return;
-        }
-
-        currentSearchIndex =
-            Number.isNaN(selectedIndex)
-                ? highlightedIndex
-                : selectedIndex;
-
-        await loadEmployee(employeeId);
-
-        hideSearchResults();
-        updateCounter();
-    }
-
     async function loadEmployee(employeeId) {
         if (!employeeId) {
             return;
@@ -946,7 +1820,8 @@ export async function init(panel) {
                 }
             );
 
-            const result = await response.json();
+            const result =
+                await response.json();
 
             if (!response.ok) {
                 throw new Error(
@@ -972,13 +1847,9 @@ export async function init(panel) {
                     );
 
                 if (foundIndex >= 0) {
-                    currentSearchIndex = foundIndex;
+                    currentSearchIndex =
+                        foundIndex;
                 }
-            }
-
-            if (searchInput) {
-                searchInput.value =
-                    getEmployeeDisplayName(employee);
             }
 
             updateCounter();
@@ -1007,7 +1878,8 @@ export async function init(panel) {
             return;
         }
 
-        let nextIndex = currentSearchIndex;
+        let nextIndex =
+            currentSearchIndex;
 
         if (direction === 'next') {
             if (
@@ -1019,7 +1891,9 @@ export async function init(panel) {
 
             nextIndex++;
         } else {
-            if (currentSearchIndex <= 0) {
+            if (
+                currentSearchIndex <= 0
+            ) {
                 return;
             }
 
@@ -1033,7 +1907,8 @@ export async function init(panel) {
             return;
         }
 
-        currentSearchIndex = nextIndex;
+        currentSearchIndex =
+            nextIndex;
 
         await loadEmployee(
             employee.emp_id
@@ -1053,13 +1928,13 @@ export async function init(panel) {
                     No companies found.
                 </div>
             `;
-
             return;
         }
 
         clientList.innerHTML =
             clients.map(client => {
-                const config = client.payroll_config || {};
+                const config =
+                    client.payroll_config || {};
 
                 return `
                     <button
@@ -1102,9 +1977,12 @@ export async function init(panel) {
                             button.dataset.clientId,
                             button.dataset.clientName,
                             {
-                                hours_per_day: button.dataset.hoursPerDay,
-                                working_days_per_month: button.dataset.workingDaysPerMonth,
-                                working_days_per_year: button.dataset.workingDaysPerYear
+                                hours_per_day:
+                                    button.dataset.hoursPerDay,
+                                working_days_per_month:
+                                    button.dataset.workingDaysPerMonth,
+                                working_days_per_year:
+                                    button.dataset.workingDaysPerYear
                             }
                         );
                     }
@@ -1197,23 +2075,35 @@ export async function init(panel) {
         clientIcon?.classList.remove('rotate-180');
     }
 
-    function selectClient(clientId, clientName, payrollConfig = null) {
-        const clientField = getField('client_id');
+    function selectClient(
+        clientId,
+        clientName,
+        payrollConfig = null
+    ) {
+        const clientField =
+            getField('client_id');
 
         if (!clientField || !clientInput) {
             return;
         }
 
-        clientField.value = clientId || '';
+        clientField.value =
+            clientId || '';
+
         clientField.disabled = false;
 
-        clientInput.value = clientName || '';
+        clientInput.value =
+            clientName || '';
 
-        currentClientDisplayName = clientName || '';
-        currentClientPayrollConfig = payrollConfig;
+        currentClientDisplayName =
+            clientName || '';
+
+        currentClientPayrollConfig =
+            payrollConfig;
 
         if (clientIdDisplay) {
-            clientIdDisplay.value = clientId || '';
+            clientIdDisplay.value =
+                clientId || '';
         }
 
         clearComputedRates();
@@ -1229,7 +2119,8 @@ export async function init(panel) {
             return;
         }
 
-        const clientField = getField('client_id');
+        const clientField =
+            getField('client_id');
 
         if (clientField) {
             clientField.value = '';
@@ -1246,9 +2137,12 @@ export async function init(panel) {
 
         showClientDropdown();
 
-        clientSearchTimer = setTimeout(() => {
-            loadClients(clientInput?.value || '');
-        }, 250);
+        clientSearchTimer =
+            setTimeout(() => {
+                loadClients(
+                    clientInput?.value || ''
+                );
+            }, 250);
     }
 
     async function handleClientInputFocus() {
@@ -1269,10 +2163,7 @@ export async function init(panel) {
     function handleClientInputKeydown(event) {
         if (event.key === 'Escape') {
             event.preventDefault();
-
             hideClientDropdown();
-
-            return;
         }
     }
 
@@ -1303,7 +2194,9 @@ export async function init(panel) {
 
         if (
             !Number.isFinite(hoursPerDay) ||
-            !Number.isFinite(workingDaysPerMonth) ||
+            !Number.isFinite(
+                workingDaysPerMonth
+            ) ||
             hoursPerDay <= 0 ||
             workingDaysPerMonth <= 0
         ) {
@@ -1317,7 +2210,8 @@ export async function init(panel) {
     }
 
     function formatRate(value) {
-        const number = Number(value);
+        const number =
+            Number(value);
 
         if (!Number.isFinite(number)) {
             return '';
@@ -1333,7 +2227,8 @@ export async function init(panel) {
 
         if (rateBasisField) {
             rateBasisField.value = 'Daily';
-            rateBasisField.disabled = !editable;
+            rateBasisField.disabled =
+                !editable;
 
             rateBasisField.classList.remove(
                 'cursor-pointer',
@@ -1354,7 +2249,8 @@ export async function init(panel) {
 
         if (dailyRateField) {
             dailyRateField.disabled = false;
-            dailyRateField.readOnly = !editable;
+            dailyRateField.readOnly =
+                !editable;
 
             dailyRateField.classList.remove(
                 'cursor-text',
@@ -1373,7 +2269,10 @@ export async function init(panel) {
             );
         }
 
-        [hourlyRateField, monthlyRateField].forEach(field => {
+        [
+            hourlyRateField,
+            monthlyRateField
+        ].forEach(field => {
             if (!field) {
                 return;
             }
@@ -1390,7 +2289,9 @@ export async function init(panel) {
                 'cursor-not-allowed'
             );
 
-            field.classList.add('opacity-60');
+            field.classList.add(
+                'opacity-60'
+            );
         });
     }
 
@@ -1469,7 +2370,8 @@ export async function init(panel) {
         }
 
         if (rateBasisField) {
-            rateBasisField.value = 'Daily';
+            rateBasisField.value =
+                'Daily';
         }
 
         updateRateFieldState();
@@ -1498,7 +2400,10 @@ export async function init(panel) {
                 return;
             }
 
-            if (field.name === 'profile_photo') {
+            if (
+                field.name ===
+                'profile_photo'
+            ) {
                 if (
                     field.files &&
                     field.files.length > 0
@@ -1512,10 +2417,14 @@ export async function init(panel) {
                 return;
             }
 
-            if (field.type === 'checkbox') {
+            if (
+                field.type === 'checkbox'
+            ) {
                 data.append(
                     field.name,
-                    field.checked ? '1' : '0'
+                    field.checked
+                        ? '1'
+                        : '0'
                 );
 
                 return;
@@ -1532,10 +2441,12 @@ export async function init(panel) {
 
     async function saveEmployee() {
         const firstName =
-            getField('first_name')?.value.trim();
+            getField('first_name')
+                ?.value.trim();
 
         const lastName =
-            getField('last_name')?.value.trim();
+            getField('last_name')
+                ?.value.trim();
 
         if (!firstName || !lastName) {
             await Swal.fire({
@@ -1551,7 +2462,10 @@ export async function init(panel) {
         const isNew =
             mode === 'add';
 
-        if (!getField('client_id')?.value) {
+        if (
+            !getField('client_id')
+                ?.value
+        ) {
             await Swal.fire({
                 icon: 'warning',
                 title: 'Company Required',
@@ -1562,7 +2476,9 @@ export async function init(panel) {
             return;
         }
 
-        if (!dailyRateField?.value) {
+        if (
+            !dailyRateField?.value
+        ) {
             await Swal.fire({
                 icon: 'warning',
                 title: 'Daily Rate Required',
@@ -1580,7 +2496,8 @@ export async function init(panel) {
         }
 
         if (rateBasisField) {
-            rateBasisField.value = 'Daily';
+            rateBasisField.value =
+                'Daily';
         }
 
         const csrfToken =
@@ -1624,10 +2541,9 @@ export async function init(panel) {
             const employeeId =
                 currentEmployeeId;
 
-            const url =
-                isNew
-                    ? API.store
-                    : API.update(employeeId);
+            const url = isNew
+                ? API.store
+                : API.update(employeeId);
 
             const formData =
                 buildFormData();
@@ -1645,11 +2561,15 @@ export async function init(panel) {
                     {
                         method: 'POST',
                         headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
+                            'X-CSRF-TOKEN':
+                                csrfToken,
+                            'X-Requested-With':
+                                'XMLHttpRequest',
+                            'Accept':
+                                'application/json'
                         },
-                        credentials: 'same-origin',
+                        credentials:
+                            'same-origin',
                         body: formData
                     }
                 );
@@ -1666,8 +2586,8 @@ export async function init(panel) {
                         Object.values(
                             result.errors
                         )
-                        .flat()
-                        .join('\n');
+                            .flat()
+                            .join('\n');
 
                     throw new Error(
                         messages
@@ -1686,9 +2606,7 @@ export async function init(panel) {
                 result;
 
             populateForm(employee);
-
             setMode('view');
-
             saveOriginalData();
 
             if (isNew) {
@@ -1701,11 +2619,17 @@ export async function init(panel) {
                 const existingIndex =
                     searchItems.findIndex(
                         item =>
-                            String(item.emp_id) ===
-                            String(employee.emp_id)
+                            String(
+                                item.emp_id
+                            ) ===
+                            String(
+                                employee.emp_id
+                            )
                     );
 
-                if (existingIndex >= 0) {
+                if (
+                    existingIndex >= 0
+                ) {
                     searchItems[
                         existingIndex
                     ] = employee;
@@ -1736,6 +2660,17 @@ export async function init(panel) {
                 timer: 1800,
                 showConfirmButton: false
             });
+
+            showListingView();
+
+            const listSearch =
+                employeeListSearch?.value ||
+                '';
+
+            await loadEmployeeList(
+                listSearch,
+                employeeListPage
+            );
         } catch (error) {
             console.error(
                 'Employee save error:',
@@ -1765,11 +2700,13 @@ export async function init(panel) {
 
         hideSearchResults();
 
+        showFormView();
         setMode('add');
 
-        getField('first_name')?.focus({
-            preventScroll: true
-        });
+        getField('first_name')
+            ?.focus({
+                preventScroll: true
+            });
     }
 
     async function startEdit() {
@@ -1785,7 +2722,9 @@ export async function init(panel) {
 
         originalClientPayrollConfig =
             currentClientPayrollConfig
-                ? { ...currentClientPayrollConfig }
+                ? {
+                    ...currentClientPayrollConfig
+                }
                 : null;
 
         setMode('edit');
@@ -1810,7 +2749,6 @@ export async function init(panel) {
             }
 
             setMode('view');
-
             saveOriginalData();
 
             return;
@@ -1829,7 +2767,6 @@ export async function init(panel) {
         hideSearchResults();
 
         setMode('view');
-
         saveOriginalData();
     }
 
@@ -1850,14 +2787,9 @@ export async function init(panel) {
             searchInput?.value || '';
 
         searchTimer =
-            setTimeout(
-                () => {
-                    searchEmployees(
-                        query
-                    );
-                },
-                300
-            );
+            setTimeout(() => {
+                searchEmployees(query);
+            }, 300);
     }
 
     function handleSearchFocus() {
@@ -1886,9 +2818,7 @@ export async function init(panel) {
 
         if (event.key === 'Escape') {
             event.preventDefault();
-
             hideSearchResults();
-
             return;
         }
 
@@ -1898,7 +2828,6 @@ export async function init(panel) {
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-
             showSearchResults();
 
             highlightedIndex++;
@@ -1917,7 +2846,6 @@ export async function init(panel) {
 
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-
             showSearchResults();
 
             highlightedIndex--;
@@ -1932,14 +2860,144 @@ export async function init(panel) {
             return;
         }
 
-        if (event.key === 'Enter') {
-            if (highlightedIndex >= 0) {
+        if (
+            event.key === 'Enter'
+        ) {
+            if (
+                highlightedIndex >= 0
+            ) {
                 event.preventDefault();
 
-                await selectHighlightedResult();
+                const selectedResult =
+                    results[
+                        highlightedIndex
+                    ];
+
+                currentSearchIndex =
+                    Number(
+                        selectedResult
+                            .dataset
+                            .index
+                    );
+
+                await loadEmployee(
+                    selectedResult
+                        .dataset
+                        .employeeId
+                );
+
+                hideSearchResults();
+                updateCounter();
             }
         }
     }
+
+    function handleListSearchKeydown(event) {
+        if (
+            event.key === 'Escape'
+        ) {
+            event.preventDefault();
+
+            if (employeeListSearchResults) {
+                employeeListSearchResults.classList.add(
+                    'hidden'
+                );
+            }
+        }
+    }
+
+    async function handleBackToList(event) {
+        event?.preventDefault();
+        event?.stopPropagation();
+
+        if (mode === 'edit' || mode === 'add') {
+            const confirmed =
+                await confirmCancel();
+
+            if (!confirmed) {
+                return;
+            }
+        }
+
+        clearForm();
+
+        searchItems = [];
+        currentSearchIndex = -1;
+        highlightedIndex = -1;
+
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
+        hideSearchResults();
+
+        setMode('view');
+        saveOriginalData();
+
+        showListingView();
+    }
+
+
+
+    form.addEventListener(
+        'submit',
+        event => {
+            event.preventDefault();
+        }
+    );
+
+    searchInput?.setAttribute(
+        'role',
+        'combobox'
+    );
+
+    searchInput?.setAttribute(
+        'aria-autocomplete',
+        'list'
+    );
+
+    searchInput?.setAttribute(
+        'aria-expanded',
+        'false'
+    );
+
+    searchInput?.setAttribute(
+        'aria-controls',
+        'employeeSearchList'
+    );
+
+    searchList?.setAttribute(
+        'role',
+        'listbox'
+    );
+
+    employeeListSearch?.addEventListener(
+        'input',
+        handleEmployeeListSearch
+    );
+
+    employeeListSearch?.addEventListener(
+        'keydown',
+        handleListSearchKeydown
+    );
+
+    employeeSortButton?.addEventListener(
+        'click',
+    event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const existingMenu =
+            panel.querySelector('#employeeSortMenu');
+
+        if (existingMenu) {
+            closeEmployeeSortMenu();
+            return;
+        }
+
+        createEmployeeSortMenu();
+        }
+    );
 
     searchInput?.addEventListener(
         'input',
@@ -1990,9 +3048,7 @@ export async function init(panel) {
 
             if (
                 searchResults &&
-                !searchResults.contains(
-                    event.target
-                ) &&
+                !searchResults.contains(event.target) &&
                 event.target !== searchInput
             ) {
                 hideSearchResults();
@@ -2000,19 +3056,82 @@ export async function init(panel) {
 
             if (
                 clientDropdown &&
-                !clientDropdown.contains(
-                    event.target
-                ) &&
+                !clientDropdown.contains(event.target) &&
                 event.target !== clientInput
             ) {
                 hideClientDropdown();
             }
+
+            if (
+                employeeListSearchResults &&
+                !employeeListSearchResults.contains(event.target) &&
+                event.target !== employeeListSearch
+            ) {
+                employeeListSearchResults.classList.add(
+                    'hidden'
+                );
+            }
+            const employeeSortMenu =
+                event.target.closest(
+                    '#employeeSortMenu'
+                );
+
+            const employeeSortButtonTarget =
+                event.target.closest(
+                    '#employeeSortButton'
+                );
+
+            if (
+                !employeeSortMenu &&
+                !employeeSortButtonTarget
+            ) {
+                closeEmployeeSortMenu();
+            }
+
+            const employeeContextMenu =
+                event.target.closest(
+                    '.employee-context-menu'
+                );
+
+            const employeeContextButton =
+                event.target.closest(
+                    '.employee-context-button'
+                );
+
+            if (
+                !employeeContextMenu &&
+                !employeeContextButton
+            ) {
+                employeeList
+                    ?.querySelectorAll(
+                        '.employee-context-menu'
+                    )
+                    .forEach(menu => {
+                        menu.classList.add('hidden');
+                    });
+
+                employeeList
+                    ?.querySelectorAll(
+                        '.employee-context-button'
+                    )
+                    .forEach(button => {
+                        button.setAttribute(
+                            'aria-expanded',
+                            'false'
+                        );
+                    });
+            }
         }
     );
 
-    addButton?.addEventListener(
+    employeeAddButton?.addEventListener(
         'click',
         startAdd
+    );
+
+    employeeBackButton?.addEventListener(
+        'click',
+        handleBackToList
     );
 
     editButton?.addEventListener(
@@ -2048,6 +3167,35 @@ export async function init(panel) {
         }
     );
 
+    employeePreviousPageButton?.addEventListener(
+        'click',
+        () => {
+            if (employeeListPage > 1) {
+                loadEmployeeList(
+                    employeeListSearch?.value ||
+                    '',
+                    employeeListPage - 1
+                );
+            }
+        }
+    );
+
+    employeeNextPageButton?.addEventListener(
+        'click',
+        () => {
+            if (
+                employeeListPage <
+                employeeListLastPage
+            ) {
+                loadEmployeeList(
+                    employeeListSearch?.value ||
+                    '',
+                    employeeListPage + 1
+                );
+            }
+        }
+    );
+
     profileInput?.addEventListener(
         'change',
         () => {
@@ -2080,24 +3228,25 @@ export async function init(panel) {
             const reader =
                 new FileReader();
 
-            reader.onload =
-                event => {
-                    profilePreview.src =
-                        event.target.result;
+            reader.onload = event => {
+                profilePreview.src =
+                    event.target.result;
 
-                    profilePreview.classList.remove(
-                        'hidden'
-                    );
-                };
+                profilePreview.classList.remove(
+                    'hidden'
+                );
+            };
 
             reader.readAsDataURL(file);
         }
     );
+    
 
-    clearForm();
+clearForm();
+setMode('view');
+saveOriginalData();
+showListingView();
 
-    setMode('view');
-
-    saveOriginalData();
+await loadEmployeeList('', 1);
 }
 
