@@ -24,17 +24,33 @@
             </div> 
         </div> 
  
-        <div class="grid grid-cols-[80px_minmax(0,1fr)_44px] sm:grid-cols-[100px_minmax(0,1fr)_52px] items-center px-4 sm:px-5 h-10 border-b border-gray-100 dark:border-gray-600">
-            <div class="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase"> 
-                Client ID 
-            </div> 
- 
-            <div class="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase"> 
-                Client Name 
-            </div> 
- 
-            <div></div> 
-        </div> 
+            <div class="grid grid-cols-[80px_minmax(0,1fr)_44px] sm:grid-cols-[100px_minmax(0,1fr)_100px] items-center px-4 sm:px-5 h-10 border-b border-gray-100 dark:border-gray-800">
+
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">
+                    Client ID
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">
+                    Client Name
+                </div>
+
+                    <div class="flex items-center justify-end">
+                        <button
+                            type="button"
+                            id="clientSortButton"
+                            title="Sort clients"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            class="inline-flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+
+                            <span class="text-xs font-semibold uppercase">
+                                Sort
+                            </span>
+
+                            <i class="fa-solid fa-arrow-down-a-z text-lg"></i>
+                        </button>
+                    </div>
+            </div>
  
         <div id="clientList" class="px-3 sm:px-4 py-3 space-y-2"> 
         </div> 

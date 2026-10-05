@@ -8,44 +8,88 @@ use Illuminate\Support\Facades\DB;
 
 class ClientMasterController extends Controller
 {
-    public function search(Request $request)
-    {
-        $search = trim($request->input('search', ''));
-        $perPage = 20;
+        public function search(Request $request)
+        {
+            $search = trim($request->input('search', ''));
+            $sort = $request->input('sort', 'name');
+            $direction = strtolower($request->input('direction', 'asc'));
+            $status = strtolower($request->input('status', 'active'));
 
-        $clients = ClientMaster::query()
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('client_name', 'like', "%{$search}%")
-                        ->orWhere('client_contact', 'like', "%{$search}%")
-                        ->orWhere('client_contact2', 'like', "%{$search}%");
-                });
-            })
-            ->orderBy('client_name')
-            ->paginate($perPage);
+            $perPage = 20;
 
-        return response()->json([
-            'success' => true,
-            'data' => $clients->items(),
-            'pagination' => [
-                'current_page' => $clients->currentPage(),
-                'last_page' => $clients->lastPage(),
-                'per_page' => $clients->perPage(),
-                'total' => $clients->total(),
-                'from' => $clients->firstItem(),
-                'to' => $clients->lastItem()
-            ]
-        ]);
+            // Only allow valid sort directions.
+            $direction = in_array($direction, ['asc', 'desc'], true)
+                ? $direction
+                : 'asc';
+
+            // Only allow valid statuses.
+            $status = in_array($status, ['active', 'archived'], true)
+                ? $status
+                : 'active';
+
+            // Only allow valid sort options.
+            $sort = in_array($sort, ['name', 'latest', 'oldest', 'letter'], true)
+                ? $sort
+                : 'name';
+
+            $clients = ClientMaster::query()
+                ->where('status', $status)
+
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($query) use ($search) {
+                        $query->where('client_name', 'like', "%{$search}%")
+                            ->orWhere('client_contact', 'like', "%{$search}%")
+                            ->orWhere('client_contact2', 'like', "%{$search}%");
+                    });
+                })
+
+                ->when(
+                    $sort === 'latest' || $sort === 'oldest',
+                    function ($query) use ($direction) {
+                        $query->orderBy('created_at', $direction);
+                    }
+                )
+
+                ->when(
+                    $sort === 'name' || $sort === 'letter',
+                    function ($query) use ($direction) {
+                        $query->orderBy('client_name', $direction);
+                    }
+                )
+
+                ->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $clients->items(),
+                'pagination' => [
+                    'current_page' => $clients->currentPage(),
+                    'last_page' => $clients->lastPage(),
+                    'per_page' => $clients->perPage(),
+                    'total' => $clients->total(),
+                    'from' => $clients->firstItem(),
+                    'to' => $clients->lastItem()
+                ]
+         ]);
     }
 
     public function show(ClientMaster $client)
     {
+        // Do not allow archived clients to be loaded.
+        if ($client->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This client is archived.'
+            ], 404);
+        }
+
         $client->load('payrollConfig');
 
         if ($client->payrollConfig) {
-            $client->payrollConfig->payroll_frequency = $this->normalizePayrollFrequency(
-                $client->payrollConfig->payroll_frequency
-            );
+            $client->payrollConfig->payroll_frequency =
+                $this->normalizePayrollFrequency(
+                    $client->payrollConfig->payroll_frequency
+                );
         }
 
         return response()->json([
@@ -61,11 +105,43 @@ class ClientMasterController extends Controller
 
     public function update(Request $request, ClientMaster $client)
     {
+        // Prevent editing an archived client.
+        if ($client->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Archived clients cannot be edited.'
+            ], 404);
+        }
+
         return $this->saveClient($request, $client);
     }
 
-    private function saveClient(Request $request, ?ClientMaster $client = null)
+    /**
+     * Archive a client instead of permanently deleting it.
+     */
+    public function destroy(ClientMaster $client)
     {
+        if ($client->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Client is already archived.'
+            ], 400);
+        }
+
+        $client->update([
+            'status' => 'archived'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Client archived successfully.'
+        ]);
+    }
+
+    private function saveClient(
+        Request $request,
+        ?ClientMaster $client = null
+    ) {
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
             'client_address' => 'nullable|string|max:255',
@@ -137,6 +213,7 @@ class ClientMasterController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $client) {
+
             $clientData = collect($validated)
                 ->only([
                     'client_name',
@@ -156,13 +233,20 @@ class ClientMasterController extends Controller
 
             $configData = $validated['payroll_config'] ?? [];
 
-            $configData['payroll_frequency'] = $this->normalizePayrollFrequency(
-                $configData['payroll_frequency'] ?? 'semi_monthly'
-            );
+            $configData['payroll_frequency'] =
+                $this->normalizePayrollFrequency(
+                    $configData['payroll_frequency'] ?? 'semi_monthly'
+                );
 
             if ($client) {
+
                 $client->update($clientData);
+
             } else {
+
+                // New clients are always active.
+                $clientData['status'] = 'active';
+
                 $client = ClientMaster::create($clientData);
             }
 
@@ -174,9 +258,10 @@ class ClientMasterController extends Controller
             $client->load('payrollConfig');
 
             if ($client->payrollConfig) {
-                $client->payrollConfig->payroll_frequency = $this->normalizePayrollFrequency(
-                    $client->payrollConfig->payroll_frequency
-                );
+                $client->payrollConfig->payroll_frequency =
+                    $this->normalizePayrollFrequency(
+                        $client->payrollConfig->payroll_frequency
+                    );
             }
 
             return response()->json([
@@ -197,10 +282,12 @@ class ClientMasterController extends Controller
             'semi-monthly',
             'semi monthly',
             'semi_monthly' => 'semi_monthly',
+
             'weekly' => 'weekly',
+
             'monthly' => 'monthly',
+
             default => 'semi_monthly'
         };
     }
 }
-

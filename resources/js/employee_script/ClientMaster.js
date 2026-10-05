@@ -4,7 +4,8 @@ export async function init(panel) {
     const listingView = panel.querySelector('#clientListingView'); 
     const formView = panel.querySelector('#clientFormView'); 
     const clientList = panel.querySelector('#clientList'); 
-    const clientListSearch = panel.querySelector('#clientListSearch'); 
+    const clientListSearch = panel.querySelector('#clientListSearch');
+    const clientSortButton = panel.querySelector('#clientSortButton');
     const addClientButton = panel.querySelector('#clientAddButton'); 
     const backToListButton = panel.querySelector('#clientBackToListButton'); 
  
@@ -93,6 +94,9 @@ export async function init(panel) {
     let listSearchTimeout = null; 
     let searchHighlightedIndex = -1; 
     let clientListPage = 1; 
+    let clientSort = 'name';
+    let clientSortDirection = 'asc';
+    let clientStatus = 'active';
  
     function isDarkMode() { 
         return document.documentElement.classList.contains('dark'); 
@@ -211,7 +215,380 @@ export async function init(panel) {
             button.setAttribute('aria-expanded', 'false'); 
         }); 
     } 
+
+    function closeSortMenu() {
+        panel.querySelector('#clientSortMenu')?.remove();
+        clientSortButton?.setAttribute('aria-expanded', 'false');
+    }
  
+    function createSortMenu() {
+        closeActionMenus();
+        closeSortMenu();
+
+        if (!clientSortButton) return;
+
+        const menu = document.createElement('div');
+
+        menu.id = 'clientSortMenu';
+
+        menu.className = [
+            'absolute',
+            'right-0',
+            'top-full',
+            'mt-2',
+            'w-52',
+            'z-50',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1'
+        ].join(' ');
+
+        const createMenuButton = (
+            label,
+            onClick,
+            active = false
+        ) => {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+
+            button.className = [
+                'w-full',
+                'flex',
+                'items-center',
+                'justify-between',
+                'px-3',
+                'py-2',
+                'text-sm',
+                'text-left',
+                'text-gray-700',
+                'dark:text-gray-200',
+                'hover:bg-gray-50',
+                'dark:hover:bg-gray-600',
+                'transition-colors',
+                'cursor-pointer'
+            ].join(' ');
+
+            button.innerHTML = `
+                <span>${escapeHtml(label)}</span>
+                ${
+                    active
+                        ? '<i class="fa-solid fa-check text-green-600 dark:text-green-400 text-xs"></i>'
+                        : ''
+                }
+            `;
+
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                onClick();
+            });
+
+            return button;
+        };
+
+        // STATUS
+
+        const statusWrapper = document.createElement('div');
+
+        statusWrapper.className = 'relative';
+
+        const statusButton = document.createElement('button');
+
+        statusButton.type = 'button';
+
+        statusButton.className = [
+            'w-full',
+            'flex',
+            'items-center',
+            'justify-between',
+            'px-3',
+            'py-2',
+            'text-sm',
+            'text-left',
+            'text-gray-700',
+            'dark:text-gray-200',
+            'hover:bg-gray-50',
+            'dark:hover:bg-gray-600',
+            'transition-colors',
+            'cursor-pointer'
+        ].join(' ');
+
+        statusButton.innerHTML = `
+            <span>Status</span>
+            <i class="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
+        `;
+
+        const statusMenu = document.createElement('div');
+
+        statusMenu.className = [
+            'absolute',
+            'right-full',
+            'top-0',
+            'mr-1',
+            'w-40',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1',
+            'hidden'
+        ].join(' ');
+
+        const statusOptions = [
+            {
+                label: 'Active',
+                value: 'active'
+            },
+            {
+                label: 'Archived',
+                value: 'archived'
+            }
+        ];
+
+        statusOptions.forEach(option => {
+            const button = createMenuButton(
+                option.label,
+                () => {
+                    clientStatus = option.value;
+                    clientListPage = 1;
+
+                    closeSortMenu();
+
+                    loadClientList(
+                        clientListSearch?.value || '',
+                        1
+                    );
+                },
+                clientStatus === option.value
+            );
+
+            statusMenu.appendChild(button);
+        });
+
+        statusWrapper.appendChild(statusButton);
+        statusWrapper.appendChild(statusMenu);
+
+        statusWrapper.addEventListener('mouseenter', () => {
+            statusMenu.classList.remove('hidden');
+        });
+
+        statusWrapper.addEventListener('mouseleave', () => {
+            statusMenu.classList.add('hidden');
+        });
+
+        statusButton.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            statusMenu.classList.toggle('hidden');
+        });
+
+        menu.appendChild(statusWrapper);
+
+        // DIVIDER
+
+        const divider = document.createElement('div');
+
+        divider.className =
+            'my-1 border-t border-gray-100 dark:border-gray-600';
+
+        menu.appendChild(divider);
+
+        // DEFAULT NAME
+
+        menu.appendChild(
+            createMenuButton(
+                'Default Name',
+                () => {
+                    clientSort = 'name';
+                    clientSortDirection = 'asc';
+                    clientListPage = 1;
+
+                    closeSortMenu();
+
+                    loadClientList(
+                        clientListSearch?.value || '',
+                        1
+                    );
+                },
+                clientSort === 'name' &&
+                clientSortDirection === 'asc'
+            )
+        );
+
+        // LATEST TO OLDEST
+
+        menu.appendChild(
+            createMenuButton(
+                'Latest to Oldest',
+                () => {
+                    clientSort = 'latest';
+                    clientSortDirection = 'desc';
+                    clientListPage = 1;
+
+                    closeSortMenu();
+
+                    loadClientList(
+                        clientListSearch?.value || '',
+                        1
+                    );
+                },
+                clientSort === 'latest' &&
+                clientSortDirection === 'desc'
+            )
+        );
+
+        // OLDEST TO LATEST
+
+        menu.appendChild(
+            createMenuButton(
+                'Oldest to Latest',
+                () => {
+                    clientSort = 'oldest';
+                    clientSortDirection = 'asc';
+                    clientListPage = 1;
+
+                    closeSortMenu();
+
+                    loadClientList(
+                        clientListSearch?.value || '',
+                        1
+                    );
+                },
+                clientSort === 'oldest' &&
+                clientSortDirection === 'asc'
+            )
+        );
+
+        // BY LETTER
+
+        const letterWrapper = document.createElement('div');
+
+        letterWrapper.className = 'relative';
+
+        const letterButton = document.createElement('button');
+
+        letterButton.type = 'button';
+
+        letterButton.className = [
+            'w-full',
+            'flex',
+            'items-center',
+            'justify-between',
+            'px-3',
+            'py-2',
+            'text-sm',
+            'text-left',
+            'text-gray-700',
+            'dark:text-gray-200',
+            'hover:bg-gray-50',
+            'dark:hover:bg-gray-600',
+            'transition-colors',
+            'cursor-pointer'
+        ].join(' ');
+
+        letterButton.innerHTML = `
+            <span>By Letter</span>
+            <i class="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
+        `;
+
+        const letterMenu = document.createElement('div');
+
+        letterMenu.className = [
+            'absolute',
+            'right-full',
+            'top-0',
+            'mr-1',
+            'w-40',
+            'bg-white',
+            'dark:bg-gray-700',
+            'border',
+            'border-gray-200',
+            'dark:border-gray-600',
+            'rounded-lg',
+            'shadow-lg',
+            'py-1',
+            'hidden'
+        ].join(' ');
+
+        const letterOptions = [
+            {
+                label: 'A to Z',
+                direction: 'asc'
+            },
+            {
+                label: 'Z to A',
+                direction: 'desc'
+            }
+        ];
+
+        letterOptions.forEach(option => {
+            const button = createMenuButton(
+                option.label,
+                () => {
+                    clientSort = 'letter';
+                    clientSortDirection = option.direction;
+                    clientListPage = 1;
+
+                    closeSortMenu();
+
+                    loadClientList(
+                        clientListSearch?.value || '',
+                        1
+                    );
+                },
+                clientSort === 'letter' &&
+                clientSortDirection === option.direction
+            );
+
+            letterMenu.appendChild(button);
+        });
+
+        letterWrapper.appendChild(letterButton);
+        letterWrapper.appendChild(letterMenu);
+
+        letterWrapper.addEventListener('mouseenter', () => {
+            letterMenu.classList.remove('hidden');
+        });
+
+        letterWrapper.addEventListener('mouseleave', () => {
+            letterMenu.classList.add('hidden');
+        });
+
+        letterButton.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            letterMenu.classList.toggle('hidden');
+        });
+
+        menu.appendChild(letterWrapper);
+
+        // APPEND MENU
+
+        const parent = clientSortButton.parentElement;
+
+        if (!parent) return;
+
+        if (getComputedStyle(parent).position === 'static') {
+            parent.classList.add('relative');
+        }
+
+        parent.appendChild(menu);
+
+        clientSortButton.setAttribute('aria-expanded', 'true');
+    }
+
     function createActionMenu(button, clientId, clientName) { 
         closeActionMenus(); 
  
@@ -219,28 +596,28 @@ export async function init(panel) {
  
         menu.className = 'client-action-menu absolute right-3 top-full mt-1 z-50 w-40 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-lg'; 
  
-        menu.innerHTML = ` 
-            <button 
-                type="button" 
-                class="client-delete-action flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer" 
-                data-client-id="${escapeHtml(clientId)}"> 
-                <i class="fa-solid fa-trash text-xs"></i> 
-                <span>Delete</span> 
-            </button> 
-        `; 
- 
+        menu.innerHTML = `
+            <button
+                type="button"
+                class="client-archive-action flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
+                data-client-id="${escapeHtml(clientId)}">
+                <i class="fa-solid fa-box-archive text-xs"></i>
+                <span>Archive</span>
+            </button>
+        `;
+        
         button.parentElement?.appendChild(menu); 
  
-        const deleteButton = menu.querySelector('.client-delete-action'); 
+        const archiveButton = menu.querySelector('.client-archive-action'); 
  
-        deleteButton?.addEventListener('click', async event => { 
-            event.preventDefault(); 
-            event.stopPropagation(); 
- 
-            closeActionMenus(); 
- 
-            await deleteClient(clientId, clientName); 
-        }); 
+        archiveButton?.addEventListener('click', async event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            closeActionMenus();
+
+            await archiveClient(clientId, clientName);
+        });
     } 
  
     function getClientPaginationContainer() { 
@@ -252,7 +629,7 @@ export async function init(panel) {
  
         pagination.id = 'clientListPagination'; 
  
-        pagination.className = 'flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-gray-100 dark:border-gray-700 dark:bg-gray-700'; 
+        pagination.className = 'flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-4 border-t border-gray-100 dark:border-gray-700 '; 
  
         clientList?.parentElement?.appendChild(pagination); 
  
@@ -392,8 +769,16 @@ export async function init(panel) {
         clientListPage = page; 
  
         try { 
-            const response = await fetch( 
-                `/payroll/public/api/client-master/search?search=${encodeURIComponent(search)}&page=${page}`, 
+        const params = new URLSearchParams({
+            search: search || '',
+            page: String(page),
+            sort: clientSort,
+            direction: clientSortDirection,
+            status: clientStatus
+        });
+
+        const response = await fetch(
+        `/payroll/public/api/client-master/search?${params.toString()}`,
                 { 
                     method: 'GET', 
                     headers: { 
@@ -423,42 +808,62 @@ export async function init(panel) {
                 return; 
             } 
  
-            clientList.innerHTML = clients.map(client => ` 
-                <div 
-                    class="client-list-row relative group grid grid-cols-[80px_minmax(0,1fr)_44px] sm:grid-cols-[100px_minmax(0,1fr)_52px] items-center min-h-[52px] px-4 sm:px-5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-green-200 dark:hover:border-green-800 hover:shadow-sm transition-all duration-150 cursor-pointer" 
-                    data-client-id="${escapeHtml(client.client_id)}"> 
+                clientList.innerHTML = clients.map(client => `
+                    <div
+                        class="client-list-row relative group grid grid-cols-[80px_minmax(0,1fr)_44px] sm:grid-cols-[100px_minmax(0,1fr)_52px] items-center min-h-[52px] px-4 sm:px-5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 hover:border-green-200 dark:hover:border-green-800 hover:shadow-sm transition-all duration-150 cursor-pointer"
+                        data-client-id="${escapeHtml(client.client_id)}"
+                        data-client-status="${escapeHtml(client.status || 'active')}">
+
+                        <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                            #${escapeHtml(client.client_id)}
+                        </div>
+
+                        <div class="min-w-0 pr-3">
+                            <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                                ${escapeHtml(client.client_name || '')}
+                            </div>
+                        </div>
+
+                        <div class="relative shrink-0 flex justify-end">
+                            ${
+                                client.status === 'active'
+                                    ? `
+                                        <button
+                                            type="button"
+                                            class="client-action-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                                            data-client-action="${escapeHtml(client.client_id)}"
+                                            aria-label="Client actions"
+                                            aria-expanded="false">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </button>
+                                    `
+                                    : ''
+                            }
+                        </div>
+                    </div>
+                `).join('');
  
-                    <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate"> 
-                        #${escapeHtml(client.client_id)} 
-                    </div> 
- 
-                    <div class="min-w-0 pr-3"> 
-                        <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate"> 
-                            ${escapeHtml(client.client_name || '')} 
-                        </div> 
-                    </div> 
- 
-                    <div class="relative shrink-0 flex justify-end"> 
-                        <button 
-                            type="button" 
-                            class="client-action-button w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer" 
-                            data-client-action="${escapeHtml(client.client_id)}" 
-                            aria-label="Client actions" 
-                            aria-expanded="false"> 
-                            <i class="fa-solid fa-ellipsis-vertical"></i> 
-                        </button> 
-                    </div> 
-                </div> 
-            `).join(''); 
- 
-            clientList.querySelectorAll('.client-list-row').forEach(row => { 
-                row.addEventListener('click', async event => { 
-                    if (event.target.closest('.client-action-button')) return; 
-                    if (event.target.closest('.client-action-menu')) return; 
- 
-                    await loadClient(row.dataset.clientId); 
-                }); 
-            }); 
+                clientList.querySelectorAll('.client-list-row').forEach(row => {
+                    row.addEventListener('click', async event => {
+                        if (event.target.closest('.client-action-button')) return;
+                        if (event.target.closest('.client-action-menu')) return;
+
+                        const status = row.dataset.clientStatus || 'active';
+
+                        if (status === 'archived') {
+                            await Swal.fire(swalConfig({
+                                icon: 'info',
+                                title: 'Archived Client',
+                                text: 'This client is archived and cannot be opened for editing.',
+                                confirmButtonColor: '#0a5d3c'
+                            }));
+
+                            return;
+                        }
+
+                        await loadClient(row.dataset.clientId);
+                    });
+                });
  
             clientList.querySelectorAll('.client-action-button').forEach(button => { 
                 button.addEventListener('click', event => { 
@@ -500,22 +905,82 @@ export async function init(panel) {
         } 
     } 
  
-    async function deleteClient(clientId, clientName) { 
-        const result = await Swal.fire(swalConfig({ 
-            icon: 'warning', 
-            title: 'Delete Client?', 
-            text: `Are you sure you want to delete ${clientName}?`, 
-            showCancelButton: true, 
-            confirmButtonText: 'Yes, Delete', 
-            cancelButtonText: 'Cancel', 
-            confirmButtonColor: '#dc2626', 
-            focusCancel: true 
-        })); 
- 
-        if (!result.isConfirmed) return; 
- 
-        /* Delete endpoint will be added after the controller destroy() method and route are implemented. */ 
-    } 
+        async function archiveClient(clientId, clientName) {
+            const result = await Swal.fire(swalConfig({
+                icon: 'warning',
+                title: 'Archive Client?',
+                text: `Are you sure you want to archive ${clientName}?`,
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Archive',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#dc2626',
+                focusCancel: true
+            }));
+
+            if (!result.isConfirmed) return;
+
+            const csrfToken = document.querySelector(
+                'meta[name="csrf-token"]'
+            )?.getAttribute('content');
+
+            if (!csrfToken) {
+                await Swal.fire(swalConfig({
+                    icon: 'error',
+                    title: 'Security Token Missing',
+                    text: 'CSRF token was not found. Please refresh the page.'
+                }));
+
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `/payroll/public/api/client-master/${clientId}`,
+                    {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.message || 'Unable to archive client.'
+                    );
+                }
+
+                await Swal.fire(swalConfig({
+                    icon: 'success',
+                    title: 'Archived',
+                    text: data.message || 'Client archived successfully.',
+                    timer: 1600,
+                    showConfirmButton: false
+                }));
+
+                // Reload the current page.
+                // Since the current filter is Active,
+                // the archived client will disappear from this list.
+                await loadClientList(
+                    clientListSearch?.value || '',
+                    clientListPage
+                );
+
+            } catch (error) {
+                console.error('Client archive error:', error);
+
+                await Swal.fire(swalConfig({
+                    icon: 'error',
+                    title: 'Archive Failed',
+                    text: error.message || 'Unable to archive client.'
+                }));
+            }
+        }
  
     const inputClasses = { 
         normal: [ 
@@ -781,8 +1246,6 @@ export async function init(panel) {
         } else { 
             restoreOriginalData(); 
             editing = false; 
-            setFieldState(false); 
-            setButtonState(); 
         } 
  
         setFieldState(false); 
@@ -1014,6 +1477,16 @@ export async function init(panel) {
             if (!client) { 
                 throw new Error('Client data was not returned.'); 
             } 
+            if (String(client.status).toLowerCase() === 'archived') {
+            await Swal.fire(swalConfig({
+                icon: 'info',
+                title: 'Archived Client',
+                text: 'This client is archived and cannot be opened for editing.',
+                confirmButtonColor: '#0a5d3c'
+            }));
+
+            return;
+}
  
             const clientData = { 
                 client_name: client.client_name, 
@@ -1143,7 +1616,21 @@ export async function init(panel) {
  
         return true; 
     } 
- 
+    
+    clientSortButton?.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const existingMenu = panel.querySelector('#clientSortMenu');
+
+    if (existingMenu) {
+        closeSortMenu();
+        return;
+    }
+
+    createSortMenu();
+    });
+
     clientListSearch?.addEventListener('input', () => { 
         clearTimeout(listSearchTimeout); 
  
@@ -1272,16 +1759,21 @@ export async function init(panel) {
         } 
  
         try { 
-            const response = await fetch( 
-                `/payroll/public/api/client-master/search?search=${encodeURIComponent(query)}`, 
-                { 
-                    headers: { 
-                        'Accept': 'application/json', 
-                        'X-Requested-With': 'XMLHttpRequest' 
-                    }, 
-                    credentials: 'same-origin' 
-                } 
-            ); 
+            const params = new URLSearchParams({
+                search: query,
+                status: 'active'
+            });
+
+            const response = await fetch(
+            `/payroll/public/api/client-master/search?${params.toString()}`,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                }
+            );
  
             const result = await response.json(); 
  
@@ -1379,6 +1871,13 @@ export async function init(panel) {
         ) { 
             closeActionMenus(); 
         } 
+        
+        if (
+            !event.target.closest('#clientSortButton') &&
+            !event.target.closest('#clientSortMenu')
+        ) {
+            closeSortMenu();
+        }
  
         if ( 
             !event.target.closest('#clientSearch') && 
