@@ -1,0 +1,20 @@
+export const state = {
+    mode: 'view',
+    currentEmployeeId: null,
+    originalData: {},
+    originalClientDisplayName: '',
+    currentClientDisplayName: '',
+    currentClientPayrollConfig: null,
+    originalClientPayrollConfig: null,
+    searchTimer: null,
+    clientSearchTimer: null,
+    searchItems: [],
+    currentSearchIndex: -1,
+    highlightedIndex: -1,
+    employeeListPage: 1,
+    employeeListLastPage: 1,
+    employeeListTotal: 0,
+    employeeSort: 'name',
+    employeeSortDirection: 'asc',
+    employeeStatus: 'active'
+};

@@ -70,6 +70,7 @@ class EmployeeMaster extends Model
         'allowance',
         'with_ecol',
         'profile_photo',
+        'status',
     ];
 
     protected $casts = [

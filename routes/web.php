@@ -29,12 +29,12 @@ Route::middleware('auth')->group(function () {
         return view('includes.dashboard');
     })->name('dashboard');
 
-    // Get authenticated user permissions
+    // Auth permissions
     Route::get('/api/auth/permissions', [AuthController::class, 'permissions'])
         ->name('api.auth.permissions');
 
     // =========================================================
-    // EMPLOYEE INFORMATION
+    // EMPLOYEE MASTER
     // =========================================================
 
     // Employee information page
@@ -42,26 +42,35 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-info');
     })->name('employee.info');
 
-    // Employee master API
+    // Employee search
     Route::get('/api/employee-master/search', [EmployeeMasterController::class, 'search'])
         ->name('api.employee-master.search');
 
+    // Employee clients
     Route::get('/api/employee-master/clients', [EmployeeMasterController::class, 'clients'])
         ->name('api.employee-master.clients');
 
+    // Employee details
     Route::get('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'show'])
         ->name('api.employee-master.show');
 
+    // Create employee
     Route::post('/api/employee-master', [EmployeeMasterController::class, 'store'])
         ->name('api.employee-master.store');
 
+    // Update employee
     Route::put('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'update'])
         ->name('api.employee-master.update');
+
+    // Archive / Recover employee
+    Route::delete('/api/employee-master/{emp_id}', [EmployeeMasterController::class, 'archive'])
+        ->name('api.employee-master.archive');
 
     // =========================================================
     // CONTRACT MONITORING
     // =========================================================
 
+    // Contract monitoring page
     Route::get('/employee/contract-monitoring', function () {
         return view('employee.contract-monitoring');
     })->name('contract.monitoring');
@@ -75,29 +84,40 @@ Route::middleware('auth')->group(function () {
         return view('employee.client-master');
     })->name('client.master');
 
-    // Client master API
+    // Client search
     Route::get('/api/client-master/search', [ClientMasterController::class, 'search'])
         ->name('api.client-master.search');
 
-    Route::get('/api/client-master/{client:client_id}', [ClientMasterController::class, 'show'])
-        ->name('api.client-master.show');
+    // Client details
+    // Uses client_id as the model binding key.
+    Route::get(
+        '/api/client-master/{client:client_id}',
+        [ClientMasterController::class, 'show']
+    )->name('api.client-master.show');
 
+    // Create client
     Route::post('/api/client-master', [ClientMasterController::class, 'store'])
         ->name('api.client-master.store');
 
-    Route::put('/api/client-master/{client:client_id}', [ClientMasterController::class, 'update'])
-        ->name('api.client-master.update');
+    // Update client
+    // Uses client_id as the model binding key.
+    Route::put(
+        '/api/client-master/{client:client_id}',
+        [ClientMasterController::class, 'update']
+    )->name('api.client-master.update');
 
-    // Archive client
-    // This does NOT permanently delete the client.
-    // ClientMasterController@destroy changes status to "archived".
-    Route::delete('/api/client-master/{client:client_id}', [ClientMasterController::class, 'destroy'])
-        ->name('api.client-master.destroy');
+    // Archive / Recover client
+    // Uses client_id as the model binding key.
+    Route::delete(
+        '/api/client-master/{client:client_id}',
+        [ClientMasterController::class, 'destroy']
+    )->name('api.client-master.destroy');
 
     // =========================================================
     // EMPLOYEE DEDUCTION
     // =========================================================
 
+    // Employee deduction page
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
@@ -106,6 +126,7 @@ Route::middleware('auth')->group(function () {
     // EMPLOYEE PAYROLL
     // =========================================================
 
+    // Employee payroll page
     Route::get('/employee/employee-payroll', function () {
         return view('employee.employee-payroll');
     })->name('employee.payroll');
@@ -119,11 +140,11 @@ Route::middleware('auth')->group(function () {
         return view('includes.setting');
     })->name('setting');
 
-    // Get user profile
+    // Get profile
     Route::get('/api/settings/profile', [SettingController::class, 'profile'])
         ->name('api.settings.profile');
 
-    // Update username and email
+    // Update profile
     Route::put('/api/settings/profile', [SettingController::class, 'updateProfile'])
         ->name('api.settings.profile.update');
 
@@ -158,20 +179,28 @@ Route::middleware('auth')->group(function () {
             ->name('api.admin.users.deleted');
 
         // Permanently delete user
-        Route::delete('/api/admin/users/force-delete/{userId}', [UserManagementController::class, 'forceDeleteUser'])
-            ->name('api.admin.users.force-delete');
+        Route::delete(
+            '/api/admin/users/force-delete/{userId}',
+            [UserManagementController::class, 'forceDeleteUser']
+        )->name('api.admin.users.force-delete');
 
-        // Activate or disable user
-        Route::patch('/api/admin/users/{user}/status', [UserManagementController::class, 'toggleStatus'])
-            ->name('api.admin.users.status');
+        // Update user status
+        Route::patch(
+            '/api/admin/users/{user}/status',
+            [UserManagementController::class, 'toggleStatus']
+        )->name('api.admin.users.status');
 
         // Reset user password
-        Route::patch('/api/admin/users/{user}/password', [UserManagementController::class, 'resetPassword'])
-            ->name('api.admin.users.password');
+        Route::patch(
+            '/api/admin/users/{user}/password',
+            [UserManagementController::class, 'resetPassword']
+        )->name('api.admin.users.password');
 
         // Delete user
-        Route::delete('/api/admin/users/{user}', [UserManagementController::class, 'deleteUser'])
-            ->name('api.admin.users.delete');
+        Route::delete(
+            '/api/admin/users/{user}',
+            [UserManagementController::class, 'deleteUser']
+        )->name('api.admin.users.delete');
     });
 
     // =========================================================
@@ -184,21 +213,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/role-management', [RoleManagementController::class, 'index'])
             ->name('RoleManagement');
 
-        // Get users with roles
-        Route::get('/api/admin/role-management/users', [RoleManagementController::class, 'users'])
-            ->name('api.admin.role-management.users');
+        // Get role users
+        Route::get(
+            '/api/admin/role-management/users',
+            [RoleManagementController::class, 'users']
+        )->name('api.admin.role-management.users');
 
-        // Get available roles
-        Route::get('/api/admin/role-management/roles', [RoleManagementController::class, 'roles'])
-            ->name('api.admin.role-management.roles');
+        // Get roles
+        Route::get(
+            '/api/admin/role-management/roles',
+            [RoleManagementController::class, 'roles']
+        )->name('api.admin.role-management.roles');
 
-        // Get assigned user roles
-        Route::get('/api/admin/role-management/users/{user}/roles', [RoleManagementController::class, 'userRoles'])
-            ->name('api.admin.role-management.user-roles');
+        // Get user roles
+        Route::get(
+            '/api/admin/role-management/users/{user}/roles',
+            [RoleManagementController::class, 'userRoles']
+        )->name('api.admin.role-management.user-roles');
 
-        // Assign or remove user role
-        Route::patch('/api/admin/role-management/users/{user}/roles', [RoleManagementController::class, 'updateRole'])
-            ->name('api.admin.role-management.update-role');
+        // Update user role
+        Route::patch(
+            '/api/admin/role-management/users/{user}/roles',
+            [RoleManagementController::class, 'updateRole']
+        )->name('api.admin.role-management.update-role');
     });
 
     // =========================================================

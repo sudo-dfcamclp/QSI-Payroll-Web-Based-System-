@@ -147,12 +147,34 @@ export async function loadClientList(
 ) {
     state.clientListPage = page;
 
+    /*
+     * Make sure a valid client status
+     * always exists.
+     *
+     * Default:
+     * active
+     *
+     * Archive:
+     * archive
+     */
+    if (!state.clientStatus) {
+        state.clientStatus = 'active';
+    }
+
     const params = new URLSearchParams({
         search: search || '',
         page: String(page),
-        sort: state.clientSort,
-        direction: state.clientSortDirection,
-        status: 'active'
+        sort: state.clientSort || 'name',
+        direction: state.clientSortDirection || 'asc',
+
+        /*
+         * IMPORTANT:
+         * Do NOT hardcode this to 'active'.
+         *
+         * The selected Status menu controls
+         * state.clientStatus.
+         */
+        status: state.clientStatus
     });
 
     try {
@@ -192,7 +214,7 @@ export async function loadClientList(
 
         if (!clients.length) {
             ctx.dom.clientList.innerHTML = `
-                <div class="px-5 py-10 text-center bg-white dark:bg-gray-700">
+                <div class="px-5 py-10 text-center  dark:bg-gray-700">
 
                     <div class="text-sm font-medium text-gray-600 dark:text-gray-300">
                         No clients found
@@ -416,3 +438,4 @@ export function initializeList(ctx) {
         }
     );
 }
+
