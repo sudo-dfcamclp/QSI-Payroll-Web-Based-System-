@@ -8,6 +8,7 @@ use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ClientMasterController;
 use App\Http\Controllers\EmployeeMasterController;
+use App\Http\Controllers\EmployeePayrollController;
 
 // Login page
 Route::get('/login', function () {
@@ -130,6 +131,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/employee/employee-payroll', function () {
         return view('employee.employee-payroll');
     })->name('employee.payroll');
+
+    // Employee payroll clients
+    Route::get('/api/employee-payroll/clients', [EmployeePayrollController::class, 'clients'])
+    ->name('api.employee-payroll.clients');
 
     // =========================================================
     // SETTINGS
