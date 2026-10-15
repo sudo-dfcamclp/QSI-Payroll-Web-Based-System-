@@ -6,9 +6,14 @@ import {
     initializeClientSearch
 } from './search.js';
 
+import {
+    initializeSort
+} from './sort.js';
+
 export {
     loadClientList,
-    initializeClientSearch
+    initializeClientSearch,
+    initializeSort
 };
 
 export function init(panel) {
@@ -26,6 +31,9 @@ export function init(panel) {
 
     const clientPagination =
         panel.querySelector('#payrollClientPagination');
+
+    const clientSortButton =
+        panel.querySelector('#payrollClientSortButton');
 
     const backButton =
         panel.querySelector('#employeeBackButton');
@@ -51,7 +59,17 @@ export function init(panel) {
             clientList,
             clientSearch,
             clientPagination,
+            payrollClientSortButton: clientSortButton,
             backButton
+        },
+
+        loadClientList(search = '', page = 1, filters = {}) {
+            return loadClientList(
+                ctx,
+                search,
+                page,
+                filters
+            );
         },
 
         showCutoffList(clientId, clientName) {
@@ -73,6 +91,8 @@ export function init(panel) {
 
     initializeClientSearch(ctx);
 
+    initializeSort(ctx);
+
     loadClientList(
         ctx,
         '',
@@ -86,3 +106,4 @@ export function init(panel) {
         }
     );
 }
+

@@ -9,10 +9,15 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-[100px_minmax(0,1fr)_24px] items-center px-1 sm:px-5 py-3 text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">
+        <div class="grid grid-cols-[100px_minmax(0,1fr)_auto] items-center gap-2 px-1 sm:px-5 py-3 text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">
             <div>Client ID</div>
             <div>Client Name</div>
-            <div></div>
+            <div class="flex justify-end">
+                <button type="button" id="payrollClientSortButton" aria-expanded="false" aria-label="Sort and filter clients" class="inline-flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                    <span class="text-xs font-semibold uppercase">Sort</span>
+                    <i class="fa-solid fa-arrow-down-a-z text-lg"></i>
+                </button>
+            </div>
         </div>
 
         <div id="payrollClientList" class="space-y-2">

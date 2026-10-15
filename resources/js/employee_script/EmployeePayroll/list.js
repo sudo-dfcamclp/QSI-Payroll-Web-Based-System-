@@ -1,3 +1,5 @@
+import { state } from './state.js';
+
 const API = {
     clients: '/payroll/public/api/employee-payroll/clients'
 };
@@ -8,12 +10,32 @@ function escapeHtml(value) {
     return div.innerHTML;
 }
 
-export async function loadClientList(ctx, search = '', page = 1) {
+export async function loadClientList(
+    ctx,
+    search = '',
+    page = 1,
+    filters = {}
+) {
     const clientList = ctx.dom.clientList;
 
     if (!clientList) {
         return;
     }
+
+    // FIX: Use the selected sort options, preserving them during pagination.
+    const sort =
+        filters.sort ??
+        state.payrollClientSort ??
+        'name';
+
+    const direction =
+        filters.direction ??
+        state.payrollClientSortDirection ??
+        'asc';
+
+    state.payrollClientSort = sort;
+    state.payrollClientSortDirection = direction;
+    state.payrollClientListPage = page;
 
     clientList.innerHTML = `
         <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -22,10 +44,19 @@ export async function loadClientList(ctx, search = '', page = 1) {
     `;
 
     try {
+        // FIX: Send sort and direction to the controller.
         const params = new URLSearchParams({
             search: search.trim(),
-            page: String(page)
+            page: String(page),
+            per_page: '20',
+            sort: sort,
+            direction: direction
         });
+
+        console.log(
+            'Loading payroll clients with sorting:',
+            params.toString()
+        );
 
         const response = await fetch(
             `${API.clients}?${params.toString()}`,
@@ -91,8 +122,9 @@ export async function loadClientList(ctx, search = '', page = 1) {
             </button>
         `).join('');
 
-        clientList.querySelectorAll('.payroll-client-card').forEach(
-            clientCard => {
+        clientList
+            .querySelectorAll('.payroll-client-card')
+            .forEach(clientCard => {
                 clientCard.addEventListener('click', () => {
                     const clientId =
                         clientCard.dataset.clientId;
@@ -105,8 +137,7 @@ export async function loadClientList(ctx, search = '', page = 1) {
                         clientName
                     );
                 });
-            }
-        );
+            });
 
         renderPagination(
             ctx,
@@ -125,16 +156,12 @@ export async function loadClientList(ctx, search = '', page = 1) {
             </div>
         `;
 
-        renderPagination(
-            ctx,
-            {}
-        );
+        renderPagination(ctx, {});
     }
 }
 
 function renderPagination(ctx, paginationData = {}) {
-    const pagination =
-        ctx.dom.clientPagination;
+    const pagination = ctx.dom.clientPagination;
 
     if (!pagination) {
         return;
@@ -173,11 +200,7 @@ function renderPagination(ctx, paginationData = {}) {
     const pages = [];
 
     if (lastPage <= 7) {
-        for (
-            let page = 1;
-            page <= lastPage;
-            page++
-        ) {
+        for (let page = 1; page <= lastPage; page++) {
             pages.push(page);
         }
     } else {
@@ -187,20 +210,10 @@ function renderPagination(ctx, paginationData = {}) {
             pages.push('...');
         }
 
-        const start =
-            Math.max(2, currentPage - 1);
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(lastPage - 1, currentPage + 1);
 
-        const end =
-            Math.min(
-                lastPage - 1,
-                currentPage + 1
-            );
-
-        for (
-            let page = start;
-            page <= end;
-            page++
-        ) {
+        for (let page = start; page <= end; page++) {
             pages.push(page);
         }
 
@@ -289,6 +302,7 @@ function renderPagination(ctx, paginationData = {}) {
                     return;
                 }
 
+                // FIX: The selected sorting is retained for the next page.
                 loadClientList(
                     ctx,
                     ctx.dom.clientSearch?.value || '',

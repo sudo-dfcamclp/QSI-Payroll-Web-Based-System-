@@ -10,15 +10,25 @@ class EmployeePayrollController extends Controller
     public function clients(Request $request)
     {
         try {
-            $search = trim(
-                (string) $request->input('search', '')
-            );
+            $search = trim((string) $request->input('search', ''));
+            $sort = (string) $request->input('sort', 'name');
+            $direction = strtolower((string) $request->input('direction', 'asc'));
+            $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
 
-            $perPage = 20;
+            $allowedSorts = ['name', 'latest', 'oldest', 'letter'];
+
+            if (!in_array($sort, $allowedSorts, true)) {
+                $sort = 'name';
+            }
+
+            if (!in_array($direction, ['asc', 'desc'], true)) {
+                $direction = 'asc';
+            }
 
             $query = ClientMaster::with('payrollConfig');
 
             if ($search !== '') {
+                // FIX: Correctly split the search string into words.
                 $searchTerms = preg_split(
                     '/\s+/',
                     $search,
@@ -33,8 +43,7 @@ class EmployeePayrollController extends Controller
                                 'client_name',
                                 'like',
                                 '%' . $term . '%'
-                            )
-                            ->orWhere(
+                            )->orWhere(
                                 'client_id',
                                 'like',
                                 '%' . $term . '%'
@@ -44,9 +53,29 @@ class EmployeePayrollController extends Controller
                 });
             }
 
+            switch ($sort) {
+                case 'latest':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+
+                case 'oldest':
+                    $query->orderBy('created_at', 'asc');
+                    break;
+
+                case 'letter':
+                    // A to Z or Z to A, based on the supplied direction.
+                    $query->orderBy('client_name', $direction);
+                    break;
+
+                case 'name':
+                default:
+                    $query->orderBy('client_name', $direction);
+                    break;
+            }
+
             $clients = $query
-                ->orderBy('client_name', 'asc')
-                ->paginate($perPage);
+                ->paginate($perPage)
+                ->appends($request->query());
 
             return response()->json([
                 'success' => true,
