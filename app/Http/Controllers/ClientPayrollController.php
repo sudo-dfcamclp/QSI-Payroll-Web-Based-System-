@@ -5,15 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\ClientMaster;
 use Illuminate\Http\Request;
 
-class EmployeePayrollController extends Controller
+class ClientPayrollController extends Controller
 {
     public function clients(Request $request)
     {
         try {
             $search = trim((string) $request->input('search', ''));
             $sort = (string) $request->input('sort', 'name');
-            $direction = strtolower((string) $request->input('direction', 'asc'));
-            $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+            $direction = strtolower(
+                (string) $request->input('direction', 'asc')
+            );
+
+            $perPage = min(
+                max((int) $request->input('per_page', 20), 1),
+                100
+            );
 
             $allowedSorts = ['name', 'latest', 'oldest', 'letter'];
 
@@ -28,7 +34,6 @@ class EmployeePayrollController extends Controller
             $query = ClientMaster::with('payrollConfig');
 
             if ($search !== '') {
-                // FIX: Correctly split the search string into words.
                 $searchTerms = preg_split(
                     '/\s+/',
                     $search,
@@ -36,18 +41,13 @@ class EmployeePayrollController extends Controller
                     PREG_SPLIT_NO_EMPTY
                 );
 
-                $query->where(function ($q) use ($searchTerms) {
+                $query->where(function ($outerQuery) use ($searchTerms) {
                     foreach ($searchTerms as $term) {
-                        $q->where(function ($q) use ($term) {
-                            $q->where(
-                                'client_name',
-                                'like',
-                                '%' . $term . '%'
-                            )->orWhere(
-                                'client_id',
-                                'like',
-                                '%' . $term . '%'
-                            );
+                        $outerQuery->where(function ($termQuery) use ($term) {
+                            $termQuery
+                                ->where('client_name', 'like', "%{$term}%")
+                                ->orWhere('client_id', 'like', "%{$term}%")
+                                ->orWhere('legacy_client_id', 'like', "%{$term}%");
                         });
                     }
                 });
@@ -63,10 +63,6 @@ class EmployeePayrollController extends Controller
                     break;
 
                 case 'letter':
-                    // A to Z or Z to A, based on the supplied direction.
-                    $query->orderBy('client_name', $direction);
-                    break;
-
                 case 'name':
                 default:
                     $query->orderBy('client_name', $direction);

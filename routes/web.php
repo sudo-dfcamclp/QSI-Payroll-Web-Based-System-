@@ -8,7 +8,8 @@ use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ClientMasterController;
 use App\Http\Controllers\EmployeeMasterController;
-use App\Http\Controllers\EmployeePayrollController;
+use App\Http\Controllers\ClientPayrollController;
+use App\Http\Controllers\PayrollCutoffController;
 
 // Login page
 Route::get('/login', function () {
@@ -25,7 +26,10 @@ Route::post('/api/register', [LoginController::class, 'register'])
 
 Route::middleware('auth')->group(function () {
 
-    // Dashboard page
+    // =========================================================
+    // DASHBOARD
+    // =========================================================
+
     Route::get('/dashboard', function () {
         return view('includes.dashboard');
     })->name('dashboard');
@@ -71,7 +75,6 @@ Route::middleware('auth')->group(function () {
     // CONTRACT MONITORING
     // =========================================================
 
-    // Contract monitoring page
     Route::get('/employee/contract-monitoring', function () {
         return view('employee.contract-monitoring');
     })->name('contract.monitoring');
@@ -118,7 +121,6 @@ Route::middleware('auth')->group(function () {
     // EMPLOYEE DEDUCTION
     // =========================================================
 
-    // Employee deduction page
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
@@ -132,15 +134,22 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-payroll');
     })->name('employee.payroll');
 
-    // Employee payroll clients
-    Route::get('/api/employee-payroll/clients', [EmployeePayrollController::class, 'clients'])
-    ->name('api.employee-payroll.clients');
+    // Fetch payroll clients
+    Route::get(
+        '/api/employee-payroll/clients',
+        [ClientPayrollController::class, 'clients']
+    )->name('api.employee-payroll.clients');
+
+    // Fetch payroll cutoffs for the selected client
+    Route::get(
+        '/api/employee-payroll/cutoffs',
+        [PayrollCutoffController::class, 'index']
+    )->name('api.employee-payroll.cutoffs');
 
     // =========================================================
     // SETTINGS
     // =========================================================
 
-    // Settings page
     Route::get('/includes/setting', function () {
         return view('includes.setting');
     })->name('setting');
@@ -250,4 +259,3 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/logout', [AuthController::class, 'logout'])
         ->name('api.logout');
 });
-

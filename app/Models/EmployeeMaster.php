@@ -16,6 +16,7 @@ class EmployeeMaster extends Model
 
     protected $fillable = [
         'client_id',
+        'legacy_client_id',
         'contact_no',
         'badge_no',
         'nickname',
@@ -91,11 +92,19 @@ class EmployeeMaster extends Model
 
     public function client()
     {
-        return $this->belongsTo(ClientMaster::class, 'client_id', 'client_id');
+        return $this->belongsTo(
+            ClientMaster::class,
+            'client_id',
+            'client_id'
+        );
     }
 
     public function basicRates()
     {
-        return $this->hasMany(EmployeeBasicRate::class, 'emp_id', 'emp_id');
+        return $this->hasMany(
+            EmployeeBasicRate::class,
+            'emp_id',
+            'emp_id'
+        );
     }
 }

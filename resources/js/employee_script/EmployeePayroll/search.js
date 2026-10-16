@@ -1,30 +1,23 @@
-import {
-    loadClientList
-} from './list.js';
+import { loadClientList } from './list.js';
 
 export function initializeClientSearch(ctx) {
-    const searchInput =
-        ctx.dom.clientSearch;
+    const searchInput = ctx.dom.clientSearch;
 
-    if (!searchInput) {
+    if (!searchInput || searchInput.dataset.searchInitialized) {
         return;
     }
 
-    searchInput.addEventListener(
-        'input',
-        () => {
-            clearTimeout(
-                searchInput._searchTimeout
-            );
+    searchInput.dataset.searchInitialized = 'true';
 
-            searchInput._searchTimeout =
-                setTimeout(() => {
-                    loadClientList(
-                        ctx,
-                        searchInput.value,
-                        1
-                    );
-                }, 300);
-        }
-    );
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchInput._searchTimeout);
+
+        searchInput._searchTimeout = setTimeout(() => {
+            loadClientList(
+                ctx,
+                searchInput.value.trim(),
+                1
+            );
+        }, 300);
+    });
 }

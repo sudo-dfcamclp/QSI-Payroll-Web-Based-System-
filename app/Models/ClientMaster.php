@@ -11,6 +11,7 @@ class ClientMaster extends Model
     protected $primaryKey = 'client_id';
 
     protected $fillable = [
+        'legacy_client_id',
         'client_name',
         'client_address',
         'client_contact',
@@ -27,11 +28,19 @@ class ClientMaster extends Model
 
     public function payrollConfig()
     {
-        return $this->hasOne(ClientPayrollConfig::class, 'client_id', 'client_id');
+        return $this->hasOne(
+            ClientPayrollConfig::class,
+            'client_id',
+            'client_id'
+        );
     }
 
     public function employees()
     {
-        return $this->hasMany(EmployeeMaster::class, 'client_id', 'client_id');
+        return $this->hasMany(
+            EmployeeMaster::class,
+            'client_id',
+            'client_id'
+        );
     }
 }
