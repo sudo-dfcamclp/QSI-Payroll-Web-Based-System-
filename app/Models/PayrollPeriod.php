@@ -27,6 +27,7 @@ class PayrollPeriod extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'cutoff_no' => 'integer',
+        'status' => 'integer',
     ];
 
     /*

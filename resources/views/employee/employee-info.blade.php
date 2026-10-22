@@ -83,6 +83,7 @@
         </section> 
  
         <!-- Basic Information --> 
+        <form id="employeeForm" enctype="multipart/form-data">
         <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-4 sm:p-6 mb-5 sm:mb-6"> 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"> 
                 <div> 
@@ -91,7 +92,6 @@
                 </div> 
             </div> 
  
-            <form id="employeeForm" enctype="multipart/form-data"> 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8"> 
  
                     <!-- Profile --> 
