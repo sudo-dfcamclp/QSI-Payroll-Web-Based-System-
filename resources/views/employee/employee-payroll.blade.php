@@ -50,17 +50,23 @@
         </div>
     </div>
     <!-- Payroll Form -->
-    <div id="payrollTransactionView" class="hidden space-y-5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+    <div id="payrollTransactionView" class="hidden"data-employees-url="{{ route('payroll.employees') }}">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <button type="button" id="payrollBackToCutoffButton" class="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
                     <i class="fa-solid fa-arrow-left mr-2"></i>Back to Cutoff List
                 </button>
             </div>
             <div class="flex flex-wrap gap-2">
-                <button type="button" id="payrollRefreshButton" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"><i class="fa-solid fa-rotate"></i>Refresh</button>
-                <button type="button" id="payrollPrintButton" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"><i class="fa-solid fa-print"></i>Print</button>
-                <button type="button" id="payrollSaveButton" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"><i class="fa-solid fa-floppy-disk"></i>Save Payroll</button>
+                <button type="button" id="payrollRefreshButton" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <i class="fa-solid fa-rotate"></i>Refresh
+                </button>
+                <button type="button" id="payrollPrintButton" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <i class="fa-solid fa-print"></i>Print
+                </button>
+                <button type="button" id="payrollSaveButton" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700">
+                    <i class="fa-solid fa-floppy-disk"></i>Save Payroll
+                </button>
             </div>
         </div>
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">

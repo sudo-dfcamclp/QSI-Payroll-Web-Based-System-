@@ -10,6 +10,7 @@ use App\Http\Controllers\ClientMasterController;
 use App\Http\Controllers\EmployeeMasterController;
 use App\Http\Controllers\ClientPayrollController;
 use App\Http\Controllers\PayrollCutoffController;
+use App\Http\Controllers\PayrollEmployeeController;
 
 // Login page
 Route::get('/login', function () {
@@ -145,6 +146,11 @@ Route::middleware('auth')->group(function () {
         '/api/employee-payroll/cutoffs',
         [PayrollCutoffController::class, 'index']
     )->name('api.employee-payroll.cutoffs');
+
+    // Fetch employees with basic rates
+    Route::get('/api/employee-payroll/employees',
+        [PayrollEmployeeController::class,'getEmployeesWithBasicRates']
+    )->name('payroll.employees');
 
     // =========================================================
     // SETTINGS
