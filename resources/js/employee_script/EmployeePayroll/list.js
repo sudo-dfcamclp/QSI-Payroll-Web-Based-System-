@@ -1,5 +1,4 @@
 import { state } from './state.js';
-import { initializePayrollForm } from './payrollform.js';
 
 const API = {
     clients: '/payroll/public/api/employee-payroll/clients',
@@ -75,7 +74,6 @@ function getCutoffPagination(ctx) {
     if (!pagination && ctx.dom.cutoffList?.parentNode) {
         pagination = document.createElement('div');
         pagination.id = 'payroll-cutoff-pagination';
-
         pagination.className = 'mt-3';
 
         ctx.dom.cutoffList.insertAdjacentElement('afterend', pagination);
@@ -189,9 +187,7 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
                     ctx.dom.cutoffSearch.value = '';
                 }
 
-                ctx.showCutoffList(clientId, clientName);
-
-                await loadCutoffList(ctx, clientId, '', 1);
+                await ctx.showCutoffList(clientId, clientName);
             });
         });
 
@@ -266,7 +262,11 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
         const cutoffs = Array.isArray(result.data) ? result.data : [];
         const paginationData = result.pagination || {};
 
+        ctx.currentCutoffs = cutoffs;
+
         if (!cutoffs.length) {
+            ctx.currentCutoffs = [];
+
             cutoffList.innerHTML = `
                 <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                     No payroll cutoffs found for this client.
@@ -290,7 +290,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
             const payDate = cutoff.pay_date
                 ? formatPayrollDate(cutoff.pay_date)
                 : calculatePayDate(endDate);
-
+                
             return `
                 <button
                     type="button"
@@ -302,153 +302,59 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
                     data-status="${escapeHtml(status ?? '')}"
                     data-pay-date="${escapeHtml(cutoff.pay_date ?? '')}"
                 >
-                    <div class="grid grid-cols-[minmax(0,1fr)_180px_24px] items-center gap-4">
-                        <div class="min-w-0">
-                            <div class="text-sm font-medium text-gray-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">
-                                ${escapeHtml(formatCutoffPeriod(startDate, endDate))}
-                            </div>
+                    <div class="grid grid-cols-[100px_minmax(0,1fr)_180px_auto_24px] items-center gap-4">
 
-                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Cutoff ${escapeHtml(cutoffNo)} · ${escapeHtml(statusLabel)}
+                        <div class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                            Cutoff ${escapeHtml(cutoffNo)}
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-gray-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors truncate">
+                                ${formatCutoffPeriod(startDate, endDate)}
                             </div>
                         </div>
 
-                        <div class="text-sm text-gray-600 dark:text-gray-300">
-                            ${escapeHtml(payDate || 'Not available')}
+                        <div class="text-sm text-gray-500 dark:text-gray-400 text-right whitespace-nowrap">
+                            ${payDate || 'Not available'}
+                        </div>
+
+                        <div class="flex justify-end">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                statusLabel === 'Open'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                    : statusLabel === 'Closed'
+                                        ? 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-200'
+                                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'
+                            }">
+                                ${statusLabel}
+                            </span>
                         </div>
 
                         <div class="flex justify-end">
                             <i class="fa-solid fa-chevron-right text-gray-400 dark:text-gray-500 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors text-xs"></i>
                         </div>
+
                     </div>
                 </button>
             `;
+
+
         }).join('');
 
         cutoffList.querySelectorAll('.payroll-cutoff-card').forEach(cutoffCard => {
             cutoffCard.addEventListener('click', () => {
                 const periodId = cutoffCard.dataset.periodId;
 
-                const selectedClientId =
-                    state.payrollSelectedClientId || String(clientId);
+                const cutoff = (ctx.currentCutoffs || []).find(
+                    item => String(item.period_id) === String(periodId)
+                );
 
-                const selectedClientName =
-                    state.payrollSelectedClientName || '';
-
-                const cutoffNo = cutoffCard.dataset.cutoffNo || '';
-                const startDate = cutoffCard.dataset.startDate || '';
-                const endDate = cutoffCard.dataset.endDate || '';
-                const status = cutoffCard.dataset.status || '';
-                const payDate = cutoffCard.dataset.payDate || '';
-
-                if (!periodId || !selectedClientId) {
-                    console.error(
-                        'Payroll Transaction: client ID or period ID is missing.'
-                    );
+                if (!cutoff) {
+                    console.error('Selected cutoff was not found.');
                     return;
                 }
 
-                state.payrollSelectedClientId = selectedClientId;
-                state.payrollSelectedClientName = selectedClientName;
-                state.payrollSelectedPeriodId = periodId;
-                state.payrollSelectedCutoffNo = cutoffNo;
-                state.payrollSelectedCutoffStartDate = startDate;
-                state.payrollSelectedCutoffEndDate = endDate;
-                state.payrollSelectedCutoffStatus = status;
-                state.payrollSelectedPayDate = payDate;
-
-                const clientView = ctx.dom.clientListView;
-                const cutoffView = ctx.dom.cutoffListView;
-                const payrollView = ctx.panel.querySelector('#payrollTransactionView');
-
-                if (!payrollView) {
-                    console.error(
-                        'Payroll Transaction: #payrollTransactionView was not found in the Blade.'
-                    );
-                    return;
-                }
-
-                clientView?.classList.add('hidden');
-                cutoffView?.classList.add('hidden');
-                payrollView.classList.remove('hidden');
-
-                payrollView.dataset.clientId = String(selectedClientId);
-                payrollView.dataset.periodId = String(periodId);
-
-                const setValue = (id, value) => {
-                    const input = ctx.panel.querySelector(`#${id}`);
-
-                    if (input) {
-                        input.value = value ?? '';
-                    }
-                };
-
-                setValue('payrollClientName', selectedClientName);
-                setValue(
-                    'payrollCutoffPeriod',
-                    formatCutoffPeriod(startDate, endDate)
-                );
-                setValue('payrollCutoffNumber', cutoffNo);
-
-                setValue(
-                    'payrollPayDate',
-                    payDate ? payDate.substring(0, 10) : ''
-                );
-
-                const sidebarClient =
-                    ctx.panel.querySelector('#payrollSidebarClient');
-
-                const sidebarCutoff =
-                    ctx.panel.querySelector('#payrollSidebarCutoff');
-
-                const payrollStatus =
-                    ctx.panel.querySelector('#payrollStatus');
-
-                if (sidebarClient) {
-                    sidebarClient.textContent = selectedClientName || '—';
-                }
-
-                if (sidebarCutoff) {
-                    sidebarCutoff.textContent =
-                        formatCutoffPeriod(startDate, endDate);
-                }
-
-                if (payrollStatus) {
-                    payrollStatus.textContent = formatCutoffStatus(status);
-                }
-
-                const payrollContext = {
-                    clientId: selectedClientId,
-                    clientName: selectedClientName,
-                    periodId,
-                    cutoff: {
-                        period_id: periodId,
-                        cutoff_no: cutoffNo,
-                        start_date: startDate,
-                        end_date: endDate,
-                        pay_date: payDate,
-                        status
-                    },
-                    cutoffNo,
-                    startDate,
-                    endDate,
-                    status
-                };
-
-                console.info(
-                    'Payroll Transaction opened:',
-                    payrollContext
-                );
-
-                // Load employees using the selected client and cutoff.
-                try {
-                    initializePayrollForm(ctx, payrollContext);
-                } catch (error) {
-                    console.error(
-                        'Failed to initialize payroll form:',
-                        error
-                    );
-                }
+                ctx.showPayrollTransaction(cutoff);
             });
         });
 

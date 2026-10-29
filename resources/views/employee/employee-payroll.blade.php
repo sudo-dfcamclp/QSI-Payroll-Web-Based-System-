@@ -204,7 +204,7 @@
             </div>
          <!-- Employee Sidebar -->
             <aside class="space-y-5 lg:sticky lg:top-16 lg:self-start">
-                <section class="flex max-h-[calc(100vh-6rem)] min-h-0 flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <section class="flex max-h-210 min-h-0 flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-4 flex shrink-0 items-center justify-between">
                         <div><h3 class="font-semibold text-gray-900 dark:text-white">Employees</h3><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Manage payroll employees</p></div>
                         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"><i class="fa-solid fa-users"></i></div>
