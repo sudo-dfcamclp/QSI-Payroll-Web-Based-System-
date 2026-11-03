@@ -1,5 +1,25 @@
 <!-- Payroll Transaction -->
 <div id="employeePayrollModule" class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-7xl">
+<div id="employeePayrollBreadcrumbTrail" class="hidden items-center gap-2 mb-4 text-sm">
+    <button
+        type="button"
+        id="employeeBreadcrumbClient"
+        class="font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
+    </button>
+
+    <i class="fa-solid fa-angle-right text-xs text-gray-400"></i>
+
+    <span
+        id="employeeBreadcrumbCutoff"
+        class="hidden items-center gap-2 font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
+        Cutoff
+    </span>
+
+    <span id="employeeBreadcrumbPayroll" class="hidden items-center gap-2">
+        <i class="fa-solid fa-angle-right text-xs text-gray-400"></i>
+        <span class="font-semibold text-gray-800 dark:text-gray-100">Payroll</span>
+    </span>
+</div>
     <!-- Client List -->
     <div id="payrollClientListView">
         <div class="mb-4">
@@ -33,10 +53,24 @@
             </button>
         </div>
         <div class="mb-4">
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300 text-sm"></i>
-                <input type="text" id="payrollCutoffSearch" placeholder="Search cutoff..." class="w-full h-11 pl-11 pr-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 dark:focus:border-green-500 transition-colors">
-            </div>
+            <div class="mb-4 flex items-center gap-3">
+        <div class="relative min-w-0 flex-1">
+        <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300 text-sm"></i>
+        <input
+            type="text"
+            id="payrollCutoffSearch"
+            placeholder="Search cutoff..."
+            class="w-full h-11 pl-11 pr-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 dark:focus:border-green-500 transition-colors">
+        </div>
+
+            <button
+                type="button"
+                id="payrollAddCutoffButton"
+                class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 cursor-pointer">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Cutoff</span>
+            </button>
+        </div>
         </div>
         <div class="grid grid-cols-[minmax(0,1fr)_180px_24px] items-center px-1 sm:px-5 py-3 text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">
             <div>Cutoff Period</div>
@@ -50,7 +84,7 @@
         </div>
     </div>
     <!-- Payroll Form -->
-    <div id="payrollTransactionView" class="hidden"data-employees-url="{{ route('payroll.employees') }}">
+    <div id="payrollTransactionView" class="hidden" data-employees-url="{{ route('payroll.employees') }}" data-compute-url="{{ route('payroll.compute.preview') }}">
         <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <button type="button" id="payrollBackToCutoffButton" class="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
@@ -151,28 +185,100 @@
                     </dl>
                 </section>
                 <!-- Earnings -->
-                <section class="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-800">
-                    <div class="mb-4 flex items-center gap-3"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"><i class="fa-solid fa-wallet"></i></div><div><h3 class="font-semibold text-gray-900 dark:text-white">Earnings</h3><p class="text-xs text-gray-500 dark:text-gray-400">Working hours, leave, allowances, and adjustments</p></div></div>
-                    <div class="grid grid-cols-1 gap-x-6 gap-y-3 lg:grid-cols-2">
-                        <div class="space-y-3">
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollDaysWorked" class="text-sm text-gray-600 dark:text-gray-300">Days Worked</label><input id="payrollDaysWorked" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollRegularHours" class="text-sm text-gray-600 dark:text-gray-300">Regular OT Hours</label><input id="payrollRegularHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollNightDiffHours" class="text-sm text-gray-600 dark:text-gray-300">Night Differential Hours</label><input id="payrollNightDiffHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollRegularHolidayHours" class="text-sm text-gray-600 dark:text-gray-300">Regular Holiday Hours</label><input id="payrollRegularHolidayHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollRegularHolidayOtHours" class="text-sm text-gray-600 dark:text-gray-300">Regular Holiday OT Hours</label><input id="payrollRegularHolidayOtHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollSpecialHolidayHours" class="text-sm text-gray-600 dark:text-gray-300">Special Holiday Hours</label><input id="payrollSpecialHolidayHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollSpecialHolidayOtHours" class="text-sm text-gray-600 dark:text-gray-300">Special Holiday OT Hours</label><input id="payrollSpecialHolidayOtHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollSickLeave" class="text-sm text-gray-600 dark:text-gray-300">Sick Leave</label><input id="payrollSickLeave" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-3"><label for="payrollVacationLeave" class="text-sm text-gray-600 dark:text-gray-300">Vacation Leave</label><input id="payrollVacationLeave" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                        </div>
-                        <div class="space-y-3">
-                            <div class="grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3"><label for="payrollFixedAllowance" class="text-sm text-gray-600 dark:text-gray-300">Fixed Allowance</label><input id="payrollFixedAllowance" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3"><label for="payrollAdjustment" class="text-sm text-gray-600 dark:text-gray-300">Adjustment</label><input id="payrollAdjustment" type="number" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3"><label for="payrollIncentive" class="text-sm text-gray-600 dark:text-gray-300">Incentive / Remittance</label><input id="payrollIncentive" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3"><label for="payrollEcola" class="text-sm text-gray-600 dark:text-gray-300">ECOLA Pay</label><input id="payrollEcola" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
-                            <div class="grid grid-cols-[minmax(0,1fr)_110px] items-center gap-3"><label for="payrollThirteenthMonth" class="text-sm text-gray-600 dark:text-gray-300">13th Month Pay</label><input id="payrollThirteenthMonth" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"></div>
+                
+        <!-- Earnings -->
+        <section class="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-800">
+            <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"><i class="fa-solid fa-wallet"></i></div>
+                <div><h3 class="font-semibold text-gray-900 dark:text-white">Earnings</h3><p class="text-xs text-gray-500 dark:text-gray-400">Working hours, leave, allowances, and adjustments</p></div>
+            </div>
+            <div class="grid grid-cols-1 gap-x-6 gap-y-3 lg:grid-cols-2">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollDaysWorked" class="text-sm text-gray-600 dark:text-gray-300">Days Worked</label>
+                        <input id="payrollDaysWorked" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewDaysWorked" data-preview-key="basic_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
                     </div>
-                </section>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollRegularHours" class="text-sm text-gray-600 dark:text-gray-300">Regular OT Hours</label>
+                        <input id="payrollRegularHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewRegularOT" data-preview-key="regular_ot_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollNightDiffHours" class="text-sm text-gray-600 dark:text-gray-300">Night Differential Hours</label>
+                        <input id="payrollNightDiffHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewNightDiff" data-preview-key="night_diff_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollRegularHolidayHours" class="text-sm text-gray-600 dark:text-gray-300">Regular Holiday Hours</label>
+                        <input id="payrollRegularHolidayHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewRegularHoliday" data-preview-key="regular_holiday_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollRegularHolidayOtHours" class="text-sm text-gray-600 dark:text-gray-300">Regular Holiday OT</label>
+                        <input id="payrollRegularHolidayOtHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewRegularHolidayOT" data-preview-key="regular_holiday_ot_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollSpecialHolidayHours" class="text-sm text-gray-600 dark:text-gray-300">Special Holiday Hours</label>
+                        <input id="payrollSpecialHolidayHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewSpecialHoliday" data-preview-key="special_holiday_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollSpecialHolidayOtHours" class="text-sm text-gray-600 dark:text-gray-300">Special Holiday OT</label>
+                        <input id="payrollSpecialHolidayOtHours" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewSpecialHolidayOT" data-preview-key="special_holiday_ot_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollSickLeave" class="text-sm text-gray-600 dark:text-gray-300">Sick Leave</label>
+                        <input id="payrollSickLeave" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewSickLeave" data-preview-key="sick_leave_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollVacationLeave" class="text-sm text-gray-600 dark:text-gray-300">Vacation Leave</label>
+                        <input id="payrollVacationLeave" type="number" min="0" step="0.01" value="0" class="payroll-number w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewVacationLeave" data-preview-key="vacation_leave_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollFixedAllowance" class="text-sm text-gray-600 dark:text-gray-300">Fixed Allowance</label>
+                        <input id="payrollFixedAllowance" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewFixedAllowance" data-preview-key="allowance" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollLoadAllowance" class="text-sm text-gray-600 dark:text-gray-300">Load Allowance (L)</label>
+                        <input id="payrollLoadAllowance" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"><div id="previewLoadAllowance" data-preview-key="load_allow" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div></div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollMealAllowance" class="text-sm text-gray-600 dark:text-gray-300">Meal Allowance (M)</label>
+                        <input id="payrollMealAllowance" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"><div id="previewMealAllowance" data-preview-key="meal_allow" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div></div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollTranspoAllowance" class="text-sm text-gray-600 dark:text-gray-300">Transportation Allowance (T)</label>
+                        <input id="payrollTranspoAllowance" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"><div id="previewTranspoAllowance" data-preview-key="transpo_allow" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div></div>
+                <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollAdjustment" class="text-sm text-gray-600 dark:text-gray-300">Adjustment</label>
+                        <input id="payrollAdjustment" type="number" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewAdjustment" data-preview-key="salary_adjustment" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollIncentive" class="text-sm text-gray-600 dark:text-gray-300">Incentive / Remittance</label>
+                        <input id="payrollIncentive" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewIncentive" data-preview-key="incentive_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollEcola" class="text-sm text-gray-600 dark:text-gray-300">ECOLA Pay</label>
+                        <input id="payrollEcola" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="previewEcola" data-preview-key="ecola_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                    <div class="grid grid-cols-[minmax(0,1fr)_90px_115px] items-center gap-2">
+                        <label for="payrollThirteenthMonth" class="text-sm text-gray-600 dark:text-gray-300">13th Month Pay</label>
+                        <input id="payrollThirteenthMonth" type="number" min="0" step="0.01" value="0" class="payroll-money w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                        <div id="preview13thMonth" data-preview-key="thirteenth_month_pay" class="payroll-preview rounded-lg border border-green-200 bg-green-50 px-2 py-2 text-right text-xs font-semibold text-green-700 dark:border-green-900 dark:bg-green-900/20 dark:text-green-400">₱0.00</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
                 <!-- Deductions -->
                 <section class="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-4 flex items-center gap-3"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"><i class="fa-solid fa-file-invoice-dollar"></i></div><div><h3 class="font-semibold text-gray-900 dark:text-white">Deductions</h3><p class="text-xs text-gray-500 dark:text-gray-400">Attendance, contributions, tax, and other deductions</p></div></div>

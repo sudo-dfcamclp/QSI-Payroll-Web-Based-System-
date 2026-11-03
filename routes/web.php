@@ -11,6 +11,7 @@ use App\Http\Controllers\EmployeeMasterController;
 use App\Http\Controllers\ClientPayrollController;
 use App\Http\Controllers\PayrollCutoffController;
 use App\Http\Controllers\PayrollEmployeeController;
+use App\Http\Controllers\PayrollComputationController;
 
 // Login page
 Route::get('/login', function () {
@@ -151,6 +152,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/employee-payroll/employees',
         [PayrollEmployeeController::class,'getEmployeesWithBasicRates']
     )->name('payroll.employees');
+
+    // Payroll computation preview
+    Route::post(
+        '/api/employee-payroll/compute-preview',
+        [PayrollComputationController::class, 'preview']
+    )->name('payroll.compute.preview');
 
     // =========================================================
     // SETTINGS
