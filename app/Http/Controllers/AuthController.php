@@ -71,7 +71,8 @@ class AuthController extends Controller
                 'employee-info', 
                 'employee-deduction', 
                 'employee-payroll', 
-                'first-last-cutoff', 
+                'first-last-cutoff',
+                'payroll-config', 
                 'contract-monitoring', 
                 'client-master', 
                 'user-management', 
@@ -86,6 +87,7 @@ class AuthController extends Controller
                 'employee-deduction', 
                 'employee-payroll', 
                 'first-last-cutoff', 
+                'payroll-config',
             ]); 
         } 
 

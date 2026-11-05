@@ -137,39 +137,11 @@
 
                     <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/first-last-cutoff') }}" data-tab-id="first-last-cutoff" data-tab-title="First / Last Cut-Off" data-tab-icon="fa-solid fa-calendar-days">First / Last Cut-Off</a>
 
+                    <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/payroll-config') }}" data-tab-id="payroll-config" data-tab-title="Payroll Config" data-tab-icon="fa-solid fa-sliders">Payroll Configuration</a>
                 </div>
 
             </div>
         @endif
-
-        <!-- Maintenance -->
-        <div class="dropdown-container relative">
-
-            <button type="button" class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-green-600 dark:hover:bg-green-700 hover:text-white transition-colors group cursor-pointer">
-                <i class="fa-solid fa-screwdriver-wrench text-gray-500 dark:text-gray-300 group-hover:text-white text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-                <span class="sidebar-text whitespace-nowrap font-medium select-none group-hover:text-white">Maintenance</span>
-                <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 dark:text-gray-300 group-hover:text-white ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
-            </button>
-
-            <div class="dropdown-menu max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out">
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/branch') }}" data-tab-id="branch" data-tab-title="Branch" data-tab-icon="fa-solid fa-code-branch">Branch</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/department') }}" data-tab-id="department" data-tab-title="Department" data-tab-icon="fa-solid fa-building">Department</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/position') }}" data-tab-id="position" data-tab-title="Position" data-tab-icon="fa-solid fa-briefcase">Position</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/tax-table') }}" data-tab-id="tax-table" data-tab-title="Tax Table" data-tab-icon="fa-solid fa-table">Tax Table</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/pagibig-table') }}" data-tab-id="pagibig-table" data-tab-title="Pagibig Table" data-tab-icon="fa-solid fa-table">Pagibig Table</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/phealth-table') }}" data-tab-id="phealth-table" data-tab-title="P-Health Table" data-tab-icon="fa-solid fa-table">P-Health Table</a>
-
-                <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/employee/sss-table') }}" data-tab-id="sss-table" data-tab-title="SSS Table" data-tab-icon="fa-solid fa-table">SSS Table</a>
-
-            </div>
-
-        </div>
 
         <!-- Billing -->
         <div class="dropdown-container relative">
@@ -211,7 +183,7 @@
 
                 <button type="button" class="sidebar-menu-btn w-full flex items-center gap-3 px-3 py-3 text-gray-700 dark:text-gray-100 rounded-lg hover:bg-green-600 dark:hover:bg-green-700 hover:text-white transition-colors group cursor-pointer">
                     <i class="fa-solid fa-sliders text-gray-500 dark:text-gray-300 group-hover:text-white text-lg shrink-0 w-5 text-center pointer-events-none"></i>
-                    <span class="sidebar-text whitespace-nowrap font-medium select-none group-hover:text-white">Configuration</span>
+                    <span class="sidebar-text whitespace-nowrap font-medium select-none group-hover:text-white">System Config</span>
                     <i class="dropdown-chevron fa-solid fa-chevron-down text-gray-400 dark:text-gray-300 group-hover:text-white ml-auto text-sm shrink-0 transition-transform duration-300 pointer-events-none"></i>
                 </button>
 

@@ -275,29 +275,6 @@
 
                                     <div class="space-y-4">
 
-                                        <!-- Engineering -->
-                                        <div>
-
-                                            <div class="flex justify-between mb-1">
-
-                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                    Engineering
-                                                </span>
-
-                                                <span class="text-sm text-gray-500 dark:text-gray-300">
-                                                    78%
-                                                </span>
-
-                                            </div>
-
-                                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-
-                                                <div class="bg-blue-600 h-2 rounded-full" style="width: 78%"></div>
-
-                                            </div>
-
-                                        </div>
-
                                         <!-- Marketing -->
                                         <div>
 
@@ -327,7 +304,7 @@
                                             <div class="flex justify-between mb-1">
 
                                                 <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                    Finance
+                                                    Admin
                                                 </span>
 
                                                 <span class="text-sm text-gray-500 dark:text-gray-300">

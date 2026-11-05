@@ -37,7 +37,7 @@
         <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 sm:px-6 py-4 mb-5 sm:mb-6"> 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"> 
                 <div class="min-w-0"> 
-                    <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">Employee Master</h1> 
+                    <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">Employee Master List</h1> 
                     <p id="employeeSubtitle" class="text-sm text-gray-500 dark:text-gray-300 mt-0.5 truncate">Employee: None selected</p> 
                 </div> 
             </div> 

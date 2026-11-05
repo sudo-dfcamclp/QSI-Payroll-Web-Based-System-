@@ -37,11 +37,13 @@ class PayrollComputationController extends Controller
             'inputs.sunday_ot' => ['nullable', 'numeric', 'min:0'],
             'inputs.ot_no_prem_hrs' => ['nullable', 'numeric', 'min:0'],
 
-            // Holidays
-            'inputs.sp_hol_days' => ['nullable', 'numeric', 'min:0'],
+            // Holidays (Inayos ko rito: sp_hol_hrs at leg_hol_hrs)
+            'inputs.sp_hol_hrs' => ['nullable', 'numeric', 'min:0'],
             'inputs.sp_hol_ot_hrs' => ['nullable', 'numeric', 'min:0'],
             'inputs.excess_sp_hol_ot_hrs' => ['nullable', 'numeric', 'min:0'],
-            'inputs.leg_hol_days' => ['nullable', 'numeric', 'min:0'],
+            'inputs.excess_sun_sp_ot_hrs' => ['nullable', 'numeric', 'min:0'], // Idinagdag para sa SH RD OT Hrs
+            
+            'inputs.leg_hol_hrs' => ['nullable', 'numeric', 'min:0'],
             'inputs.leg_hol_ot_hrs' => ['nullable', 'numeric', 'min:0'],
             'inputs.excess_leg_hol_ot_hrs' => ['nullable', 'numeric', 'min:0'],
             'inputs.excess_sun_leg_ot_hrs' => ['nullable', 'numeric', 'min:0'],

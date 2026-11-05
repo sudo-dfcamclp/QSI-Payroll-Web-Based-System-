@@ -159,6 +159,11 @@ Route::middleware('auth')->group(function () {
         [PayrollComputationController::class, 'preview']
     )->name('payroll.compute.preview');
 
+    // Payroll Configuration page
+    Route::get('/employee/payroll-config', function () {
+        return view('employee.payroll-config');
+    })->name('employee.payroll-config');
+
     // =========================================================
     // SETTINGS
     // =========================================================
