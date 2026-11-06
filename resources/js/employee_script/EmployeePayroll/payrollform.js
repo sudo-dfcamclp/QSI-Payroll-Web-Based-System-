@@ -12,7 +12,8 @@ export function initializePayrollForm(ctx, options = {}) {
     const cutoff = options.cutoff || null;
     const clientId = String(options.clientId || cutoff?.client_id || view.dataset.clientId || '');
     const periodId = String(options.periodId || cutoff?.period_id || view.dataset.periodId || '');
-    const storageKey = `payroll_form_${clientId}_${periodId}`;
+    
+    const formStateKey = `payroll_form_${clientId}_${periodId}`;
 
     if (clientId) view.dataset.clientId = clientId;
     if (periodId) view.dataset.periodId = periodId;
@@ -27,7 +28,6 @@ export function initializePayrollForm(ctx, options = {}) {
             const [year, month, day] = String(value).split('T')[0].split('-');
             return `${month}/${day}/${year}`;
         };
-
         const start = formatDate(cutoff.start_date);
         const end = formatDate(cutoff.end_date);
         const period = start && end ? `${start} - ${end}` : '';
@@ -65,7 +65,6 @@ export function initializePayrollForm(ctx, options = {}) {
         if (view.dataset.payrollFormInitialized === 'true') persistState();
     }
 
-    // Inayos natin ito para maging float/number ang amount
     function getDeductions() {
         return [...panel.querySelectorAll('#payrollOtherDeductions tr')]
             .filter(row => row.querySelector('.payroll-other-deduction-type'))
@@ -77,26 +76,25 @@ export function initializePayrollForm(ctx, options = {}) {
 
     function persistState() {
         if (!clientId || !periodId) return;
+
         const fields = {};
         panel.querySelectorAll('input[id], select[id], textarea[id]').forEach(input => {
-            if (['payrollClientName', 'payrollCutoffPeriod', 'payrollCutoffNumber', 'payrollPayDate'].includes(input.id)) return;
+            if (['payrollClientName', 'payrollCutoffPeriod', 'payrollCutoffNumber', 'payrollPayDate', 'switchSss', 'switchPagibig', 'switchPhilhealth'].includes(input.id)) return;
             fields[input.id] = input.value;
         });
 
+        const switches = {
+            deduct_sss: get('switchSss')?.checked ?? true,
+            deduct_pagibig: get('switchPagibig')?.checked ?? true,
+            deduct_philhealth: get('switchPhilhealth')?.checked ?? true
+        };
+
         const data = {
-            clientId,
-            clientName,
-            periodId,
-            cutoff: cutoff ? {
-                period_id: cutoff.period_id,
-                cutoff_no: cutoff.cutoff_no,
-                start_date: cutoff.start_date,
-                end_date: cutoff.end_date,
-                pay_date: cutoff.pay_date
-            } : null,
+            clientId, clientName, periodId,
+            cutoff: cutoff ? { period_id: cutoff.period_id, cutoff_no: cutoff.cutoff_no, start_date: cutoff.start_date, end_date: cutoff.end_date, pay_date: cutoff.pay_date } : null,
             fields,
             deductions: getDeductions(),
-            contributionOverrides: computation ? computation.getContributionOverrides() : { sss: false, pagibig: false, philhealth: false },
+            switches,
             activeTab: view.dataset.activePayrollTab || 'pending',
             selectedEmployeeId: view.dataset.selectedEmployeeId || '',
             selectedEmployeeRates: view.dataset.selectedEmployeeRates || '[]',
@@ -105,7 +103,7 @@ export function initializePayrollForm(ctx, options = {}) {
         };
 
         try {
-            savePayrollState(storageKey, data);
+            localStorage.setItem(formStateKey, JSON.stringify(data));
         } catch (error) {
             console.error('Unable to save payroll state:', error);
         }
@@ -137,9 +135,7 @@ export function initializePayrollForm(ctx, options = {}) {
         const typeCell = document.createElement('td');
         typeCell.className = 'px-3 py-2';
         const typeInput = document.createElement('input');
-        typeInput.type = 'text';
-        typeInput.maxLength = 100;
-        typeInput.placeholder = 'Deduction type';
+        typeInput.type = 'text'; typeInput.maxLength = 100; typeInput.placeholder = 'Deduction type';
         typeInput.className = 'payroll-other-deduction-type w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200';
         typeInput.value = type;
         typeCell.appendChild(typeInput);
@@ -147,9 +143,7 @@ export function initializePayrollForm(ctx, options = {}) {
         const amountCell = document.createElement('td');
         amountCell.className = 'px-3 py-2';
         const amountInput = document.createElement('input');
-        amountInput.type = 'number';
-        amountInput.min = '0';
-        amountInput.step = '0.01';
+        amountInput.type = 'number'; amountInput.min = '0'; amountInput.step = '0.01';
         amountInput.className = 'payroll-other-deduction-amount w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-2 text-right text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200';
         amountInput.value = amount ?? '0';
         amountCell.appendChild(amountInput);
@@ -166,27 +160,23 @@ export function initializePayrollForm(ctx, options = {}) {
         row.append(typeCell, amountCell, actionCell);
         tbody.appendChild(row);
 
-        // I-trigger agad ang computation pag nagbago ang amount o type
-        typeInput.addEventListener('input', () => computation.scheduleComputation());
-        amountInput.addEventListener('input', () => computation.scheduleComputation());
+        typeInput.addEventListener('input', () => computation.scheduleComputation(400));
+        amountInput.addEventListener('input', () => computation.scheduleComputation(400));
 
         removeButton.addEventListener('click', () => {
             row.remove();
-            if (!tbody.querySelector('.payroll-other-deduction-type')) {
-                showEmptyDeductionRow();
-            }
-            computation.scheduleComputation(0); // Force compute agad
+            if (!tbody.querySelector('.payroll-other-deduction-type')) showEmptyDeductionRow();
+            computation.scheduleComputation(0);
         });
 
-        if (shouldCompute) {
-            computation.scheduleComputation(0);
-        }
+        if (shouldCompute) computation.scheduleComputation(0);
     }
 
     function restoreState() {
         let saved;
         try {
-            saved = loadPayrollState(storageKey);
+            const raw = localStorage.getItem(formStateKey);
+            saved = raw ? JSON.parse(raw) : null;
         } catch (error) {
             console.error('Unable to restore payroll state:', error);
             return null;
@@ -200,17 +190,18 @@ export function initializePayrollForm(ctx, options = {}) {
             if (input && 'value' in input) input.value = value ?? '';
         });
 
+        if (saved.switches) {
+            if (get('switchSss')) get('switchSss').checked = saved.switches.deduct_sss;
+            if (get('switchPagibig')) get('switchPagibig').checked = saved.switches.deduct_pagibig;
+            if (get('switchPhilhealth')) get('switchPhilhealth').checked = saved.switches.deduct_philhealth;
+        }
+
         const tbody = get('payrollOtherDeductions');
         if (tbody) {
             tbody.replaceChildren();
             const deductions = Array.isArray(saved.deductions) ? saved.deductions : [];
-            if (!deductions.length) {
-                showEmptyDeductionRow();
-            } else {
-                deductions.forEach(item => {
-                    addDeductionRow(item.type, item.amount, false);
-                });
-            }
+            if (!deductions.length) showEmptyDeductionRow();
+            else deductions.forEach(item => addDeductionRow(item.type, item.amount, false));
         }
 
         view.dataset.selectedEmployeeId = saved.selectedEmployeeId || '';
@@ -221,75 +212,44 @@ export function initializePayrollForm(ctx, options = {}) {
         return saved;
     }
 
-    const computation = createPayrollComputation({
-        panel,
-        view,
-        get,
-        getDeductions,
-        persistState
-    });
+    // 🔑 I-restore muna ang state BAGO gumawa ng computation instance
+    const savedState = restoreState();
+    
+    const computation = createPayrollComputation({ panel, view, get, getDeductions, persistState });
+
+    if (savedState?.switches) {
+        computation.setSwitchState({
+            switchSss: savedState.switches.deduct_sss,
+            switchPagibig: savedState.switches.deduct_pagibig,
+            switchPhilhealth: savedState.switches.deduct_philhealth
+        });
+        computation.skipBackendSwitchesOnce();
+    }
 
     const previewMap = {
         earnings: {
-            basic_pay: 'previewDaysWorked',
-            regular_ot_pay: 'previewRegularOT',
-            night_diff_pay: 'previewNightDiff',
-            rest_day_ot_pay: 'previewRestDay',
-            sunday_ot_pay: 'previewRestDayOT',
-            special_holiday_pay: 'previewSpecialHoliday',
-            special_holiday_ot_pay: 'previewSpecialHolidayOT',
-            excess_ot_pay: 'previewSpecialHolidayRestDay',
-            excess_sun_special_ot_pay: 'previewSpecialHolidayRestDayOT',
-            regular_holiday_pay: 'previewLegalHoliday',
-            regular_holiday_ot_pay: 'previewLegalHolidayOT',
-            excess_legal_hol_ot_pay: 'previewLegalHolidayRestDay',
-            excess_sun_legal_ot_pay: 'previewLegalHolidayRestDayOT',
-            sick_leave_pay: 'previewSickLeave',
-            vacation_leave_pay: 'previewVacationLeave',
-            allowance: 'previewFixedAllowance',
-            load_allow: 'previewLoadAllowance',
-            meal_allow: 'previewMealAllowance',
-            transpo_allow: 'previewTranspoAllowance',
-            salary_adjustment: 'previewAdjustment',
-            incentive_pay: 'previewIncentive',
-            ecola_pay: 'previewEcola',
-            thirteenth_month_pay: 'preview13thMonth'
+            basic_pay: 'previewDaysWorked', regular_ot_pay: 'previewRegularOT', night_diff_pay: 'previewNightDiff', rest_day_ot_pay: 'previewRestDay', sunday_ot_pay: 'previewRestDayOT',
+            special_holiday_pay: 'previewSpecialHoliday', special_holiday_ot_pay: 'previewSpecialHolidayOT', excess_ot_pay: 'previewSpecialHolidayRestDay', excess_sun_special_ot_pay: 'previewSpecialHolidayRestDayOT',
+            regular_holiday_pay: 'previewLegalHoliday', regular_holiday_ot_pay: 'previewLegalHolidayOT', excess_legal_hol_ot_pay: 'previewLegalHolidayRestDay', excess_sun_legal_ot_pay: 'previewLegalHolidayRestDayOT',
+            sick_leave_pay: 'previewSickLeave', vacation_leave_pay: 'previewVacationLeave', allowance: 'previewFixedAllowance', load_allow: 'previewLoadAllowance', meal_allow: 'previewMealAllowance', transpo_allow: 'previewTranspoAllowance',
+            salary_adjustment: 'previewAdjustment', incentive_pay: 'previewIncentive', ecola_pay: 'previewEcola', thirteenth_month_pay: 'preview13thMonth'
         },
         deductions: {
-            absent_ded: 'previewDaysAbsent',
-            tardy_ded: 'previewLateHours',
-            sss_ee: 'previewSSS',
-            pagibig_ee: 'previewPagibig',
-            philhealth_ee: 'previewPhilhealth',
-            wtax: 'previewWithholdingTax'
+            absent_ded: 'previewDaysAbsent', tardy_ded: 'previewLateHours', sss_ee: 'previewSSS', pagibig_ee: 'previewPagibig', philhealth_ee: 'previewPhilhealth', wtax: 'previewWithholdingTax'
         }
     };
 
-    const money = value => new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency: 'PHP',
-        minimumFractionDigits: 2
-    }).format(Number(value) || 0);
+    const money = value => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 }).format(Number(value) || 0);
 
     function renderPreviews(result) {
         const earnings = result?.earnings || {};
         const deductions = result?.deductions || {};
-
-        Object.entries(previewMap.earnings).forEach(([key, id]) => {
-            const element = get(id);
-            if (element && earnings[key] !== undefined) element.textContent = money(earnings[key]);
-        });
-
-        Object.entries(previewMap.deductions).forEach(([key, id]) => {
-            const element = get(id);
-            if (element && deductions[key] !== undefined) element.textContent = money(deductions[key]);
-        });
+        Object.entries(previewMap.earnings).forEach(([key, id]) => { const el = get(id); if (el && earnings[key] !== undefined) el.textContent = money(earnings[key]); });
+        Object.entries(previewMap.deductions).forEach(([key, id]) => { const el = get(id); if (el && deductions[key] !== undefined) el.textContent = money(deductions[key]); });
     }
 
     function resetPreviews() {
-        panel.querySelectorAll('[id^="preview"]').forEach(element => {
-            element.textContent = money(0);
-        });
+        panel.querySelectorAll('[id^="preview"]').forEach(el => { el.textContent = money(0); });
     }
 
     function filterEmployees(input, list) {
@@ -301,35 +261,13 @@ export function initializePayrollForm(ctx, options = {}) {
     }
 
     function showDonePayrollNotice() {
-        const errorElement = get('payrollComputationError');
-        if (errorElement) {
-            errorElement.textContent = 'Completed payroll display requires retrieval of the saved payroll record.';
-            errorElement.classList.remove('hidden');
-        }
+        const el = get('payrollComputationError');
+        if (el) { el.textContent = 'Completed payroll display requires retrieval of the saved payroll record.'; el.classList.remove('hidden'); }
     }
-
-    function activateContributionResetButtons() {
-        panel.addEventListener('click', event => {
-            const button = event.target.closest('[data-reset-contribution]');
-            if (!button || !panel.contains(button)) return;
-            const contribution = button.dataset.resetContribution;
-            if (!['sss', 'pagibig', 'philhealth'].includes(contribution)) return;
-            computation.resetContribution(contribution);
-        });
-    }
-
-    function restoreContributionState(savedState) {
-        computation.restoreContributionOverrides(savedState?.contributionOverrides || {});
-    }
-
-    const savedState = restoreState();
-    restoreContributionState(savedState);
 
     if (!view.dataset.payrollComputedListener) {
         view.dataset.payrollComputedListener = 'true';
-        view.addEventListener('payroll:computed', event => {
-            renderPreviews(event.detail);
-        });
+        view.addEventListener('payroll:computed', event => renderPreviews(event.detail));
     }
 
     if (!view.dataset.payrollTabsInitialized) {
@@ -342,49 +280,22 @@ export function initializePayrollForm(ctx, options = {}) {
         view.dataset.payrollFormInitialized = 'true';
 
         panel.addEventListener('input', event => {
-            const target = event.target;
-            if (target.matches('.payroll-number, .payroll-money') || target.matches('.payroll-other-deduction-type, .payroll-other-deduction-amount')) {
-                computation.scheduleComputation();
-            }
-            if (target.matches('input[id], select[id], textarea[id]')) {
-                persistState();
-            }
+            if (event.target.matches('input[id], select[id], textarea[id]')) persistState();
         });
 
         panel.addEventListener('change', event => {
-            if (event.target.matches('input, select, textarea')) {
-                persistState();
-                computation.scheduleComputation(0);
-            }
+            if (event.target.matches('input, select, textarea')) persistState();
         });
 
-        activateContributionResetButtons();
-
-        get('payrollAddDeductionButton')?.addEventListener('click', () => {
-            addDeductionRow('', '0');
-            persistState();
-        });
+        get('payrollAddDeductionButton')?.addEventListener('click', () => { addDeductionRow('', '0'); persistState(); });
 
         get('payrollRefreshButton')?.addEventListener('click', () => {
-            panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => {
-                input.value = '0';
-            });
-            computation.restoreContributionOverrides({ sss: false, pagibig: false, philhealth: false });
-            showEmptyDeductionRow();
-            resetPreviews();
-            persistState();
-            computation.scheduleComputation(0);
+            window.location.reload(); 
         });
 
         get('payrollPrintButton')?.addEventListener('click', () => window.print());
-
-        get('payrollEmployeeSearch')?.addEventListener('input', event => {
-            filterEmployees(event.target, get('payrollPendingEmployees'));
-        });
-
-        get('payrollDoneSearch')?.addEventListener('input', event => {
-            filterEmployees(event.target, get('payrollDoneEmployees'));
-        });
+        get('payrollEmployeeSearch')?.addEventListener('input', event => filterEmployees(event.target, get('payrollPendingEmployees')));
+        get('payrollDoneSearch')?.addEventListener('input', event => filterEmployees(event.target, get('payrollDoneEmployees')));
 
         get('payrollSaveButton')?.addEventListener('click', () => {
             persistState();
@@ -413,7 +324,6 @@ export function initializePayrollForm(ctx, options = {}) {
         }
 
         const requestKey = `${clientId}:${periodId}`;
-
         if (view.dataset.employeesLoaded === 'true' && view.dataset.employeeRequestKey === requestKey) return;
 
         view.dataset.employeesLoaded = 'false';
@@ -440,16 +350,11 @@ export function initializePayrollForm(ctx, options = {}) {
             url.searchParams.set('client_id', clientId);
             url.searchParams.set('period_id', periodId);
 
-            const response = await fetch(url.toString(), {
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin'
-            });
-
+            const response = await fetch(url.toString(), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
             const result = await response.json();
             if (!response.ok) throw new Error(result.message || `Failed to load employees. HTTP ${response.status}`);
 
             if (view.dataset.clientId !== clientId || view.dataset.periodId !== periodId || view.dataset.employeeRequestKey !== requestKey) return;
-
             if (!result || !Array.isArray(result.pending) || !Array.isArray(result.done)) throw new Error('Invalid Pending/Done API response.');
 
             pendingList.replaceChildren();
@@ -480,7 +385,17 @@ export function initializePayrollForm(ctx, options = {}) {
 
                 button.addEventListener('click', () => {
                     computation.cancelComputation();
-                    resetPreviews();
+                    
+                    const isNewEmployee = view.dataset.selectedEmployeeId !== String(employee.emp_id ?? '');
+                    
+                    if (isNewEmployee) {
+                        panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => input.value = '0');
+                        if (get('switchSss')) get('switchSss').checked = true;
+                        if (get('switchPagibig')) get('switchPagibig').checked = true;
+                        if (get('switchPhilhealth')) get('switchPhilhealth').checked = true;
+                        showEmptyDeductionRow();
+                        resetPreviews();
+                    }
 
                     view.dataset.selectedEmployeeId = String(employee.emp_id ?? '');
                     view.dataset.selectedEmployeeRates = JSON.stringify(employee.basic_rates || []);
@@ -488,15 +403,12 @@ export function initializePayrollForm(ctx, options = {}) {
 
                     if (get('payrollSidebarEmployee')) get('payrollSidebarEmployee').textContent = name || 'Unnamed employee';
 
-                    panel.querySelectorAll('#payrollPendingEmployees button, #payrollDoneEmployees button').forEach(item => {
-                        item.classList.remove('border-green-300', 'bg-green-50', 'dark:bg-green-900/20');
-                    });
-
+                    panel.querySelectorAll('#payrollPendingEmployees button, #payrollDoneEmployees button').forEach(item => item.classList.remove('border-green-300', 'bg-green-50', 'dark:bg-green-900/20'));
                     button.classList.add('border-green-300', 'bg-green-50', 'dark:bg-green-900/20');
                     persistState();
 
                     if (status === 'pending') {
-                        computation.computePayroll();
+                        computation.computePayroll(); 
                     } else {
                         showDonePayrollNotice();
                     }
@@ -525,8 +437,16 @@ export function initializePayrollForm(ctx, options = {}) {
             view.dataset.employeesLoaded = 'true';
 
             if (savedSelectedEmployeeId) {
+                if (view.dataset.selectedPayrollStatus === 'done') {
+                    activatePayrollTab(doneTab);
+                } else {
+                    activatePayrollTab(pendingTab);
+                }
+
                 const selectedButton = [...panel.querySelectorAll('[data-employee-id]')].find(button => button.dataset.employeeId === savedSelectedEmployeeId);
-                selectedButton?.click();
+                if (selectedButton) {
+                    selectedButton.click(); 
+                }
             } else {
                 view.dataset.selectedEmployeeId = '';
                 view.dataset.selectedEmployeeRates = '[]';

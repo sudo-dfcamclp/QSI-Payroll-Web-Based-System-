@@ -1,136 +1,93 @@
 export function createPayrollComputation({
-    panel,
-    view,
-    get,
-    getDeductions,
-    persistState
+    panel, view, get, getDeductions, persistState
 }) {
     let debounceTimer = null;
     let activeController = null;
     let requestSequence = 0;
 
-    const contributionOverrides = {
-        sss: false,
-        pagibig: false,
-        philhealth: false
+    const switchState = {
+        switchSss: true,
+        switchPagibig: true,
+        switchPhilhealth: true
     };
 
-    const contributionFields = {
-        sss: { employee: 'payrollSss', employer: 'payrollSssEmployer' },
-        pagibig: { employee: 'payrollPagibig', employer: 'payrollPagibigEmployer' },
-        philhealth: { employee: 'payrollPhilhealth', employer: 'payrollPhilhealthEmployer' }
-    };
+    let skipBackendSwitchesOnNextCompute = false;
+    let hasReceivedInitialSwitches = false;
 
-    const contributionInputMap = {
-        payrollSss: 'sss',
-        payrollSssEmployer: 'sss',
-        payrollPagibig: 'pagibig',
-        payrollPagibigEmployer: 'pagibig',
-        payrollPhilhealth: 'philhealth',
-        payrollPhilhealthEmployer: 'philhealth'
-    };
-
-    const money = value => new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency: 'PHP',
-        minimumFractionDigits: 2
-    }).format(Number(value) || 0);
+    const money = value => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 }).format(Number(value) || 0);
 
     const fieldMap = {
-        payrollDaysWorked: 'days_present',
-        payrollDaysAbsent: 'days_absent',
-        payrollHoursWorked: 'hours_worked',
-        payrollRegularHours: 'ot_hrs',
-        payrollNightDiffHours: 'night_diff_ot',
-        payrollRestDayHours: 'rest_day_ot_hrs',
-        payrollRestDayOtHours: 'sunday_ot',
-        payrollSpecialHolidayHours: 'sp_hol_hrs',
-        payrollSpecialHolidayOtHours: 'sp_hol_ot_hrs',
-        payrollSpecialHolidayRestDayHours: 'excess_ot_hrs',
-        payrollSpecialHolidayRestDayOtHours: 'excess_sun_sp_ot_hrs',
-        payrollLegalHolidayHours: 'leg_hol_hrs',
-        payrollLegalHolidayOtHours: 'leg_hol_ot_hrs',
-        payrollLegalHolidayRestDayHours: 'excess_leg_hol_ot_hrs',
-        payrollLegalHolidayRestDayOtHours: 'excess_sun_leg_ot_hrs',
-        payrollSickLeave: 'sl_days',
-        payrollVacationLeave: 'vl_days',
-        payrollFixedAllowance: 'allowance',
-        payrollLoadAllowance: 'load_allow',
-        payrollMealAllowance: 'meal_allow',
-        payrollTranspoAllowance: 'transpo_allow',
-        payrollAdjustment: 'salary_adj',
-        payrollIncentive: 'incentive_pay',
-        payrollEcola: 'ecola_pay',
-        payrollThirteenthMonth: 'thirteenth_month_pay',
-        payrollLateHours: 'tardy_hrs'
+        payrollDaysWorked: 'days_present', payrollDaysAbsent: 'days_absent', payrollHoursWorked: 'hours_worked',
+        payrollRegularHours: 'ot_hrs', payrollNightDiffHours: 'night_diff_ot', payrollRestDayHours: 'rest_day_ot_hrs', payrollRestDayOtHours: 'sunday_ot',
+        payrollSpecialHolidayHours: 'sp_hol_hrs', payrollSpecialHolidayOtHours: 'sp_hol_ot_hrs', payrollSpecialHolidayRestDayHours: 'excess_ot_hrs', payrollSpecialHolidayRestDayOtHours: 'excess_sun_sp_ot_hrs',
+        payrollLegalHolidayHours: 'leg_hol_hrs', payrollLegalHolidayOtHours: 'leg_hol_ot_hrs', payrollLegalHolidayRestDayHours: 'excess_leg_hol_ot_hrs', payrollLegalHolidayRestDayOtHours: 'excess_sun_leg_ot_hrs',
+        payrollSickLeave: 'sl_days', payrollVacationLeave: 'vl_days', payrollFixedAllowance: 'allowance', payrollLoadAllowance: 'load_allow', payrollMealAllowance: 'meal_allow', payrollTranspoAllowance: 'transpo_allow',
+        payrollAdjustment: 'salary_adj', payrollIncentive: 'incentive_pay', payrollEcola: 'ecola_pay', payrollThirteenthMonth: 'thirteenth_month_pay', payrollLateHours: 'tardy_hrs'
     };
 
     const previewMap = {
-        previewDaysWorked: ['basic_pay'],
-        previewRegularOT: ['regular_ot_pay'],
-        previewNightDiff: ['night_diff_pay'],
-        previewRestDay: ['rest_day_ot_pay'],
-        previewRestDayOT: ['sunday_ot_pay'],
-        previewRegularHoliday: ['regular_holiday_pay'],
-        previewRegularHolidayOT: ['regular_holiday_ot_pay'],
-        previewSpecialHoliday: ['special_holiday_pay'],
-        previewSpecialHolidayOT: ['special_holiday_ot_pay'],
-        previewSpecialHolidayRestDay: ['excess_ot_pay'],
-        previewSpecialHolidayRestDayOT: ['excess_sun_special_ot_pay'],
-        previewLegalHolidayRestDay: ['excess_legal_hol_ot_pay'],
-        previewLegalHolidayRestDayOT: ['excess_sun_legal_ot_pay'],
-        previewSickLeave: ['sick_leave_pay'],
-        previewVacationLeave: ['vacation_leave_pay'],
-        previewFixedAllowance: ['allowance'],
-        previewLoadAllowance: ['load_allow'],
-        previewMealAllowance: ['meal_allow'],
-        previewTranspoAllowance: ['transpo_allow'],
-        previewAdjustment: ['salary_adjustment'],
-        previewIncentive: ['incentive_pay'],
-        previewEcola: ['ecola_pay'],
-        preview13thMonth: ['thirteenth_month_pay']
+        previewDaysWorked: ['basic_pay'], previewRegularOT: ['regular_ot_pay'], previewNightDiff: ['night_diff_pay'],
+        previewRestDay: ['rest_day_ot_pay'], previewRestDayOT: ['sunday_ot_pay'],
+        previewRegularHoliday: ['regular_holiday_pay'], previewRegularHolidayOT: ['regular_holiday_ot_pay'], previewSpecialHoliday: ['special_holiday_pay'], previewSpecialHolidayOT: ['special_holiday_ot_pay'],
+        previewSpecialHolidayRestDay: ['excess_ot_pay'], previewSpecialHolidayRestDayOT: ['excess_sun_special_ot_pay'], previewLegalHolidayRestDay: ['excess_legal_hol_ot_pay'], previewLegalHolidayRestDayOT: ['excess_sun_legal_ot_pay'],
+        previewSickLeave: ['sick_leave_pay'], previewVacationLeave: ['vacation_leave_pay'], previewFixedAllowance: ['allowance'], previewLoadAllowance: ['load_allow'], previewMealAllowance: ['meal_allow'], previewTranspoAllowance: ['transpo_allow'],
+        previewAdjustment: ['salary_adjustment'], previewIncentive: ['incentive_pay'], previewEcola: ['ecola_pay'], preview13thMonth: ['thirteenth_month_pay']
     };
+
+    function setSwitchState(newState = {}) {
+        if (typeof newState.switchSss === 'boolean') switchState.switchSss = newState.switchSss;
+        if (typeof newState.switchPagibig === 'boolean') switchState.switchPagibig = newState.switchPagibig;
+        if (typeof newState.switchPhilhealth === 'boolean') switchState.switchPhilhealth = newState.switchPhilhealth;
+        applySwitchStateToDOM();
+    }
+
+    function getSwitchState() {
+        return {
+            switchSss: switchState.switchSss,
+            switchPagibig: switchState.switchPagibig,
+            switchPhilhealth: switchState.switchPhilhealth
+        };
+    }
+
+    function skipBackendSwitchesOnce() {
+        skipBackendSwitchesOnNextCompute = true;
+    }
 
     function collectInputs() {
         const inputs = {};
-
-        // Standard inputs
         panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => {
             if (!input.id) return;
             const fieldName = fieldMap[input.id];
-            if (fieldName) {
-                inputs[fieldName] = input.value === '' ? '0' : input.value;
-            }
+            if (fieldName) inputs[fieldName] = input.value === '' ? '0' : input.value;
         });
 
-        // Contributions
-        Object.entries(contributionFields).forEach(([name, fields]) => {
-            const employeeInput = get(fields.employee);
-            const employerInput = get(fields.employer);
-            inputs[`${name}_ee`] = employeeInput?.value || '0';
-            inputs[`${name}_er`] = employerInput?.value || '0';
-        });
+        inputs.deduct_sss = switchState.switchSss;
+        inputs.deduct_pagibig = switchState.switchPagibig;
+        inputs.deduct_philhealth = switchState.switchPhilhealth;
 
-        // Checkboxes
+        if (!switchState.switchSss) {
+            inputs.sss_ee = get('payrollSss')?.value || '0';
+            inputs.sss_er = get('payrollSssEmployer')?.value || '0';
+        }
+        if (!switchState.switchPagibig) {
+            inputs.pagibig_ee = get('payrollPagibig')?.value || '0';
+            inputs.pagibig_er = get('payrollPagibigEmployer')?.value || '0';
+        }
+        if (!switchState.switchPhilhealth) {
+            inputs.philhealth_ee = get('payrollPhilhealth')?.value || '0';
+            inputs.philhealth_er = get('payrollPhilhealthEmployer')?.value || '0';
+        }
+
         const ecolaHoliday = get('payrollEcolaHoliday');
         const ecolaLegal = get('payrollEcolaLegal');
         if (ecolaHoliday) inputs.ecola_hol_checked = ecolaHoliday.checked;
         if (ecolaLegal) inputs.ecola_legal_checked = ecolaLegal.checked;
 
-        // Over/Under
         const overUnder = get('payrollOverUnderPay');
         if (overUnder) inputs.over_under_pay = overUnder.value || '0';
 
-        // Other Deductions (Galing sa payrollform.js)
-        inputs.other_deductions = typeof getDeductions === 'function'
-            ? getDeductions()
-            : [];
-
+        inputs.other_deductions = typeof getDeductions === 'function' ? getDeductions() : [];
         return inputs;
-    }
-
-    function collectContributionOverrides() {
-        return { ...contributionOverrides };
     }
 
     function getNumericValue(source, keys) {
@@ -138,9 +95,7 @@ export function createPayrollComputation({
         for (const key of keys) {
             if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== null && source[key] !== undefined) {
                 const value = source[key];
-                if (typeof value === 'object') {
-                    return Number(value.amount ?? value.total ?? value.value ?? 0) || 0;
-                }
+                if (typeof value === 'object') return Number(value.amount ?? value.total ?? value.value ?? 0) || 0;
                 return Number(value) || 0;
             }
         }
@@ -150,102 +105,99 @@ export function createPayrollComputation({
     function renderEarnings(earnings = {}) {
         Object.entries(previewMap).forEach(([elementId, keys]) => {
             const element = get(elementId);
-            if (!element) return;
-            element.textContent = money(getNumericValue(earnings, keys));
+            if (element) element.textContent = money(getNumericValue(earnings, keys));
         });
     }
 
     function renderDeductions(deductions = {}, contributions = {}) {
-        const employeeMapping = {
-            payrollSss: ['sss_ee'],
-            payrollPagibig: ['pagibig_ee'],
-            payrollPhilhealth: ['philhealth_ee']
+        const mapping = {
+            payrollSss: ['sss_ee'], payrollPagibig: ['pagibig_ee'], payrollPhilhealth: ['philhealth_ee'],
+            payrollSssEmployer: ['sss_er'], payrollPagibigEmployer: ['pagibig_er'], payrollPhilhealthEmployer: ['philhealth_er']
         };
 
-        Object.entries(employeeMapping).forEach(([inputId, keys]) => {
+        Object.entries(mapping).forEach(([inputId, keys]) => {
             const input = get(inputId);
             if (!input) return;
-            const contributionName = contributionInputMap[inputId];
-            if (contributionOverrides[contributionName]) return;
-            input.value = getNumericValue(deductions, keys).toFixed(2);
+
+            if (document.activeElement === input) return;
+
+            const source = inputId.includes('Employer') ? contributions : deductions;
+            input.value = getNumericValue(source, keys).toFixed(2);
         });
 
-        const employerMapping = {
-            payrollSssEmployer: ['sss_er'],
-            payrollPagibigEmployer: ['pagibig_er'],
-            payrollPhilhealthEmployer: ['philhealth_er']
-        };
-
-        Object.entries(employerMapping).forEach(([inputId, keys]) => {
-            const input = get(inputId);
-            if (!input) return;
-            const contributionName = contributionInputMap[inputId];
-            if (contributionOverrides[contributionName]) return;
-            input.value = getNumericValue(contributions, keys).toFixed(2);
-        });
-
-        const otherDeductions = {
-            payrollWithholdingTax: ['wtax']
-        };
-
-        Object.entries(otherDeductions).forEach(([inputId, keys]) => {
-            const input = get(inputId);
-            if (!input) return;
-            input.value = getNumericValue(deductions, keys).toFixed(2);
-        });
+        const wtaxInput = get('payrollWithholdingTax');
+        if (wtaxInput) wtaxInput.value = getNumericValue(deductions, ['wtax']).toFixed(2);
     }
 
     function renderSummary(summary = {}) {
         const gross = Number(summary.gross_pay) || 0;
         const deductions = Number(summary.total_deductions) || 0;
         const net = Number(summary.net_pay) || 0;
-
-        ['payrollGrossPay', 'payrollSummaryGross'].forEach(id => {
-            const element = get(id);
-            if (element) element.textContent = money(gross);
-        });
-
-        ['payrollTotalDeductions', 'payrollSummaryDeductions'].forEach(id => {
-            const element = get(id);
-            if (element) element.textContent = money(deductions);
-        });
-
+        ['payrollGrossPay', 'payrollSummaryGross'].forEach(id => { const el = get(id); if (el) el.textContent = money(gross); });
+        ['payrollTotalDeductions', 'payrollSummaryDeductions'].forEach(id => { const el = get(id); if (el) el.textContent = money(deductions); });
         const netElement = get('payrollNetPay');
         if (netElement) netElement.textContent = money(net);
     }
 
+    function applySwitchStateToDOM() {
+        const mapping = [
+            { switchId: 'switchSss', empId: 'payrollSss', emprId: 'payrollSssEmployer', stateKey: 'switchSss' },
+            { switchId: 'switchPagibig', empId: 'payrollPagibig', emprId: 'payrollPagibigEmployer', stateKey: 'switchPagibig' },
+            { switchId: 'switchPhilhealth', empId: 'payrollPhilhealth', emprId: 'payrollPhilhealthEmployer', stateKey: 'switchPhilhealth' }
+        ];
+
+        mapping.forEach(({ switchId, empId, emprId, stateKey }) => {
+            const switchEl = get(switchId);
+            const empEl = get(empId);
+            const emprEl = get(emprId);
+            const isChecked = switchState[stateKey];
+
+            if (switchEl) switchEl.checked = isChecked;
+
+            [empEl, emprEl].forEach(el => {
+                if (!el) return;
+                const shouldDisable = isChecked;
+
+                el.disabled = shouldDisable;
+                el.readOnly = shouldDisable;
+
+                el.classList.remove(
+                    'bg-gray-100', 'dark:bg-gray-800', 'text-gray-400', 'cursor-not-allowed',
+                    'bg-white', 'dark:bg-gray-900', 'text-gray-900', 'dark:text-gray-200', 'cursor-default'
+                );
+
+                if (shouldDisable) {
+                    el.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-400', 'cursor-not-allowed');
+                } else {
+                    el.classList.add('bg-white', 'dark:bg-gray-900', 'text-gray-900', 'dark:text-gray-200', 'cursor-default');
+                }
+            });
+        });
+    }
+
     function renderResult(result) {
         renderEarnings(result.earnings || {});
-        renderDeductions(result.deductions || {}, result.contributions || {});
         renderSummary(result.summary || {});
+        applySwitchStateToDOM();
+        renderDeductions(result.deductions || {}, result.contributions || {});
     }
 
     function resetPreviews() {
-        panel.querySelectorAll('[id^="preview"]').forEach(element => {
-            element.textContent = money(0);
-        });
+        panel.querySelectorAll('[id^="preview"]').forEach(el => { el.textContent = money(0); });
         ['payrollGrossPay', 'payrollSummaryGross', 'payrollTotalDeductions', 'payrollSummaryDeductions', 'payrollNetPay'].forEach(id => {
-            const element = get(id);
-            if (element) element.textContent = money(0);
+            const el = get(id);
+            if (el) el.textContent = money(0);
         });
     }
 
     function showError(message) {
-        const errorElement = get('payrollComputationError');
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        } else {
-            console.error(message);
-        }
+        const el = get('payrollComputationError');
+        if (el) { el.textContent = message; el.classList.remove('hidden'); } else console.error(message);
     }
 
     function clearError() {
-        const errorElement = get('payrollComputationError');
-        if (errorElement) {
-            errorElement.textContent = '';
-            errorElement.classList.add('hidden');
-        }
+        const el = get('payrollComputationError');
+        if (el) { el.textContent = ''; el.classList.add('hidden'); }
     }
 
     function getErrorMessage(responseData) {
@@ -256,61 +208,31 @@ export function createPayrollComputation({
         return responseData?.message || 'Unable to compute payroll.';
     }
 
-    function activateContributionInputListeners() {
-        panel.addEventListener('input', event => {
-            const input = event.target;
-            if (!input?.id) return;
-            const contributionName = contributionInputMap[input.id];
-            if (!contributionName) return;
-            contributionOverrides[contributionName] = true;
-            scheduleComputation();
-        });
-    }
-
-    function resetContribution(name) {
-        if (!Object.prototype.hasOwnProperty.call(contributionOverrides, name)) return;
-        contributionOverrides[name] = false;
-        if (typeof persistState === 'function') persistState();
-        scheduleComputation(0);
-    }
-
-    function clearContributionOverride(name) {
-        if (!Object.prototype.hasOwnProperty.call(contributionOverrides, name)) return;
-        contributionOverrides[name] = false;
-    }
-
-    function restoreContributionOverrides(overrides = {}) {
-        Object.keys(contributionOverrides).forEach(key => {
-            contributionOverrides[key] = overrides[key] === true;
-        });
-    }
-
-    function getContributionOverrides() {
-        return { ...contributionOverrides };
-    }
-
-    async function computePayroll() {
+    async function computePayroll(options = {}) {
         const computeUrl = view.dataset.computeUrl;
         const clientId = view.dataset.clientId;
         const periodId = view.dataset.periodId;
         const employeeId = view.dataset.selectedEmployeeId;
 
-        if (!computeUrl || !clientId || !periodId || !employeeId) {
-            resetPreviews();
-            return;
-        }
+        if (!computeUrl || !clientId || !periodId || !employeeId) { resetPreviews(); return; }
 
         cancelActiveRequest();
         activeController = new AbortController();
         const controller = activeController;
         const sequence = ++requestSequence;
 
+        const sentSwitchState = {
+            sss: switchState.switchSss,
+            pagibig: switchState.switchPagibig,
+            philhealth: switchState.switchPhilhealth
+        };
+
+        const shouldSkipBackendSwitches = skipBackendSwitchesOnNextCompute;
+        skipBackendSwitchesOnNextCompute = false;
+
         const payload = {
-            client_id: clientId,
-            period_id: periodId,
-            emp_id: employeeId,
-            inputs: collectInputs(),
-            contribution_overrides: collectContributionOverrides()
+            client_id: clientId, period_id: periodId, emp_id: employeeId,
+            inputs: collectInputs()
         };
 
         clearError();
@@ -331,38 +253,46 @@ export function createPayrollComputation({
             });
 
             let responseData;
-            try {
-                responseData = await response.json();
-            } catch {
-                throw new Error('Invalid response received from payroll server.');
-            }
-
-            if (!response.ok || responseData.success === false) {
-                throw new Error(getErrorMessage(responseData));
-            }
-
+            try { responseData = await response.json(); } catch { throw new Error('Invalid response received.'); }
+            if (!response.ok || responseData.success === false) throw new Error(getErrorMessage(responseData));
             if (sequence !== requestSequence) return;
-            if (view.dataset.selectedEmployeeId !== String(employeeId) || view.dataset.periodId !== String(periodId) || view.dataset.clientId !== String(clientId)) return;
+            if (view.dataset.selectedEmployeeId !== String(employeeId) ||
+                view.dataset.periodId !== String(periodId) ||
+                view.dataset.clientId !== String(clientId)) return;
 
             const result = responseData.data;
-            const summary = result?.summary;
+            if (!result || !result.summary) throw new Error('Invalid payroll computation response.');
 
-            if (!result || !summary || summary.gross_pay === undefined || summary.total_deductions === undefined || summary.net_pay === undefined) {
-                throw new Error('Invalid payroll computation response.');
+            if (!hasReceivedInitialSwitches && result.switches && !shouldSkipBackendSwitches) {
+                if (typeof result.switches.deduct_sss === 'boolean') switchState.switchSss = result.switches.deduct_sss;
+                if (typeof result.switches.deduct_pagibig === 'boolean') switchState.switchPagibig = result.switches.deduct_pagibig;
+                if (typeof result.switches.deduct_philhealth === 'boolean') switchState.switchPhilhealth = result.switches.deduct_philhealth;
+                hasReceivedInitialSwitches = true;
             }
 
-            renderResult(result);
-            if (typeof persistState === 'function') persistState();
+            const switchChangedSinceSend =
+                sentSwitchState.sss !== switchState.switchSss ||
+                sentSwitchState.pagibig !== switchState.switchPagibig ||
+                sentSwitchState.philhealth !== switchState.switchPhilhealth;
 
-            view.dispatchEvent(new CustomEvent('payroll:computed', {
-                bubbles: true,
-                detail: result
-            }));
+            if (shouldSkipBackendSwitches || switchChangedSinceSend) {
+                renderEarnings(result.earnings || {});
+                renderSummary(result.summary || {});
+                applySwitchStateToDOM();
+                renderDeductions(result.deductions || {}, result.contributions || {});
+            } else {
+                renderResult(result);
+            }
+
+            if (typeof persistState === 'function') {
+                persistState(getSwitchState());
+            }
+
+            view.dispatchEvent(new CustomEvent('payroll:computed', { bubbles: true, detail: result }));
 
         } catch (error) {
             if (error.name === 'AbortError') return;
             if (sequence !== requestSequence) return;
-            console.error('Payroll computation error:', error);
             showError(error.message || 'Payroll computation failed.');
         } finally {
             if (sequence === requestSequence) {
@@ -373,16 +303,13 @@ export function createPayrollComputation({
     }
 
     function cancelActiveRequest() {
-        if (activeController) {
-            activeController.abort();
-            activeController = null;
-        }
+        if (activeController) { activeController.abort(); activeController = null; }
     }
 
     function scheduleComputation(delay = 400) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            if (typeof persistState === 'function') persistState();
+            if (typeof persistState === 'function') persistState(getSwitchState());
             computePayroll();
         }, delay);
     }
@@ -390,20 +317,59 @@ export function createPayrollComputation({
     function cancelComputation() {
         clearTimeout(debounceTimer);
         requestSequence++;
+        skipBackendSwitchesOnNextCompute = false;
         cancelActiveRequest();
         get('payrollComputationLoading')?.classList.add('hidden');
     }
 
-    activateContributionInputListeners();
+    ['switchSss', 'switchPagibig', 'switchPhilhealth'].forEach(id => {
+        const el = get(id);
+        if (!el) return;
+
+        el.addEventListener('change', (e) => {
+            switchState[id] = e.target.checked;
+            hasReceivedInitialSwitches = true;
+
+            applySwitchStateToDOM();
+
+            if (typeof persistState === 'function') {
+                persistState(getSwitchState());
+            }
+
+            scheduleComputation(50);
+        });
+    });
+
+    const inputMapping = [
+        { inputId: 'payrollSss', stateKey: 'switchSss' },
+        { inputId: 'payrollSssEmployer', stateKey: 'switchSss' },
+        { inputId: 'payrollPagibig', stateKey: 'switchPagibig' },
+        { inputId: 'payrollPagibigEmployer', stateKey: 'switchPagibig' },
+        { inputId: 'payrollPhilhealth', stateKey: 'switchPhilhealth' },
+        { inputId: 'payrollPhilhealthEmployer', stateKey: 'switchPhilhealth' }
+    ];
+
+    inputMapping.forEach(({ inputId, stateKey }) => {
+        const el = get(inputId);
+        if (!el) return;
+
+        el.addEventListener('input', () => {
+            if (!switchState[stateKey]) {
+                if (typeof persistState === 'function') persistState(getSwitchState());
+                scheduleComputation(400);
+            }
+        });
+    });
+
+    applySwitchStateToDOM();
 
     return {
         computePayroll,
         scheduleComputation,
         cancelComputation,
         resetPreviews,
-        resetContribution,
-        clearContributionOverride,
-        getContributionOverrides,
-        restoreContributionOverrides
+        setSwitchState,
+        getSwitchState,
+        skipBackendSwitchesOnce
     };
 }
