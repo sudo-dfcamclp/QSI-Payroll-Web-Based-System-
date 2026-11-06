@@ -361,6 +361,18 @@ export function createPayrollComputation({
         });
     });
 
+    // Listener for all earning inputs to trigger computation and preview
+    panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => {
+        if (['payrollSss', 'payrollSssEmployer', 'payrollPagibig', 'payrollPagibigEmployer', 'payrollPhilhealth', 'payrollPhilhealthEmployer'].includes(input.id)) {
+            return;
+        }
+
+        input.addEventListener('input', () => {
+            if (typeof persistState === 'function') persistState(getSwitchState());
+            scheduleComputation(400);
+        });
+    });
+
     applySwitchStateToDOM();
 
     return {

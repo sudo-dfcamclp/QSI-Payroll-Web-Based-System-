@@ -100,7 +100,7 @@ class PayrollComputationService
             $deductions['philhealth_er'] = $this->num($inputs['philhealth_er'] ?? 0);
         }
 
-        // FIX: I-calculate ang total deductions gamit ang na-override na $deductions
+        // I-calculate ang total deductions gamit ang na-override na $deductions
         $totalDeductions = $this->money(
             $e['absent_deduction'] + $e['tardy_deduction'] + $otherDeductions + $overUnderPay +
             $deductions['sss_ee'] + $deductions['philhealth_ee'] + $deductions['pagibig_ee'] + 

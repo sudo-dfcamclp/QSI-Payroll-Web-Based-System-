@@ -185,17 +185,20 @@ export function initializePayrollForm(ctx, options = {}) {
         if (!saved || typeof saved !== 'object') return null;
         if (String(saved.clientId) !== clientId || String(saved.periodId) !== periodId) return null;
 
+        // Ibalik ang inputs
         Object.entries(saved.fields || {}).forEach(([id, value]) => {
             const input = get(id);
             if (input && 'value' in input) input.value = value ?? '';
         });
 
+        // Ibalik ang switches
         if (saved.switches) {
             if (get('switchSss')) get('switchSss').checked = saved.switches.deduct_sss;
             if (get('switchPagibig')) get('switchPagibig').checked = saved.switches.deduct_pagibig;
             if (get('switchPhilhealth')) get('switchPhilhealth').checked = saved.switches.deduct_philhealth;
         }
 
+        // Ibalik ang Other Deductions
         const tbody = get('payrollOtherDeductions');
         if (tbody) {
             tbody.replaceChildren();
@@ -304,9 +307,11 @@ export function initializePayrollForm(ctx, options = {}) {
     }
 
     activatePayrollTab(savedState?.activeTab === 'done' ? doneTab : pendingTab);
+
     loadEmployees();
 
     async function loadEmployees() {
+
         const pendingList = get('payrollPendingEmployees');
         const doneList = get('payrollDoneEmployees');
         const pendingCount = get('payrollPendingCount');
@@ -408,6 +413,7 @@ export function initializePayrollForm(ctx, options = {}) {
                     persistState();
 
                     if (status === 'pending') {
+                        // Ipatakbo ang compute agad kapag clinick
                         computation.computePayroll(); 
                     } else {
                         showDonePayrollNotice();
@@ -446,6 +452,13 @@ export function initializePayrollForm(ctx, options = {}) {
                 const selectedButton = [...panel.querySelectorAll('[data-employee-id]')].find(button => button.dataset.employeeId === savedSelectedEmployeeId);
                 if (selectedButton) {
                     selectedButton.click(); 
+                    
+                    // 🔑 IDINAGDAG ITO: I-trigger ang recompute pagkatapos ma-auto-click ang employee
+                    setTimeout(() => {
+                        if (view.dataset.selectedEmployeeId) {
+                            computation.computePayroll();
+                        }
+                    }, 100);
                 }
             } else {
                 view.dataset.selectedEmployeeId = '';

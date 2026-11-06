@@ -8,7 +8,7 @@
     </button>
 
     <i class="fa-solid fa-angle-right text-xs text-gray-400"></i>
-
+    
     <span
         id="employeeBreadcrumbCutoff"
         class="hidden items-center gap-2 font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
@@ -561,7 +561,7 @@
 
             <!-- COLUMN 2: EMPLOYEE SIDEBAR (ORDER-1 on Mobile) -->
             <aside class="space-y-5 xl:sticky xl:top-18 xl:self-start order-1 xl:order-2">
-                <section class="flex max-h-200 min-h-0 flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <section class="flex max-h-205 min-h-0 flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-4 flex shrink-0 items-center justify-between">
                         <div><h3 class="font-semibold text-gray-900 dark:text-white">Employees</h3><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Manage payroll employees</p></div>
                         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"><i class="fa-solid fa-users"></i></div>
