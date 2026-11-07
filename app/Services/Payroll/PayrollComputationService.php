@@ -70,7 +70,30 @@ class PayrollComputationService
         $inputs['deduct_philhealth'] = $switches['deduct_philhealth'];
 
         $e = $this->earnings->compute($inputs, $rate, $config, $ctx);
-        $deductions = $this->deductions->compute($rate, $config, $ctx, $e['gross_pay'], $e['basic_pay'], $period, $data['contribution_overrides'] ?? [], $inputs);
+        $contributionOverrides = is_array($data['contribution_overrides'] ?? null)
+            ? $data['contribution_overrides']
+            : [];
+
+        foreach ([
+            'deduct_sss' => 'sss',
+            'deduct_pagibig' => 'pagibig',
+            'deduct_philhealth' => 'philhealth',
+        ] as $switch => $contribution) {
+            if ($inputs[$switch] === false) {
+                $contributionOverrides[$contribution] = true;
+            }
+        }
+
+        $deductions = $this->deductions->compute(
+            $rate,
+            $config,
+            $ctx,
+            $e['gross_pay'],
+            $e['basic_pay'],
+            $period,
+            $contributionOverrides,
+            $inputs
+        );
 
         $taxableIncome = $e['gross_pay'];
         if (empty($config->ecola_taxable)) $taxableIncome -= $e['ecola_pay'];
@@ -81,26 +104,7 @@ class PayrollComputationService
         $otherDeductions = $this->computeOtherDeductions($inputs['other_deductions']);
         $overUnderPay = $this->money($inputs['over_under_pay']);
 
-        // Kunin ang manual inputs kapag naka-uncheck (galing sa JS payload)
-        $manualSssEe = !$switches['deduct_sss'] ? $this->num($inputs['sss_ee'] ?? 0) : 0;
-        $manualPagibigEe = !$switches['deduct_pagibig'] ? $this->num($inputs['pagibig_ee'] ?? 0) : 0;
-        $manualPhilhealthEe = !$switches['deduct_philhealth'] ? $this->num($inputs['philhealth_ee'] ?? 0) : 0;
-
-        // I-override ang deductions array para tama ang lumalabas sa UI
-        if (!$switches['deduct_sss']) {
-            $deductions['sss_ee'] = $manualSssEe;
-            $deductions['sss_er'] = $this->num($inputs['sss_er'] ?? 0);
-        }
-        if (!$switches['deduct_pagibig']) {
-            $deductions['pagibig_ee'] = $manualPagibigEe;
-            $deductions['pagibig_er'] = $this->num($inputs['pagibig_er'] ?? 0);
-        }
-        if (!$switches['deduct_philhealth']) {
-            $deductions['philhealth_ee'] = $manualPhilhealthEe;
-            $deductions['philhealth_er'] = $this->num($inputs['philhealth_er'] ?? 0);
-        }
-
-        // I-calculate ang total deductions gamit ang na-override na $deductions
+        // FIX: Direkta nang kinukuha ang total deductions mula sa binalik ng DeductionService (na-override na yung manual inputs doon)
         $totalDeductions = $this->money(
             $e['absent_deduction'] + $e['tardy_deduction'] + $otherDeductions + $overUnderPay +
             $deductions['sss_ee'] + $deductions['philhealth_ee'] + $deductions['pagibig_ee'] + 

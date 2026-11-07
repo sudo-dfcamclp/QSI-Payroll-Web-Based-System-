@@ -5,12 +5,7 @@ export function createPayrollComputation({
     let activeController = null;
     let requestSequence = 0;
 
-    const switchState = {
-        switchSss: true,
-        switchPagibig: true,
-        switchPhilhealth: true
-    };
-
+    const switchState = { switchSss: true, switchPagibig: true, switchPhilhealth: true };
     let skipBackendSwitchesOnNextCompute = false;
     let hasReceivedInitialSwitches = false;
 
@@ -42,16 +37,10 @@ export function createPayrollComputation({
     }
 
     function getSwitchState() {
-        return {
-            switchSss: switchState.switchSss,
-            switchPagibig: switchState.switchPagibig,
-            switchPhilhealth: switchState.switchPhilhealth
-        };
+        return { switchSss: switchState.switchSss, switchPagibig: switchState.switchPagibig, switchPhilhealth: switchState.switchPhilhealth };
     }
 
-    function skipBackendSwitchesOnce() {
-        skipBackendSwitchesOnNextCompute = true;
-    }
+    function skipBackendSwitchesOnce() { skipBackendSwitchesOnNextCompute = true; }
 
     function collectInputs() {
         const inputs = {};
@@ -111,18 +100,28 @@ export function createPayrollComputation({
 
     function renderDeductions(deductions = {}, contributions = {}) {
         const mapping = {
-            payrollSss: ['sss_ee'], payrollPagibig: ['pagibig_ee'], payrollPhilhealth: ['philhealth_ee'],
-            payrollSssEmployer: ['sss_er'], payrollPagibigEmployer: ['pagibig_er'], payrollPhilhealthEmployer: ['philhealth_er']
+            payrollSss: ['sss_ee', 'switchSss'], 
+            payrollPagibig: ['pagibig_ee', 'switchPagibig'], 
+            payrollPhilhealth: ['philhealth_ee', 'switchPhilhealth'],
+            payrollSssEmployer: ['sss_er', 'switchSss'], 
+            payrollPagibigEmployer: ['pagibig_er', 'switchPagibig'], 
+            payrollPhilhealthEmployer: ['philhealth_er', 'switchPhilhealth']
         };
 
-        Object.entries(mapping).forEach(([inputId, keys]) => {
+        Object.entries(mapping).forEach(([inputId, [key, switchKey]]) => {
             const input = get(inputId);
             if (!input) return;
 
+            // Kung ang user ay nagta-type pa lang sa input na ito, wag galawin.
             if (document.activeElement === input) return;
 
+            // 🔑 KUNG NAKA-UNCHECK (Manual Mode), HUWAG GALAWIN ANG INPUT.
+            // Hahayaan lang natin kung ano ang nakalagay (e.g. 900), para hindi mabura.
+            if (!switchState[switchKey]) return;
+
+            // Kung naka-check (Auto Mode), i-update base sa response.
             const source = inputId.includes('Employer') ? contributions : deductions;
-            input.value = getNumericValue(source, keys).toFixed(2);
+            input.value = getNumericValue(source, [key]).toFixed(2);
         });
 
         const wtaxInput = get('payrollWithholdingTax');
@@ -221,19 +220,11 @@ export function createPayrollComputation({
         const controller = activeController;
         const sequence = ++requestSequence;
 
-        const sentSwitchState = {
-            sss: switchState.switchSss,
-            pagibig: switchState.switchPagibig,
-            philhealth: switchState.switchPhilhealth
-        };
-
+        const sentSwitchState = { sss: switchState.switchSss, pagibig: switchState.switchPagibig, philhealth: switchState.switchPhilhealth };
         const shouldSkipBackendSwitches = skipBackendSwitchesOnNextCompute;
         skipBackendSwitchesOnNextCompute = false;
 
-        const payload = {
-            client_id: clientId, period_id: periodId, emp_id: employeeId,
-            inputs: collectInputs()
-        };
+        const payload = { client_id: clientId, period_id: periodId, emp_id: employeeId, inputs: collectInputs() };
 
         clearError();
         const loadingElement = get('payrollComputationLoading');
@@ -256,9 +247,7 @@ export function createPayrollComputation({
             try { responseData = await response.json(); } catch { throw new Error('Invalid response received.'); }
             if (!response.ok || responseData.success === false) throw new Error(getErrorMessage(responseData));
             if (sequence !== requestSequence) return;
-            if (view.dataset.selectedEmployeeId !== String(employeeId) ||
-                view.dataset.periodId !== String(periodId) ||
-                view.dataset.clientId !== String(clientId)) return;
+            if (view.dataset.selectedEmployeeId !== String(employeeId) || view.dataset.periodId !== String(periodId) || view.dataset.clientId !== String(clientId)) return;
 
             const result = responseData.data;
             if (!result || !result.summary) throw new Error('Invalid payroll computation response.');
@@ -270,10 +259,7 @@ export function createPayrollComputation({
                 hasReceivedInitialSwitches = true;
             }
 
-            const switchChangedSinceSend =
-                sentSwitchState.sss !== switchState.switchSss ||
-                sentSwitchState.pagibig !== switchState.switchPagibig ||
-                sentSwitchState.philhealth !== switchState.switchPhilhealth;
+            const switchChangedSinceSend = sentSwitchState.sss !== switchState.switchSss || sentSwitchState.pagibig !== switchState.switchPagibig || sentSwitchState.philhealth !== switchState.switchPhilhealth;
 
             if (shouldSkipBackendSwitches || switchChangedSinceSend) {
                 renderEarnings(result.earnings || {});
@@ -284,10 +270,8 @@ export function createPayrollComputation({
                 renderResult(result);
             }
 
-            if (typeof persistState === 'function') {
-                persistState(getSwitchState());
-            }
-
+            // 🔑 Tinanggal ang parameter (getSwitchState()) para hindi mag-error at tumuloy sa dispatchEvent
+            if (typeof persistState === 'function') persistState();
             view.dispatchEvent(new CustomEvent('payroll:computed', { bubbles: true, detail: result }));
 
         } catch (error) {
@@ -302,14 +286,12 @@ export function createPayrollComputation({
         }
     }
 
-    function cancelActiveRequest() {
-        if (activeController) { activeController.abort(); activeController = null; }
-    }
+    function cancelActiveRequest() { if (activeController) { activeController.abort(); activeController = null; } }
 
     function scheduleComputation(delay = 400) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            if (typeof persistState === 'function') persistState(getSwitchState());
+            if (typeof persistState === 'function') persistState();
             computePayroll();
         }, delay);
     }
@@ -325,63 +307,41 @@ export function createPayrollComputation({
     ['switchSss', 'switchPagibig', 'switchPhilhealth'].forEach(id => {
         const el = get(id);
         if (!el) return;
-
         el.addEventListener('change', (e) => {
             switchState[id] = e.target.checked;
             hasReceivedInitialSwitches = true;
-
             applySwitchStateToDOM();
-
-            if (typeof persistState === 'function') {
-                persistState(getSwitchState());
-            }
-
+            if (typeof persistState === 'function') persistState();
             scheduleComputation(50);
         });
     });
 
     const inputMapping = [
-        { inputId: 'payrollSss', stateKey: 'switchSss' },
-        { inputId: 'payrollSssEmployer', stateKey: 'switchSss' },
-        { inputId: 'payrollPagibig', stateKey: 'switchPagibig' },
-        { inputId: 'payrollPagibigEmployer', stateKey: 'switchPagibig' },
-        { inputId: 'payrollPhilhealth', stateKey: 'switchPhilhealth' },
-        { inputId: 'payrollPhilhealthEmployer', stateKey: 'switchPhilhealth' }
+        { inputId: 'payrollSss', stateKey: 'switchSss' }, { inputId: 'payrollSssEmployer', stateKey: 'switchSss' },
+        { inputId: 'payrollPagibig', stateKey: 'switchPagibig' }, { inputId: 'payrollPagibigEmployer', stateKey: 'switchPagibig' },
+        { inputId: 'payrollPhilhealth', stateKey: 'switchPhilhealth' }, { inputId: 'payrollPhilhealthEmployer', stateKey: 'switchPhilhealth' }
     ];
 
     inputMapping.forEach(({ inputId, stateKey }) => {
         const el = get(inputId);
         if (!el) return;
-
         el.addEventListener('input', () => {
             if (!switchState[stateKey]) {
-                if (typeof persistState === 'function') persistState(getSwitchState());
+                if (typeof persistState === 'function') persistState();
                 scheduleComputation(400);
             }
         });
     });
 
-    // Listener for all earning inputs to trigger computation and preview
     panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => {
-        if (['payrollSss', 'payrollSssEmployer', 'payrollPagibig', 'payrollPagibigEmployer', 'payrollPhilhealth', 'payrollPhilhealthEmployer'].includes(input.id)) {
-            return;
-        }
-
+        if (['payrollSss', 'payrollSssEmployer', 'payrollPagibig', 'payrollPagibigEmployer', 'payrollPhilhealth', 'payrollPhilhealthEmployer'].includes(input.id)) return;
         input.addEventListener('input', () => {
-            if (typeof persistState === 'function') persistState(getSwitchState());
+            if (typeof persistState === 'function') persistState();
             scheduleComputation(400);
         });
     });
 
     applySwitchStateToDOM();
 
-    return {
-        computePayroll,
-        scheduleComputation,
-        cancelComputation,
-        resetPreviews,
-        setSwitchState,
-        getSwitchState,
-        skipBackendSwitchesOnce
-    };
+    return { computePayroll, scheduleComputation, cancelComputation, resetPreviews, setSwitchState, getSwitchState, skipBackendSwitchesOnce };
 }

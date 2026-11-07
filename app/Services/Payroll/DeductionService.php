@@ -190,15 +190,16 @@ class DeductionService
             }
         }
 
-        // Manual overrides
+        // Manual overrides — FIXED: gated by BOTH employee switch (via $overrides) AND client config flag
         $manualOverrides = [
-            'sss' => ['ee' => 'sss_ee', 'er' => 'sss_er'],
-            'pagibig' => ['ee' => 'pagibig_ee', 'er' => 'pagibig_er'],
-            'philhealth' => ['ee' => 'philhealth_ee', 'er' => 'philhealth_er'],
+            'sss'        => ['ee' => 'sss_ee',        'er' => 'sss_er',        'flag' => $config->withhold_sss ?? null],
+            'pagibig'    => ['ee' => 'pagibig_ee',    'er' => 'pagibig_er',    'flag' => $config->withhold_pagibig ?? null],
+            'philhealth' => ['ee' => 'philhealth_ee', 'er' => 'philhealth_er', 'flag' => $config->withhold_philhealth ?? null],
         ];
 
         foreach ($manualOverrides as $name => $fields) {
-            if (empty($overrides[$name])) continue;
+            if (empty($overrides[$name])) continue;                        // checkbox must be OFF
+            if (!$this->isContributionEnabled($fields['flag'])) continue;  // client flag must be ON
 
             $result[$fields['ee']] = $this->money($inputs[$fields['ee']] ?? 0);
             $result[$fields['er']] = $this->money($inputs[$fields['er']] ?? 0);
