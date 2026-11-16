@@ -147,4 +147,3 @@ export function initializeSort(ctx) {
     window.addEventListener('resize', () => closeSortMenu(ctx));
     window.addEventListener('scroll', () => closeSortMenu(ctx), true);
 }
-

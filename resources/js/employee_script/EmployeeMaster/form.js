@@ -1,12 +1,15 @@
 import Swal from 'sweetalert2';
+
 export function getFields(ctx) {
     if (!ctx.dom.form) return [];
     return Array.from(ctx.dom.form.querySelectorAll('[name]')).filter(field => field.name !== 'employeeSearch');
 }
+
 export function getField(ctx, name) {
     if (!ctx.dom.form || !name) return null;
     return ctx.dom.form.querySelector(`[name="${CSS.escape(name)}"]`);
 }
+
 export function getFormDataObject(ctx) {
     const data = {};
     ctx.getFields().forEach(field => {
@@ -28,11 +31,14 @@ export function getFormDataObject(ctx) {
     });
     return data;
 }
+
 export function setFieldValue(ctx, name, value) {
     if (!ctx.dom.form || !name) return;
     const fields = Array.from(ctx.dom.form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
     if (!fields.length) return;
+    
     const first = fields[0];
+    
     if (first.type === 'radio') {
         fields.forEach(field => {
             field.checked = String(field.value) === String(value ?? '');
@@ -50,8 +56,19 @@ export function setFieldValue(ctx, name, value) {
         });
         return;
     }
-    first.value = value ?? '';
+
+    // 🔑 FIX: I-format ang date value para sa <input type="date">
+    let finalValue = value ?? '';
+
+    if (first.type === 'date' && finalValue) {
+        // Kukunin lang ang unang 10 characters (YYYY-MM-DD)
+        // Mula sa "2019-03-25T00:00:00.000000Z" → "2019-03-25"
+        finalValue = String(finalValue).split('T')[0];
+    }
+
+    first.value = finalValue;
 }
+
 export function populateForm(ctx, employee) {
     if (!employee) return;
     const fields = ['emp_id','client_id','contact_no','badge_no','nickname','last_name','first_name','middle_name','suffix_name','birth_date','birth_place','citizenship','gender','civil_status','weight','height','religion','house_no','street','barangay','district','city','town','contact','phone','primary_education','secondary_education','college','degree','major','post_grad','course','sss_no','philhealth_no','pagibig_no','tin_no','employment_status','remarks','position','branch','department','date_hired','date_resigned','start_contract','end_contract','rate_basis','month_no','hourly_rate','daily_rate','monthly_rate','date_reg','date_prob','insurance_no','agency_fee','agency','account_no','expanded_tax','allowance','with_ecol'];
@@ -74,6 +91,7 @@ export function populateForm(ctx, employee) {
     ctx.updateRateFieldState();
     ctx.setFieldState(ctx.state.mode === 'edit' || ctx.state.mode === 'add');
 }
+
 export function updateEmployeeHeader(ctx, employee) {
     if (!ctx.dom.employeeSubtitle) return;
     if (!employee) {
@@ -83,6 +101,7 @@ export function updateEmployeeHeader(ctx, employee) {
     const fullName = [employee.first_name,employee.middle_name,employee.last_name,employee.suffix_name].filter(Boolean).join(' ');
     ctx.dom.employeeSubtitle.textContent = `Employee: ${fullName || 'Unnamed Employee'}`;
 }
+
 export function clearForm(ctx) {
     if (!ctx.dom.form) return;
     ctx.dom.form.reset();
@@ -109,6 +128,7 @@ export function clearForm(ctx) {
     ctx.setFieldState(ctx.state.mode === 'edit' || ctx.state.mode === 'add');
     ctx.updateCounter();
 }
+
 export function setFieldState(ctx, enabled) {
     ctx.getFields().forEach(field => {
         if (!field) return;
@@ -174,6 +194,7 @@ export function setFieldState(ctx, enabled) {
     ctx.updateRateFieldState();
     if (!enabled) ctx.hideClientDropdown();
 }
+
 export function setSearchEnabled(ctx, enabled) {
     if (!ctx.dom.searchInput) return;
     ctx.dom.searchInput.classList.remove('cursor-text','cursor-pointer','cursor-not-allowed');
@@ -182,6 +203,7 @@ export function setSearchEnabled(ctx, enabled) {
     ctx.dom.searchInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
     if (!enabled) ctx.hideSearchResults();
 }
+
 export function setMode(ctx, newMode) {
     ctx.state.mode = newMode;
     if (newMode === 'view') {
@@ -207,6 +229,7 @@ export function setMode(ctx, newMode) {
     ctx.updateButtons();
     ctx.updateNavigationButtons();
 }
+
 export function updateButtons(ctx) {
     if (ctx.state.mode === 'view') {
         ctx.dom.employeeAddButton?.classList.remove('hidden');
@@ -234,6 +257,7 @@ export function updateButtons(ctx) {
         ctx.dom.cancelButton.classList.add('bg-red-600','hover:bg-red-700');
     }
 }
+
 export function updateCounter(ctx) {
     if (!ctx.dom.employeeCounter) return;
     if (ctx.state.searchItems.length === 0 || ctx.state.currentSearchIndex < 0) {
@@ -244,6 +268,7 @@ export function updateCounter(ctx) {
     ctx.dom.employeeCounter.textContent = `${ctx.state.currentSearchIndex + 1} of ${ctx.state.searchItems.length}`;
     ctx.updateNavigationButtons();
 }
+
 export function updateNavigationButtons(ctx) {
     const hasSelection = ctx.state.mode === 'view' && ctx.state.currentSearchIndex >= 0 && ctx.state.searchItems.length > 0;
     const canPrevious = hasSelection && ctx.state.currentSearchIndex > 0;
@@ -261,11 +286,13 @@ export function updateNavigationButtons(ctx) {
         ctx.dom.nextButton.classList.toggle('cursor-pointer',canNext);
     }
 }
+
 export function saveOriginalData(ctx) {
     ctx.state.originalData = ctx.getFormDataObject();
     ctx.state.originalClientDisplayName = ctx.state.currentClientDisplayName;
     ctx.state.originalClientPayrollConfig = ctx.state.currentClientPayrollConfig ? {...ctx.state.currentClientPayrollConfig} : null;
 }
+
 export function restoreOriginalData(ctx) {
     Object.entries(ctx.state.originalData ?? {}).forEach(([key,value]) => ctx.setFieldValue(key,value));
     ctx.state.currentClientPayrollConfig = ctx.state.originalClientPayrollConfig ? {...ctx.state.originalClientPayrollConfig} : null;
@@ -273,6 +300,7 @@ export function restoreOriginalData(ctx) {
     if (ctx.dom.clientIdDisplay) ctx.dom.clientIdDisplay.value = ctx.getField('client_id')?.value || '';
     ctx.updateRateFieldState();
 }
+
 export function hasChanges(ctx) {
     const currentData = ctx.getFormDataObject();
     const originalData = ctx.state.originalData ?? {};
@@ -284,6 +312,7 @@ export function hasChanges(ctx) {
     const photoChanged = Boolean(ctx.dom.profileInput?.files?.length);
     return fieldsChanged || clientChanged || payrollChanged || photoChanged;
 }
+
 export async function confirmCancel(ctx) {
     if (!ctx.hasChanges()) return true;
     const result = await Swal.fire({

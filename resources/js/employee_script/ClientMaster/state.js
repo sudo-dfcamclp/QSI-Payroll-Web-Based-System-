@@ -8,5 +8,6 @@ export const state = {
     searchHighlightedIndex: -1,
     clientListPage: 1,
     clientSort: 'name',
-    clientSortDirection: 'asc'
+    clientSortDirection: 'asc',
+    clientStatus: 'active' 
 };

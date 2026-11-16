@@ -17,6 +17,12 @@ export async function init(panel) {
         return;
     }
 
+    // 🔑 FIX: Dynamic APP_URL para sa profile image path
+    const APP_URL = document
+        .querySelector('meta[name="app-url"]')
+        ?.getAttribute('content')
+        ?.replace(/\/$/, '') || '';
+
     // Get API URLs
     const usersUrl = userGrid.dataset.usersUrl;
     const statusBaseUrl = userGrid.dataset.statusUrl;
@@ -193,13 +199,13 @@ export async function init(panel) {
         const status = String(user.status || 'pending').toLowerCase();
         const initials = getInitials(user.username || user.email || 'U');
 
-        // Profile picture
+        // 🔑 FIX: Gamitin ang APP_URL at i-append nang diretso ang profile path
         const profile = String(user.profile || '').trim();
-
         let profileDisplay = '';
 
         if (profile) {
-            const profileUrl = `/payroll/public/storage/${profile}`;
+            // Dinidikit natin sa APP_URL at tinatanggal ang anumang sobrang leading slash
+            const profileUrl = `${APP_URL}/${profile.replace(/^\/+/, '')}`;
 
             profileDisplay = `
                 <img
@@ -207,7 +213,7 @@ export async function init(panel) {
                     alt="${username}"
                     class="w-11 h-11 rounded-xl object-cover shrink-0"
                     loading="lazy"
-                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.classList.remove('hidden'); this.nextElementSibling.classList.add('flex');"
                 >
                 <div class="hidden w-11 h-11 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 items-center justify-center font-semibold shrink-0">
                     ${initials}
@@ -365,7 +371,6 @@ export async function init(panel) {
         const nextStatus = user.status === 'active' ? 'disabled' : 'active';
         const actionText = nextStatus === 'active' ? 'activate' : 'disable';
 
-        // Keep confirmation dialog centered.
         const theme = getSwalTheme();
 
         const result = await Swal.fire({
@@ -410,13 +415,11 @@ export async function init(panel) {
 
             await loadUsers(currentPage);
 
-            // Success notification appears in the upper-right corner.
             showToast(
                 data.message || 'User status updated successfully.',
                 'success'
             );
         } catch (error) {
-            // Error notification appears in the upper-right corner.
             showToast(
                 error.message || 'Unable to update user status.',
                 'error'
@@ -435,7 +438,6 @@ export async function init(panel) {
         let password = '';
         let confirmedPassword = '';
 
-        // Keep password form centered.
         const theme = getSwalTheme();
 
         const result = await Swal.fire({
@@ -500,13 +502,11 @@ export async function init(panel) {
                 throw new Error(getErrorMessage(data, 'Unable to reset user password.'));
             }
 
-            // Success notification appears in the upper-right corner.
             showToast(
                 data.message || 'User password reset successfully.',
                 'success'
             );
         } catch (error) {
-            // Error notification appears in the upper-right corner.
             showToast(
                 error.message || 'Unable to reset user password.',
                 'error'

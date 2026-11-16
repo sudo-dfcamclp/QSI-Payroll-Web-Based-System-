@@ -1,5 +1,10 @@
 import Swal from 'sweetalert2';
 
+const APP_URL = document
+    .querySelector('meta[name="app-url"]')
+    ?.getAttribute('content')
+    ?.replace(/\/$/, '') || '';
+
 document.addEventListener('DOMContentLoaded', () => {
     // AUTH VIEWS
     const loginView = document.getElementById('loginView');
@@ -115,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setButtonLoading(loginButton, true, 'Signing in...');
 
         try {
-            const response = await fetch('/payroll/public/api/login', {
+            const response = await fetch(`${APP_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
                 credentials: 'same-origin',

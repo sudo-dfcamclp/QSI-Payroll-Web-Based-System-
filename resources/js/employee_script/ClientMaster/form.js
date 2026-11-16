@@ -192,6 +192,13 @@ export function setFormData(ctx, data = {}) {
             }
         }
 
+        // 🔑 FIX: I-format ang date value para sa <input type="date">
+        if (field.type === 'date' && value) {
+            // Kukunin lang ang unang 10 characters (YYYY-MM-DD)
+            // Mula sa "2019-03-25T00:00:00.000000Z" → "2019-03-25"
+            value = String(value).split('T')[0];
+        }
+
         field.value = value ?? '';
     });
 }

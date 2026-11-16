@@ -1,23 +1,18 @@
+import { API } from './config.js'; // 🔑 Idinagdag para sa dynamic URLs
+
 export function getClientName(ctx, employee) {
-    return employee?.client_name ||
-        employee?.client?.client_name ||
-        '';
+    return employee?.client_name || employee?.client?.client_name || '';
 }
 
 export function updateClientDisplay(ctx, clientName) {
-    ctx.state.currentClientDisplayName =
-        clientName || '';
-
+    ctx.state.currentClientDisplayName = clientName || '';
     if (ctx.dom.clientInput) {
-        ctx.dom.clientInput.value =
-            clientName || '';
+        ctx.dom.clientInput.value = clientName || '';
     }
 }
 
 export function clearClient(ctx) {
-    const clientField =
-        ctx.getField('client_id');
-
+    const clientField = ctx.getField('client_id');
     if (clientField) {
         clientField.value = '';
         clientField.disabled = false;
@@ -33,7 +28,6 @@ export function clearClient(ctx) {
 
     ctx.state.currentClientDisplayName = '';
     ctx.state.currentClientPayrollConfig = null;
-
     ctx.hideClientDropdown();
 
     if (ctx.dom.clientList) {
@@ -44,14 +38,9 @@ export function clearClient(ctx) {
 }
 
 export function populateClient(ctx, employee) {
-    const clientField =
-        ctx.getField('client_id');
-
-    const clientName =
-        ctx.getClientName(employee);
-
-    const clientId =
-        employee?.client_id ?? '';
+    const clientField = ctx.getField('client_id');
+    const clientName = ctx.getClientName(employee);
+    const clientId = employee?.client_id ?? '';
 
     if (clientField) {
         clientField.value = clientId;
@@ -61,18 +50,14 @@ export function populateClient(ctx, employee) {
     ctx.updateClientDisplay(clientName);
 
     if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value =
-            clientId;
+        ctx.dom.clientIdDisplay.value = clientId;
     }
 
-    ctx.state.currentClientPayrollConfig =
-        employee?.payroll_config || null;
+    ctx.state.currentClientPayrollConfig = employee?.payroll_config || null;
 }
 
 export function renderClientResults(ctx, clients) {
-    if (!ctx.dom.clientList) {
-        return;
-    }
+    if (!ctx.dom.clientList) return;
 
     if (!clients.length) {
         ctx.dom.clientList.innerHTML = `
@@ -80,85 +65,69 @@ export function renderClientResults(ctx, clients) {
                 No companies found.
             </div>
         `;
-
         return;
     }
 
-    ctx.dom.clientList.innerHTML =
-        clients.map(client => {
-            const config =
-                client.payroll_config || {};
+    ctx.dom.clientList.innerHTML = clients.map(client => {
+        const config = client.payroll_config || {};
 
-            return `
-                <button
-                    type="button"
-                    data-client-id="${ctx.escapeHtml(client.client_id)}"
-                    data-client-name="${ctx.escapeHtml(client.client_name)}"
-                    data-hours-per-day="${ctx.escapeHtml(config.hours_per_day ?? '')}"
-                    data-working-days-per-month="${ctx.escapeHtml(config.working_days_per_month ?? '')}"
-                    data-working-days-per-year="${ctx.escapeHtml(config.working_days_per_year ?? '')}"
-                    class="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0">
+        return `
+            <button
+                type="button"
+                data-client-id="${ctx.escapeHtml(client.client_id)}"
+                data-client-name="${ctx.escapeHtml(client.client_name)}"
+                data-hours-per-day="${ctx.escapeHtml(config.hours_per_day ?? '')}"
+                data-working-days-per-month="${ctx.escapeHtml(config.working_days_per_month ?? '')}"
+                data-working-days-per-year="${ctx.escapeHtml(config.working_days_per_year ?? '')}"
+                class="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0">
 
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-9 h-9 shrink-0 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
-                            <i class="fa-solid fa-building text-teal-600 dark:text-teal-400 text-sm"></i>
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 shrink-0 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
+                        <i class="fa-solid fa-building text-teal-600 dark:text-teal-400 text-sm"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="text-sm font-medium text-gray-800 dark:text-white truncate">
+                            ${ctx.escapeHtml(client.client_name)}
                         </div>
 
-                        <div class="min-w-0">
-                            <div class="text-sm font-medium text-gray-800 dark:text-white truncate">
-                                ${ctx.escapeHtml(client.client_name)}
-                            </div>
-
-                            <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                Client ID: ${ctx.escapeHtml(client.client_id)}
-                            </div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                            Client ID: ${ctx.escapeHtml(client.client_id)}
                         </div>
                     </div>
-                </button>
-            `;
-        }).join('');
+                </div>
+            </button>
+        `;
+    }).join('');
 
-    ctx.dom.clientList
-        .querySelectorAll('[data-client-id]')
-        .forEach(button => {
-            button.addEventListener(
-                'click',
-                event => {
-                    event.preventDefault();
-                    event.stopPropagation();
+    ctx.dom.clientList.querySelectorAll('[data-client-id]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
 
-                    ctx.selectClient(
-                        button.dataset.clientId,
-                        button.dataset.clientName,
-                        {
-                            hours_per_day:
-                                button.dataset.hoursPerDay,
-
-                            working_days_per_month:
-                                button.dataset.workingDaysPerMonth,
-
-                            working_days_per_year:
-                                button.dataset.workingDaysPerYear
-                        }
-                    );
+            ctx.selectClient(
+                button.dataset.clientId,
+                button.dataset.clientName,
+                {
+                    hours_per_day: button.dataset.hoursPerDay,
+                    working_days_per_month: button.dataset.workingDaysPerMonth,
+                    working_days_per_year: button.dataset.workingDaysPerYear
                 }
             );
         });
+    });
 }
 
 export async function loadClients(ctx, query = '') {
-    if (!ctx.dom.clientList) {
-        return;
-    }
+    if (!ctx.dom.clientList) return;
 
     try {
-        const trimmedQuery =
-            query.trim();
+        const trimmedQuery = query.trim();
 
-        const url =
-            trimmedQuery
-                ? `${ctx.api.clients}?q=${encodeURIComponent(trimmedQuery)}`
-                : ctx.api.clients;
+        // 🔑 Ginamit ang API.clients mula sa config.js
+        const url = trimmedQuery
+            ? `${API.clients}?q=${encodeURIComponent(trimmedQuery)}`
+            : API.clients;
 
         ctx.dom.clientList.innerHTML = `
             <div class="px-4 py-4 text-sm text-center text-gray-500 dark:text-gray-400">
@@ -167,44 +136,25 @@ export async function loadClients(ctx, query = '') {
             </div>
         `;
 
-        const response = await fetch(
-            url,
-            {
-                method: 'GET',
-                headers: {
-                    'Accept':
-                        'application/json',
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        });
 
-                    'X-Requested-With':
-                        'XMLHttpRequest'
-                },
-                credentials:
-                    'same-origin'
-            }
-        );
-
-        const result =
-            await response.json();
+        const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(
-                result.message ||
-                'Unable to load companies.'
-            );
+            throw new Error(result.message || 'Unable to load companies.');
         }
 
-        const clients =
-            Array.isArray(result.data)
-                ? result.data
-                : [];
-
+        const clients = Array.isArray(result.data) ? result.data : [];
         ctx.renderClientResults(clients);
     } catch (error) {
-        console.error(
-            'Failed to load clients:',
-            error
-        );
-
+        console.error('Failed to load clients:', error);
         ctx.dom.clientList.innerHTML = `
             <div class="px-4 py-4 text-sm text-center text-red-500 dark:text-red-400">
                 Unable to load companies.
@@ -214,70 +164,34 @@ export async function loadClients(ctx, query = '') {
 }
 
 export function showClientDropdown(ctx) {
-    if (
-        !ctx.dom.clientDropdown ||
-        !ctx.dom.clientInput ||
-        ctx.dom.clientInput.disabled
-    ) {
+    if (!ctx.dom.clientDropdown || !ctx.dom.clientInput || ctx.dom.clientInput.disabled) {
         return;
     }
 
-    ctx.dom.clientDropdown.classList.remove(
-        'hidden'
-    );
-
-    ctx.dom.clientIcon?.classList.add(
-        'rotate-180'
-    );
+    ctx.dom.clientDropdown.classList.remove('hidden');
+    ctx.dom.clientIcon?.classList.add('rotate-180');
 }
 
 export function hideClientDropdown(ctx) {
-    if (!ctx.dom.clientDropdown) {
-        return;
-    }
+    if (!ctx.dom.clientDropdown) return;
 
-    ctx.dom.clientDropdown.classList.add(
-        'hidden'
-    );
-
-    ctx.dom.clientIcon?.classList.remove(
-        'rotate-180'
-    );
+    ctx.dom.clientDropdown.classList.add('hidden');
+    ctx.dom.clientIcon?.classList.remove('rotate-180');
 }
 
-export function selectClient(
-    ctx,
-    clientId,
-    clientName,
-    payrollConfig = null
-) {
-    const clientField =
-        ctx.getField('client_id');
+export function selectClient(ctx, clientId, clientName, payrollConfig = null) {
+    const clientField = ctx.getField('client_id');
 
-    if (
-        !clientField ||
-        !ctx.dom.clientInput
-    ) {
-        return;
-    }
+    if (!clientField || !ctx.dom.clientInput) return;
 
-    clientField.value =
-        clientId || '';
-
+    clientField.value = clientId || '';
     clientField.disabled = false;
-
-    ctx.dom.clientInput.value =
-        clientName || '';
-
-    ctx.state.currentClientDisplayName =
-        clientName || '';
-
-    ctx.state.currentClientPayrollConfig =
-        payrollConfig;
+    ctx.dom.clientInput.value = clientName || '';
+    ctx.state.currentClientDisplayName = clientName || '';
+    ctx.state.currentClientPayrollConfig = payrollConfig;
 
     if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value =
-            clientId || '';
+        ctx.dom.clientIdDisplay.value = clientId || '';
     }
 
     ctx.clearComputedRates();
@@ -286,60 +200,31 @@ export function selectClient(
 }
 
 export function handleClientSearchInput(ctx) {
-    if (
-        ctx.state.mode === 'view' ||
-        ctx.dom.clientInput?.disabled
-    ) {
-        return;
-    }
+    if (ctx.state.mode === 'view' || ctx.dom.clientInput?.disabled) return;
 
-    const clientField =
-        ctx.getField('client_id');
-
-    if (clientField) {
-        clientField.value = '';
-    }
-
-    if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value = '';
-    }
+    const clientField = ctx.getField('client_id');
+    if (clientField) clientField.value = '';
+    if (ctx.dom.clientIdDisplay) ctx.dom.clientIdDisplay.value = '';
 
     ctx.state.currentClientDisplayName = '';
     ctx.state.currentClientPayrollConfig = null;
 
-    clearTimeout(
-        ctx.state.clientSearchTimer
-    );
-
+    clearTimeout(ctx.state.clientSearchTimer);
     ctx.showClientDropdown();
 
-    ctx.state.clientSearchTimer =
-        setTimeout(() => {
-            ctx.loadClients(
-                ctx.dom.clientInput?.value || ''
-            );
-        }, 250);
+    ctx.state.clientSearchTimer = setTimeout(() => {
+        ctx.loadClients(ctx.dom.clientInput?.value || '');
+    }, 250);
 }
 
 export async function handleClientInputFocus(ctx) {
-    if (
-        ctx.state.mode === 'view' ||
-        ctx.dom.clientInput?.disabled
-    ) {
-        return;
-    }
+    if (ctx.state.mode === 'view' || ctx.dom.clientInput?.disabled) return;
 
     ctx.showClientDropdown();
-
-    await ctx.loadClients(
-        ctx.dom.clientInput?.value || ''
-    );
+    await ctx.loadClients(ctx.dom.clientInput?.value || '');
 }
 
-export function handleClientInputKeydown(
-    ctx,
-    event
-) {
+export function handleClientInputKeydown(ctx, event) {
     if (event.key === 'Escape') {
         event.preventDefault();
         ctx.hideClientDropdown();

@@ -157,18 +157,16 @@ export async function init(panel) {
 
     backToListButton?.addEventListener('click', async () => {
         if (state.editing) {
-            const result = await Swal.fire(
-                swalConfig({
-                    icon: 'question',
-                    title: state.creating ? 'Cancel New Client?' : 'Discard Changes?',
-                    text: 'Any unsaved changes will be discarded.',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Go Back',
-                    cancelButtonText: 'Stay Here',
-                    confirmButtonColor: '#dc2626',
-                    focusCancel: true
-                })
-            );
+            const result = await Swal.fire(swalConfig({
+                icon: 'question',
+                title: state.creating ? 'Cancel New Client?' : 'Discard Changes?',
+                text: 'Any unsaved changes will be discarded.',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Go Back',
+                cancelButtonText: 'Stay Here',
+                confirmButtonColor: '#dc2626',
+                focusCancel: true
+            }));
 
             if (!result.isConfirmed) return;
         }

@@ -1,14 +1,12 @@
-
 import { state } from './state.js';
-const API = {
-    clients: '/payroll/public/api/employee-payroll/clients',
-    cutoffs: '/payroll/public/api/employee-payroll/cutoffs'
-};
+import { API } from './config.js';
+
 function escapeHtml(value) {
     const div = document.createElement('div');
     div.textContent = value ?? '';
     return div.innerHTML;
 }
+
 function formatPayrollDate(value) {
     if (!value) return '';
     const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -20,10 +18,12 @@ function formatPayrollDate(value) {
         year: 'numeric'
     });
 }
+
 function formatCutoffPeriod(startDate, endDate) {
     if (!startDate || !endDate) return 'Date not available';
     return `${formatPayrollDate(startDate)} - ${formatPayrollDate(endDate)}`;
 }
+
 function calculatePayDate(endDate) {
     if (!endDate) return '';
     const match = String(endDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -32,11 +32,13 @@ function calculatePayDate(endDate) {
     date.setDate(date.getDate() + 5);
     return formatPayrollDate(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
 }
+
 function formatCutoffStatus(value) {
     if (value === 0 || value === '0') return 'Open';
     if (value === 1 || value === '1') return 'Closed';
     return 'Unknown';
 }
+
 function getCutoffPagination(ctx) {
     if (ctx.dom.cutoffPagination) return ctx.dom.cutoffPagination;
     let pagination = document.getElementById('payroll-cutoff-pagination');
@@ -48,20 +50,24 @@ function getCutoffPagination(ctx) {
     }
     return pagination;
 }
+
 export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
     const clientList = ctx.dom.clientList;
     if (!clientList) return;
+
     const sort = filters.sort ?? state.payrollClientSort ?? 'name';
     const direction = filters.direction ?? state.payrollClientSortDirection ?? 'asc';
     state.payrollClientSort = sort;
     state.payrollClientSortDirection = direction;
     state.payrollClientListPage = page;
+
     clientList.innerHTML = `
         <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
             <i class="fa-solid fa-spinner fa-spin mr-2"></i>
             Loading clients...
         </div>
     `;
+
     try {
         const params = new URLSearchParams({
             search: search.trim(),
@@ -70,6 +76,7 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
             sort,
             direction
         });
+
         const response = await fetch(`${API.clients}?${params.toString()}`, {
             method: 'GET',
             headers: {
@@ -78,9 +85,12 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
             },
             credentials: 'same-origin'
         });
+
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load clients.');
+
         const clients = Array.isArray(result.data) ? result.data : [];
+
         if (!clients.length) {
             clientList.innerHTML = `
                 <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -90,6 +100,7 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
             renderPagination(ctx, result.pagination || {});
             return;
         }
+
         clientList.innerHTML = clients.map(client => `
             <button type="button" class="payroll-client-card w-full text-left bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-5 py-4 hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 cursor-pointer group" data-client-id="${escapeHtml(client.client_id)}" data-client-name="${escapeHtml(client.client_name || '')}">
                 <div class="grid grid-cols-[100px_minmax(0,1fr)_24px] items-center gap-4">
@@ -103,6 +114,7 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
                 </div>
             </button>
         `).join('');
+
         clientList.querySelectorAll('.payroll-client-card').forEach(clientCard => {
             clientCard.addEventListener('click', async () => {
                 const clientId = clientCard.dataset.clientId;
@@ -111,6 +123,7 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
                     console.error('Cannot load cutoffs: client ID is missing.');
                     return;
                 }
+
                 state.payrollSelectedClientId = clientId;
                 state.payrollSelectedClientName = clientName;
                 state.payrollSelectedPeriodId = null;
@@ -119,10 +132,12 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
                 state.payrollSelectedCutoffEndDate = null;
                 state.payrollSelectedCutoffStatus = null;
                 state.payrollSelectedPayDate = null;
+
                 if (ctx.dom.cutoffSearch) ctx.dom.cutoffSearch.value = '';
                 await ctx.showCutoffList(clientId, clientName);
             });
         });
+
         renderPagination(ctx, result.pagination || {});
     } catch (error) {
         console.error('Employee Payroll client list error:', error);
@@ -134,10 +149,12 @@ export async function loadClientList(ctx, search = '', page = 1, filters = {}) {
         renderPagination(ctx, {});
     }
 }
+
 export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
     const cutoffList = ctx.dom.cutoffList;
     const pagination = getCutoffPagination(ctx);
     if (!cutoffList) return;
+
     if (!clientId) {
         cutoffList.innerHTML = `
             <div class="px-5 py-10 text-center text-sm text-red-500 dark:text-red-400">
@@ -147,8 +164,10 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
         if (pagination) pagination.innerHTML = '';
         return;
     }
+
     state.payrollCutoffListPage = page;
     state.payrollCutoffSearch = search;
+
     cutoffList.innerHTML = `
         <div class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
             <i class="fa-solid fa-spinner fa-spin mr-2"></i>
@@ -156,6 +175,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
         </div>
     `;
     if (pagination) pagination.innerHTML = '';
+
     try {
         const params = new URLSearchParams({
             client_id: String(clientId),
@@ -163,6 +183,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
             page: String(page),
             per_page: '20'
         });
+
         const response = await fetch(`${API.cutoffs}?${params.toString()}`, {
             method: 'GET',
             headers: {
@@ -171,11 +192,14 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
             },
             credentials: 'same-origin'
         });
+
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load payroll cutoffs.');
+
         const cutoffs = Array.isArray(result.data) ? result.data : [];
         const paginationData = result.pagination || {};
         ctx.currentCutoffs = cutoffs;
+
         if (!cutoffs.length) {
             ctx.currentCutoffs = [];
             cutoffList.innerHTML = `
@@ -186,6 +210,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
             renderCutoffPagination(ctx, paginationData, clientId, search);
             return;
         }
+
         cutoffList.innerHTML = cutoffs.map(cutoff => {
             const periodId = cutoff.period_id ?? '';
             const cutoffNo = cutoff.cutoff_no ?? '';
@@ -194,6 +219,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
             const status = cutoff.status ?? null;
             const statusLabel = formatCutoffStatus(status);
             const payDate = cutoff.pay_date ? formatPayrollDate(cutoff.pay_date) : calculatePayDate(endDate);
+
             return `
                 <button type="button" class="payroll-cutoff-card w-full text-left bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-5 py-4 hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 cursor-pointer group" data-period-id="${escapeHtml(periodId)}" data-cutoff-no="${escapeHtml(cutoffNo)}" data-start-date="${escapeHtml(startDate)}" data-end-date="${escapeHtml(endDate)}" data-status="${escapeHtml(status ?? '')}" data-pay-date="${escapeHtml(cutoff.pay_date ?? '')}">
                     <div class="grid grid-cols-[100px_minmax(0,1fr)_180px_auto_24px] items-center gap-4">
@@ -212,6 +238,7 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
                 </button>
             `;
         }).join('');
+
         cutoffList.querySelectorAll('.payroll-cutoff-card').forEach(cutoffCard => {
             cutoffCard.addEventListener('click', () => {
                 const periodId = cutoffCard.dataset.periodId;
@@ -220,15 +247,18 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
                     console.error('Selected cutoff was not found.');
                     return;
                 }
+
                 state.payrollSelectedPeriodId = cutoff.period_id;
                 state.payrollSelectedCutoffNo = cutoff.cutoff_no;
                 state.payrollSelectedCutoffStartDate = cutoff.start_date;
                 state.payrollSelectedCutoffEndDate = cutoff.end_date;
                 state.payrollSelectedCutoffStatus = cutoff.status;
                 state.payrollSelectedPayDate = cutoff.pay_date;
+
                 ctx.showPayrollTransaction(cutoff);
             });
         });
+
         renderCutoffPagination(ctx, paginationData, clientId, search);
     } catch (error) {
         console.error('Employee Payroll cutoff list error:', error);
@@ -240,18 +270,22 @@ export async function loadCutoffList(ctx, clientId, search = '', page = 1) {
         if (pagination) pagination.innerHTML = '';
     }
 }
+
 function renderCutoffPagination(ctx, paginationData = {}, clientId, search = '') {
     const pagination = getCutoffPagination(ctx);
     if (!pagination) return;
+
     const currentPage = Number(paginationData.current_page || 1);
     const lastPage = Number(paginationData.last_page || 1);
     const total = Number(paginationData.total || 0);
     const from = Number(paginationData.from || 0);
     const to = Number(paginationData.to || 0);
+
     if (!total) {
         pagination.innerHTML = '';
         return;
     }
+
     if (lastPage <= 1) {
         pagination.innerHTML = `
             <div class="text-center text-xs text-gray-500 dark:text-gray-400 py-2">
@@ -260,6 +294,7 @@ function renderCutoffPagination(ctx, paginationData = {}, clientId, search = '')
         `;
         return;
     }
+
     const pages = [];
     if (lastPage <= 7) {
         for (let page = 1; page <= lastPage; page++) pages.push(page);
@@ -272,6 +307,7 @@ function renderCutoffPagination(ctx, paginationData = {}, clientId, search = '')
         if (currentPage < lastPage - 3) pages.push('...');
         pages.push(lastPage);
     }
+
     pagination.innerHTML = `
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 py-2">
             <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -289,6 +325,7 @@ function renderCutoffPagination(ctx, paginationData = {}, clientId, search = '')
             </div>
         </div>
     `;
+
     pagination.querySelectorAll('.payroll-cutoff-page').forEach(button => {
         button.addEventListener('click', () => {
             if (button.disabled) return;
@@ -298,10 +335,12 @@ function renderCutoffPagination(ctx, paginationData = {}, clientId, search = '')
         });
     });
 }
+
 export function initializeCutoffSearch(ctx) {
     const cutoffSearch = ctx.dom.cutoffSearch;
     if (!cutoffSearch || cutoffSearch.dataset.initialized === 'true') return;
     cutoffSearch.dataset.initialized = 'true';
+
     let searchTimeout;
     cutoffSearch.addEventListener('input', () => {
         clearTimeout(searchTimeout);
@@ -311,18 +350,22 @@ export function initializeCutoffSearch(ctx) {
         }, 300);
     });
 }
+
 function renderPagination(ctx, paginationData = {}) {
     const pagination = ctx.dom.clientPagination;
     if (!pagination) return;
+
     const currentPage = Number(paginationData.current_page || 1);
     const lastPage = Number(paginationData.last_page || 1);
     const total = Number(paginationData.total || 0);
     const from = Number(paginationData.from || 0);
     const to = Number(paginationData.to || 0);
+
     if (!total) {
         pagination.innerHTML = '';
         return;
     }
+
     if (lastPage <= 1) {
         pagination.innerHTML = `
             <div class="text-center text-xs text-gray-500 dark:text-gray-400 py-2">
@@ -331,6 +374,7 @@ function renderPagination(ctx, paginationData = {}) {
         `;
         return;
     }
+
     const pages = [];
     if (lastPage <= 7) {
         for (let page = 1; page <= lastPage; page++) pages.push(page);
@@ -343,6 +387,7 @@ function renderPagination(ctx, paginationData = {}) {
         if (currentPage < lastPage - 3) pages.push('...');
         pages.push(lastPage);
     }
+
     pagination.innerHTML = `
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 py-2">
             <div class="text-xs text-gray-500 dark:text-gray-400 py-2">
@@ -360,6 +405,7 @@ function renderPagination(ctx, paginationData = {}) {
             </div>
         </div>
     `;
+
     pagination.querySelectorAll('.payroll-client-page').forEach(button => {
         button.addEventListener('click', () => {
             if (button.disabled) return;

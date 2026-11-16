@@ -1,4 +1,5 @@
 import Swal from 'sweetalert2';
+import { API } from './config.js';
 
 export function showListingView(ctx) {
     ctx.dom.listingView?.classList.remove('hidden');
@@ -254,7 +255,7 @@ export function renderEmployeeList(ctx, employees) {
                     throw new Error('CSRF token was not found. Please refresh the page.');
                 }
 
-                const response = await fetch(`/payroll/public/api/employee-master/${encodeURIComponent(employeeId)}`, {
+                const response = await fetch(`${API.employee}/${encodeURIComponent(employeeId)}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
@@ -332,7 +333,7 @@ export async function loadEmployeeList(ctx, search = '', page = 1) {
         params.set('direction', ctx.state.employeeSortDirection);
         params.set('status', ctx.state.employeeStatus);
 
-        const response = await fetch(`${ctx.api.list}?${params.toString()}`, {
+        const response = await fetch(`${API.list}?${params.toString()}`, {  
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -401,4 +402,3 @@ export async function loadEmployeeFromList(ctx, employeeId) {
         });
     }
 }
-

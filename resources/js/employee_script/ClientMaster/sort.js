@@ -18,16 +18,16 @@ function getClientStatus() {
 
 export function closeSortMenu(ctx) {
     document.querySelector('#clientSortMenu')?.remove();
-    ctx.dom.clientSortButton?.setAttribute('aria-expanded','false');
+    ctx.dom.clientSortButton?.setAttribute('aria-expanded', 'false');
 }
 
-export function applyClientStatus(ctx,status) {
+export function applyClientStatus(ctx, status) {
     if (status !== 'active' && status !== 'archive') {
         status = 'active';
     }
 
     state.clientStatus = status;
-    localStorage.setItem(CLIENT_STATUS_STORAGE_KEY,status);
+    localStorage.setItem(CLIENT_STATUS_STORAGE_KEY, status);
     state.clientListPage = 1;
 
     closeSortMenu(ctx);
@@ -38,7 +38,7 @@ export function applyClientStatus(ctx,status) {
     );
 }
 
-export function applyClientSort(ctx,sort,direction) {
+export function applyClientSort(ctx, sort, direction) {
     state.clientSort = sort;
     state.clientSortDirection = direction;
     state.clientListPage = 1;
@@ -52,7 +52,7 @@ export function applyClientSort(ctx,sort,direction) {
 }
 
 export function createSortMenu(ctx) {
-    ctx.closeActionMenus();
+    // 🔑 Inalis ang ctx.closeActionMenus() at ginamit lang ang closeSortMenu
     closeSortMenu(ctx);
 
     const clientSortButton = ctx.dom.clientSortButton;
@@ -216,10 +216,10 @@ export function createSortMenu(ctx) {
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
 
-    clientSortButton.setAttribute('aria-expanded','true');
+    clientSortButton.setAttribute('aria-expanded', 'true');
 
     menu.querySelectorAll('.client-sort-option').forEach(option => {
-        option.addEventListener('click',event => {
+        option.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
 
@@ -232,7 +232,7 @@ export function createSortMenu(ctx) {
     });
 
     menu.querySelectorAll('.client-status-option').forEach(option => {
-        option.addEventListener('click',event => {
+        option.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
 
@@ -248,7 +248,7 @@ export function createSortMenu(ctx) {
     const letterTrigger = menu.querySelector('.client-sort-letter-trigger');
     const letterMenu = menu.querySelector('#clientSortLetterMenu');
 
-    statusTrigger?.addEventListener('click',event => {
+    statusTrigger?.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
 
@@ -256,7 +256,7 @@ export function createSortMenu(ctx) {
         statusMenu?.classList.toggle('hidden');
     });
 
-    letterTrigger?.addEventListener('click',event => {
+    letterTrigger?.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
 
@@ -266,7 +266,7 @@ export function createSortMenu(ctx) {
 }
 
 export function initializeSort(ctx) {
-    ctx.dom.clientSortButton?.addEventListener('click',event => {
+    ctx.dom.clientSortButton?.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
 

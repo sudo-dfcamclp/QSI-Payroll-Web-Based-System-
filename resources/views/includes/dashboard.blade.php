@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-url" content="{{ url('/') }}">
     <meta name="auth-permissions-url" content="{{ route('api.auth.permissions') }}">
     <meta name="role-management-users-url" content="{{ route('api.admin.role-management.users') }}">
     <meta name="role-management-roles-url" content="{{ route('api.admin.role-management.roles') }}">
