@@ -1,7 +1,7 @@
 import Swal from 'sweetalert2';
 import { state } from './state.js';
 import { escapeHtml, swalConfig } from './helpers.js';
-import { API } from './config.js'; // 🔑 Idinagdag
+import { API } from './config.js';
 
 export function showListingView(ctx) {
     ctx.dom.formView?.classList.add('hidden');
@@ -27,10 +27,105 @@ function getClientPaginationContainer(ctx) {
 
 function renderClientPagination(ctx, meta) {
     const container = getClientPaginationContainer(ctx);
-    if (!meta || !meta.total) { container.innerHTML = ''; return; }
-    // ... (existing pagination code - walang binago)
-}
 
+    if (!container) {
+        console.warn('Client pagination container was not found.');
+        return;
+    }
+
+    const currentPage = Number(meta?.current_page || 1);
+    const lastPage = Number(meta?.last_page || 1);
+    const total = Number(meta?.total || 0);
+    const from = Number(meta?.from || 0);
+    const to = Number(meta?.to || 0);
+
+    state.clientListPage = currentPage;
+    state.clientListLastPage = lastPage;
+    state.clientListTotal = total;
+
+    if (total <= 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const pages = [];
+
+    if (lastPage <= 7) {
+        for (let page = 1; page <= lastPage; page++) {
+            pages.push(page);
+        }
+    } else {
+        pages.push(1);
+
+        if (currentPage > 4) {
+            pages.push('...');
+        }
+
+        const startPage = Math.max(2, currentPage - 2);
+        const endPage = Math.min(lastPage - 1, currentPage + 2);
+
+        for (let page = startPage; page <= endPage; page++) {
+            pages.push(page);
+        }
+
+        if (currentPage < lastPage - 3) {
+            pages.push('...');
+        }
+
+        pages.push(lastPage);
+    }
+
+    container.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="text-xs text-gray-500 dark:text-gray-400 text-left">
+                Showing
+                <span class="font-semibold text-gray-700 dark:text-gray-200">${from}</span>
+                to
+                <span class="font-semibold text-gray-700 dark:text-gray-200">${to}</span>
+                of
+                <span class="font-semibold text-gray-700 dark:text-gray-200">${total}</span>
+                clients
+            </div>
+            <div class="flex items-center gap-1 sm:ml-auto">
+                <button type="button" class="client-pagination-button inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${currentPage <= 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Previous page">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                ${pages.map(page => {
+                    if (page === '...') {
+                        return `
+                            <span class="inline-flex items-center justify-center w-8 h-8 text-xs text-gray-400 dark:text-gray-500">...</span>
+                        `;
+                    }
+
+                    const isActive = page === currentPage;
+
+                    return `
+                        <button type="button" class="client-pagination-button inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-medium transition-colors ${isActive ? 'bg-green-600 text-white cursor-default' : 'border border-gray-300 dark:border-gray-500 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer'}" data-page="${page}" ${isActive ? 'disabled' : ''} aria-label="Go to page ${page}">
+                            ${page}
+                        </button>
+                    `;
+                }).join('')}
+                <button type="button" class="client-pagination-button inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${currentPage >= lastPage ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" data-page="${currentPage + 1}" ${currentPage >= lastPage ? 'disabled' : ''} aria-label="Next page">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    container.querySelectorAll('.client-pagination-button').forEach(button => {
+        button.addEventListener('click', event => {
+            event.preventDefault();
+
+            const page = Number(button.dataset.page);
+
+            if (!page || page < 1 || page > lastPage || page === currentPage) {
+                return;
+            }
+
+            loadClientList(ctx, ctx.dom.clientListSearch?.value || '', page);
+        });
+    });
+}
 export async function loadClientList(ctx, search = '', page = 1) {
     state.clientListPage = page;
     if (!state.clientStatus) state.clientStatus = 'active';
@@ -44,7 +139,6 @@ export async function loadClientList(ctx, search = '', page = 1) {
     });
 
     try {
-        // 🔑 Ginamit ang API.clients mula sa config.js
         const response = await fetch(`${API.clients}?${params.toString()}`, {
             method: 'GET',
             headers: {
