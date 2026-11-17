@@ -1,26 +1,75 @@
 <body class="bg-gray-100 dark:bg-gray-800 min-h-screen">
 
+    <!-- Smooth recessed/pressed state for EMPLOYEE list only -->
+    <style>
+        .employee-box.list-item-pressable {
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            transform: translateY(0) scale(1);
+            transition:
+                background-color 180ms ease,
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                transform 180ms ease;
+        }
+
+        .employee-box.list-item-pressable:hover:not(.active) {
+            background-color: #f9fafb;
+        }
+
+        .employee-box.list-item-pressable.active {
+            background-color: #f3f4f6;
+            border-color: #e5e7eb;
+            box-shadow: inset 0 2px 5px rgba(17, 24, 39, 0.16),
+                        inset 0 1px 2px rgba(17, 24, 39, 0.08);
+            transform: translateY(1px) scale(0.995);
+        }
+
+        .dark .employee-box.list-item-pressable {
+            background-color: #374151;
+            border-color: #4b5563;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+        }
+
+        .dark .employee-box.list-item-pressable:hover:not(.active) {
+            background-color: #4b5563;
+        }
+
+        .dark .employee-box.list-item-pressable.active {
+            background-color: #1f2937;
+            border-color: #374151;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.38),
+                        inset 0 1px 2px rgba(0, 0, 0, 0.22);
+            transform: translateY(1px) scale(0.995);
+        }
+    </style>
+
     <!-- Main Application Content -->
     <main id="mainContent" class="min-h-screen transition-all duration-300">
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-            <!-- 1. BACK BUTTON (Hindi na sticky, normal scroll) -->
-            <div class="pt-6 pb-4">
-                <button type="button" class="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
+            <!-- 1. DYNAMIC HEADER (Breadcrumbs / Back Button) -->
+            <div class="pt-6 pb-4 flex items-center gap-2">
+                <!-- Back to Client Link (Clickable) -->
+                <a href="#" id="headerBackToClient" class="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors cursor-pointer">
                     <i class="fa-solid fa-arrow-left mr-2"></i>Back to Client
-                </button>
+                </a>
+
+                <!-- Page Title (Lalabas lang pag nasa Employee View) -->
+                <span id="headerBreadcrumbSeparator" class="hidden text-gray-400 dark:text-gray-500 text-sm mx-1">></span>
+                <span id="headerPageTitle" class="hidden text-sm font-semibold text-gray-800 dark:text-gray-100">Employee Deduction</span>
             </div>
 
             <!-- 2. STICKY CONTAINER (Search Bar + Add Deduction Button) -->
-            <div class="sticky top-16 z-50 py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur-sm">
-                
+            <div class="sticky top-16 z-30 py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur-sm">
+
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                    
+
                     <!-- Search Bar -->
                     <div class="relative flex-1 w-full">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm pointer-events-none"></i>
-                        <input type="text" placeholder="Search..." autocomplete="off" class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+                        <input type="text" id="searchInput" placeholder="Search..." autocomplete="off" class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
                     </div>
 
                     <!-- Add Deduction Button (Right side) -->
@@ -35,132 +84,88 @@
             <!-- 3. DIVIDER (Inihiwalay sa sticky, nasa taas na ng grid) -->
             <div class="w-full border-t border-gray-300 dark:border-gray-600 mt-2 mb-4"></div>
 
-            <!-- 4. DASHBOARD GRID (Pantay ang height) -->
-            <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[300px_1fr] gap-4 sm:gap-5 lg:gap-6 pb-10 items-stretch">
+            <!-- 4. DASHBOARD GRID (Pantay ang height, nag-a-adjust base sa content) -->
+            <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[330px_1fr] gap-4 sm:gap-5 lg:gap-6 pb-10 items-stretch">
 
-                <!-- LEFT COLUMN (Box List + Pagination) - WALANG BINAGO DITO -->
+                <!-- LEFT COLUMN (Box List + Pagination) -->
                 <div class="w-full max-w-full md:max-w-none flex flex-col h-full justify-between">
-                    
-                    <!-- Modern Box List -->
-                    <div class="flex flex-col gap-2 w-full flex-1">
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
-                        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 px-4 py-3 h-10 transition-colors hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"></div>
+
+                    <!-- Dynamic Box List: Client + Employee (WALANG SCROLL, NATURAL HEIGHT) -->
+                    <div class="flex flex-col gap-1 w-full relative">
+
+                        <!-- Client list (JS renders here) -->
+                        <div id="clientListContainer" class="flex flex-col gap-1.5 w-full">
+                            <p class="text-gray-400 text-[10px] text-center py-2">Loading clients...</p>
+                        </div>
+
+                        <!-- Employee list (HIDDEN by default, JS renders here) -->
+                        <div id="employeeListContainer" class="hidden flex-col gap-1.5 w-full"></div>
+
                     </div>
 
-                    <!-- STATIC PAGINATION (Gaya sa script mo) -->
-                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                        <div class="flex flex-col gap-3">
-                            <!-- Text Info -->
-                            <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                                Showing <span class="font-semibold text-gray-700 dark:text-gray-200">1</span> to <span class="font-semibold text-gray-700 dark:text-gray-200">15</span> of <span class="font-semibold text-gray-700 dark:text-gray-200">120</span> clients
-                            </div>
-                            
-                            <!-- Buttons -->
-                            <div class="flex items-center justify-center gap-1">
-                                <!-- Previous Button -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors opacity-50 cursor-not-allowed" disabled aria-label="Previous page">
-                                    <i class="fa-solid fa-chevron-left text-xs"></i>
-                                </button>
-                                
-                                <!-- Page 1 (Active) -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-medium bg-green-600 text-white cursor-default" disabled aria-label="Go to page 1">
-                                    1
-                                </button>
-                                
-                                <!-- Page 2 -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors" aria-label="Go to page 2">
-                                    2
-                                </button>
-                                
-                                <!-- Page 3 -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors" aria-label="Go to page 3">
-                                    3
-                                </button>
-                                
-                                <!-- Ellipsis -->
-                                <span class="inline-flex items-center justify-center w-8 h-8 text-xs text-gray-400 dark:text-gray-500">...</span>
-                                
-                                <!-- Last Page -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors" aria-label="Go to page 8">
-                                    8
-                                </button>
-                                
-                                <!-- Next Button -->
-                                <button type="button" class="inline-flex items-center justify-center w-8 h-8 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer" aria-label="Next page">
-                                    <i class="fa-solid fa-chevron-right text-xs"></i>
-                                </button>
-                            </div>
-                        </div>
+                    <!-- Dynamic Pagination Containers -->
+                    <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+
+                        <!-- Client pagination (JS renders here) -->
+                        <div id="clientPaginationContainer"></div>
+
+                        <!-- Employee pagination (HIDDEN by default, JS renders here) -->
+                        <div id="employeePaginationContainer" class="hidden mt-2"></div>
+
                     </div>
 
                 </div>
 
-                <!-- RIGHT COLUMN (Top, Middle, Bottom) - BAGO ANG DESIGN -->
+                <!-- RIGHT COLUMN (Top, Middle, Bottom) -->
                 <div class="flex flex-col gap-4 sm:gap-5 lg:gap-6 w-full h-full">
 
                     <!-- RIGHT TOP BOX (Employee Information) -->
-                    <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-5">
+                    <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-4">
                         <!-- Header -->
-                        <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-600 pb-4 mb-4">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                                <i class="fa-solid fa-user-tie text-lg"></i>
+                        <div class="flex items-center border-b border-gray-100 dark:border-gray-600 pb-3 mb-3">
+                            <!-- Left Side: Name and Contract -->
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <i class="fa-solid fa-user-tie text-base"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 id="displayEmpName" class="font-semibold text-gray-900 dark:text-white text-sm truncate">—</h3>
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Start and End Contract Date</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">Employee Information</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Personal and contract details</p>
+
+                            <!-- Right Side: naka-center sa natitirang espasyo -->
+                            <div class="flex flex-1 justify-center">
+                                <div class="flex flex-col gap-1.5 shrink-0 border-l border-gray-200 dark:border-gray-600 pl-4 min-w-[160px]">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 leading-tight">Employment Status</p>
+                                        <p id="displayEmpStatus" class="text-xs font-semibold text-gray-800 dark:text-gray-100 ml-2">—</p>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 leading-tight">Months Hired</p>
+                                        <p id="displayMonthsHired" class="text-xs font-semibold text-gray-800 dark:text-gray-100 ml-2">—</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Details Grid -->
-                        <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Employee Name</dt>
-                                <dd id="displayEmpName" class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">—</dd>
+                        <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-1.5">
+                                <dt class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Basis</dt>
+                                <dd id="displayPaymentBasis" class="mt-0.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate">—</dd>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Employment Status</dt>
-                                <dd id="displayEmpStatus" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-1.5">
+                                <dt class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Monthly Rate</dt>
+                                <dd id="displayMonthlyRate" class="mt-0.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate">—</dd>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Payment Basis</dt>
-                                <dd id="displayPaymentBasis" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-1.5">
+                                <dt class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Daily Rate</dt>
+                                <dd id="displayDailyRate" class="mt-0.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate">—</dd>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Monthly Rate</dt>
-                                <dd id="displayMonthlyRate" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Daily Rate</dt>
-                                <dd id="displayDailyRate" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Hourly Rate</dt>
-                                <dd id="displayHourlyRate" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">Start Contract</dt>
-                                <dd id="displayStartContract" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">End Contract</dt>
-                                <dd id="displayEndContract" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                <dt class="text-xs text-gray-500 dark:text-gray-400">No. of Months Hired</dt>
-                                <dd id="displayMonthsHired" class="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">—</dd>
+                            <div class="bg-gray-50 dark:bg-gray-800 rounded-md px-3 py-1.5">
+                                <dt class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Hourly Rate</dt>
+                                <dd id="displayHourlyRate" class="mt-0.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate">—</dd>
                             </div>
                         </dl>
                     </div>

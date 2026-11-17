@@ -7,6 +7,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ClientMasterController;
+use App\Http\Controllers\EmployeeDeductionController;
 use App\Http\Controllers\EmployeeMasterController;
 use App\Http\Controllers\ClientPayrollController;
 use App\Http\Controllers\PayrollCutoffController;
@@ -123,10 +124,59 @@ Route::middleware('auth')->group(function () {
     // EMPLOYEE DEDUCTION
     // =========================================================
 
+    // =========================================================
+    // EMPLOYEE DEDUCTION
+    // =========================================================
+
+    // Page
     Route::get('/employee/employee-deduction', function () {
         return view('employee.employee-deduction');
     })->name('employee.deduction');
 
+    // Client list (left box)
+    Route::get('/api/employee-deduction/clients',
+        [EmployeeDeductionController::class, 'clients']
+    )->name('api.employee-deduction.clients');
+
+    // Employee list by client (left box, after client click)
+    Route::get('/api/employee-deduction/clients/{client_id}/employees',
+        [EmployeeDeductionController::class, 'employeesByClient']
+    )->name('api.employee-deduction.employees');
+
+    // Employee details (top box)
+    Route::get('/api/employee-deduction/employees/{emp_id}',
+        [EmployeeDeductionController::class, 'showEmployee']
+    )->name('api.employee-deduction.employee.show');
+
+    // Deduction types
+    Route::get('/api/employee-deduction/types',
+        [EmployeeDeductionController::class, 'types']
+    )->name('api.employee-deduction.types');
+
+    // Deductions by employee
+    Route::get('/api/employee-deduction/deductions',
+        [EmployeeDeductionController::class, 'index']
+    )->name('api.employee-deduction.index');
+
+    // Create deduction
+    Route::post('/api/employee-deduction/deductions',
+        [EmployeeDeductionController::class, 'store']
+    )->name('api.employee-deduction.store');
+
+    // Update deduction (e.g., stop / unstop)
+    Route::put('/api/employee-deduction/deductions/{id}',
+        [EmployeeDeductionController::class, 'update']
+    )->name('api.employee-deduction.update');
+
+    // Delete deduction
+    Route::delete('/api/employee-deduction/deductions/{id}',
+        [EmployeeDeductionController::class, 'destroy']
+    )->name('api.employee-deduction.destroy');
+
+    // Payment history
+    Route::get('/api/employee-deduction/payments',
+        [EmployeeDeductionController::class, 'payments']
+    )->name('api.employee-deduction.payments');
     // =========================================================
     // EMPLOYEE PAYROLL
     // =========================================================
