@@ -42,16 +42,20 @@ function showClientView(panel) {
     panel.querySelector('#headerPageTitle')?.classList.add('hidden');
 }
 
-function showEmployeeView(panel) {
+function showEmployeeView(panel, clientName) {
     panel.querySelector('#clientListContainer')?.classList.add('hidden');
     panel.querySelector('#clientPaginationContainer')?.classList.add('hidden');
     panel.querySelector('#employeeListContainer')?.classList.remove('hidden');
     panel.querySelector('#employeePaginationContainer')?.classList.remove('hidden');
 
-    // Breadcrumb: Back to Client > (employee name appears only after selection)
+    // Breadcrumb: Client Name >
     const backButton = panel.querySelector('#headerBackToClient');
+
     if (backButton) {
-        backButton.innerHTML = '<i class="fa-solid fa-arrow-left mr-1"></i> Back to Client';
+        backButton.innerHTML = `
+            <i class="fa-solid fa-arrow-left mr-1"></i>
+            ${escapeHtml(clientName)}
+        `;
         backButton.classList.remove('hidden');
     }
 
@@ -192,7 +196,9 @@ function renderClients(panel, clients) {
         <div class="client-box bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-100
                     dark:border-gray-600 px-3 h-9 flex items-center cursor-pointer
                     text-xs font-medium text-gray-800 dark:text-gray-100 truncate"
-             data-client-id="${c.client_id}" title="${escapeHtml(c.client_name)}">
+             data-client-id="${c.client_id}"
+            data-client-name="${escapeHtml(c.client_name)}"
+            title="${escapeHtml(c.client_name)}">
             ${escapeHtml(c.client_name)}
         </div>
     `).join('');
@@ -217,7 +223,8 @@ async function onClientClick(panel, box) {
     state.employeeSearch = '';
 
     // Palitan ang view bago mag load
-    showEmployeeView(panel);
+   const clientName = box.dataset.clientName;
+    showEmployeeView(panel, clientName);
     await loadEmployees(panel, clientId, 1);
 
     resetEmployeeInfo(panel);
@@ -264,9 +271,10 @@ function renderEmployees(panel, employees) {
 
     container.innerHTML = employees.map(e => `
         <div class="employee-box bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-100
-                    dark:border-gray-600 px-3 h-9 flex items-center cursor-pointer list-item-pressable
-                    text-xs font-medium text-gray-800 dark:text-gray-100 truncate"
-             data-emp-id="${e.emp_id}">
+                    dark:border-gray-600 px-3 h-9 flex items-center cursor-pointer
+                    text-xs font-medium text-gray-800 dark:text-gray-100 truncate
+                    transition-all duration-200 ease-in-out"
+            data-emp-id="${e.emp_id}">
             ${escapeHtml(e.full_name)}
         </div>
     `).join('');
@@ -285,12 +293,51 @@ function renderEmployeePagination(panel, meta, clientId) {
 // Employee Details & Deductions
 // ---------------------------------------------------------
 async function onEmployeeClick(panel, box) {
-    panel.querySelectorAll('.employee-box.active').forEach(b => b.classList.remove('active'));
-    box.classList.add('active');
+
+    // Remove active styling from previous employee.
+    panel.querySelectorAll('.employee-box.active').forEach(b => {
+        b.classList.remove(
+            'active',
+            'bg-green-600',
+            'dark:bg-green-600',
+            'border-green-500',
+            'text-white',
+            'font-semibold'
+        );
+
+        // Restore default styling.
+        b.classList.add(
+            'bg-white',
+            'dark:bg-gray-700',
+            'border-gray-100',
+            'dark:border-gray-600',
+            'text-gray-800',
+            'dark:text-gray-100'
+        );
+    });
+
+    // Apply green styling to selected employee.
+    box.classList.add(
+        'active',
+        'bg-green-600',
+        'dark:bg-green-600',
+        'border-green-500',
+        'text-white',
+        'font-semibold'
+    );
+
+    // Remove default styling from selected employee.
+    box.classList.remove(
+        'bg-white',
+        'dark:bg-gray-700',
+        'border-gray-100',
+        'dark:border-gray-600',
+        'text-gray-800',
+        'dark:text-gray-100'
+    );
 
     const empId = box.dataset.empId;
 
-    // Show selected employee name in the breadcrumb.
     const pageTitle = panel.querySelector('#headerPageTitle');
     if (pageTitle) {
         pageTitle.textContent = box.textContent.trim();
