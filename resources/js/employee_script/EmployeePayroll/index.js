@@ -1,3 +1,4 @@
+
 import { state } from './state.js';
 
 import {
@@ -11,10 +12,12 @@ import { initializeSort } from './sort.js';
 import { initializePayrollForm } from './payrollform.js';
 
 import {
-    savePayrollState,
-    loadPayrollState,
-    clearPayrollState
-} from './localstorage.js';
+    saveModuleState,
+    getModuleState,
+    clearModuleState
+} from '../../components/localstorage.js';
+
+const PAYROLL_STORAGE_KEY = 'payrollTransaction';
 
 // BARREL EXPORTS
 export {
@@ -188,7 +191,7 @@ export function init(panel) {
             state.payrollSelectedPeriodId = null;
             state.payrollSelectedCutoff = null;
 
-            savePayrollState({
+            saveModuleState(PAYROLL_STORAGE_KEY, {
                 currentStep: 'cutoff',
                 clientId: String(clientId),
                 clientName: clientName || '',
@@ -217,8 +220,12 @@ export function init(panel) {
 
         // SHOW CLIENT LIST
         showClientList() {
-            savePayrollState({
-                currentStep: 'client-list'
+            saveModuleState(PAYROLL_STORAGE_KEY, {
+                currentStep: 'client-list',
+                clientId: null,
+                clientName: '',
+                periodId: null,
+                cutoff: null
             });
 
             state.payrollSelectedClientId = null;
@@ -256,7 +263,7 @@ export function init(panel) {
             state.payrollSelectedCutoffStatus = cutoff.status ?? null;
             state.payrollSelectedPayDate = cutoff.pay_date ?? null;
 
-            savePayrollState({
+            saveModuleState(PAYROLL_STORAGE_KEY, {
                 currentStep: 'payroll-form',
                 clientId: String(clientId),
                 clientName,
@@ -337,7 +344,7 @@ export function init(panel) {
 
     // RESTORE NAVIGATION
     async function restoreNavigation() {
-        const saved = loadPayrollState();
+        const saved = getModuleState(PAYROLL_STORAGE_KEY);
 
         await ctx.loadClientList('', 1);
 
@@ -351,7 +358,7 @@ export function init(panel) {
         }
 
         if (!saved.clientId) {
-            clearPayrollState();
+            clearModuleState(PAYROLL_STORAGE_KEY);
             ctx.showClientList();
             return;
         }
@@ -370,7 +377,7 @@ export function init(panel) {
 
         if (saved.currentStep === 'payroll-form') {
             if (!cutoff) {
-                savePayrollState({
+                saveModuleState(PAYROLL_STORAGE_KEY, {
                     currentStep: 'cutoff',
                     clientId: String(saved.clientId),
                     clientName: saved.clientName || '',

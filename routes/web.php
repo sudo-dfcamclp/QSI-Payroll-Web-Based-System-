@@ -320,6 +320,15 @@ Route::middleware('auth')->group(function () {
         )->name('api.admin.role-management.update-role');
     });
 
+
+        Route::middleware('can:manage-system-settings')->group(function () {
+
+        Route::get('/admin/system-settings', function () {
+            return view('admin.SystemSetting');
+        })->name('SystemSettings');
+
+    });
+
     // =========================================================
     // LOGOUT
     // =========================================================

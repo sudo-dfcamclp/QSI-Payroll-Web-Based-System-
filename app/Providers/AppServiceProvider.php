@@ -41,5 +41,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-roles', function (User $user): bool {
             return $user->hasRoleId(1);
         });
+
+
+           /*
+        |--------------------------------------------------------------------------
+        | SYSTEM SETTINGS AUTHORIZATION
+        |--------------------------------------------------------------------------
+        */
+
+        Gate::define('manage-system-settings', function (User $user): bool {
+            return $user->hasRoleId(1);
+        });
+        
     }
 }

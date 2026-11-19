@@ -193,7 +193,7 @@
 
                     <a href="{{ route('RoleManagement') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/admin/role-management') }}" data-tab-id="role-management" data-tab-title="Role Management" data-tab-icon="fa-solid fa-user-shield">Role Management</a>
 
-                    <a href="#" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/configuration/system-settings') }}" data-tab-id="system-settings" data-tab-title="System Settings" data-tab-icon="fa-solid fa-sliders">System Settings</a>
+                    <a href="{{ route('SystemSettings') }}" class="tab-link block px-3 py-2 text-sm text-gray-600 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-green-600 dark:hover:bg-green-700 rounded-md cursor-pointer transition-colors" data-page="{{ url('/admin/system-settings') }}" data-tab-id="system-settings" data-tab-title="System Settings" data-tab-icon="fa-solid fa-sliders">System Settings</a>
 
                 </div>
 

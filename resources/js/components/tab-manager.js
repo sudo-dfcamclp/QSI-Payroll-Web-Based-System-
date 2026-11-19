@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'employee-payroll': () => import('../employee_script/EmployeePayroll/index.js'),
         'user-management': () => import('../admin_script/UserManagement.js'),
         'role-management': () => import('../admin_script/RoleManagement.js'),
-        'system-settings': () => import('../admin_script/SystemSetting.js'),
+        'system-settings': () => import('../admin_script/SystemSetting/index.js'),
         'settings': () => import('../components/setting.js'),
     };
 

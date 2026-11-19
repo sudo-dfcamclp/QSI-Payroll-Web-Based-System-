@@ -17,10 +17,10 @@ class EmployeeDeductionController extends Controller
 {
     private const EXCLUDED_EMPLOYMENT_STATUSES = ['T', 'W', 'X', 'Y', 'Z'];
     private const ACTIVE_EMPLOYEE_STATUS = 1;
-    private const PER_PAGE = 15; // <-- FIXED: 15 items per page
+    private const PER_PAGE = 15;
 
     // =========================================================
-    // 0. Client list — WITH PAGINATION (15 per page)
+    // 0. Client list
     // =========================================================
     public function clients(Request $request)
     {
@@ -68,12 +68,13 @@ class EmployeeDeductionController extends Controller
     }
 
     // =========================================================
-    // 1. Deduction types
+    // 1. Deduction types (Para sa Dropdown)
     // =========================================================
     public function types()
     {
         try {
             $types = DeductionTypes::where('status', true)
+                ->select('id', 'title')
                 ->orderBy('title')
                 ->get();
 
@@ -88,7 +89,7 @@ class EmployeeDeductionController extends Controller
     }
 
     // =========================================================
-    // 1.5 Employees by client — WITH PAGINATION (15 per page)
+    // 1.5 Employees by client
     // =========================================================
     public function employeesByClient(Request $request, $client_id)
     {
@@ -148,7 +149,6 @@ class EmployeeDeductionController extends Controller
                 return [
                     'emp_id'            => $emp->emp_id,
                     'full_name'         => trim("{$emp->last_name}, {$emp->first_name} {$emp->middle_name}"),
-                    // Tinanggal ang 'employment_status' dito para hindi na mapasa sa JS
                 ];
             });
 
@@ -178,7 +178,7 @@ class EmployeeDeductionController extends Controller
     }
 
     // =========================================================
-    // 1.6 Employee details (top box)
+    // 1.6 Employee details
     // =========================================================
     public function showEmployee($emp_id)
     {
@@ -223,6 +223,7 @@ class EmployeeDeductionController extends Controller
         ]);
 
         try {
+            // Kailangan i-load ang deductionType relation para makuha ang title sa JS sorting
             $deductions = EmployeeDeductions::with('deductionType')
                 ->where('emp_id', $validated['emp_id'])
                 ->orderByDesc('created_at')
@@ -289,45 +290,55 @@ class EmployeeDeductionController extends Controller
         }
     }
 
-    // =========================================================
-    // 4. Update deduction
-    // =========================================================
-    public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'payment'      => ['nullable', 'numeric', 'min:0'],
-            'total_amount' => ['nullable', 'numeric', 'min:0'],
-            'start_date'   => ['nullable', 'date'],
-            'end_date'     => ['nullable', 'date'],
-            'status'       => ['nullable', 'boolean'],
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $deduction = EmployeeDeductions::findOrFail($id);
-            $deduction->fill(array_filter($validated, fn($v) => $v !== null));
-            $deduction->save();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Deduction updated successfully.',
-                'data'    => $deduction,
+   
+        // =========================================================
+        // 4. Update deduction
+        // =========================================================
+        public function update(Request $request, $id)
+        {
+            $validated = $request->validate([
+                'payment'      => ['sometimes', 'numeric', 'min:0'],
+                'total_amount' => ['sometimes', 'numeric', 'min:0'],
+                'start_date'   => ['sometimes', 'date'],
+                'end_date'     => ['sometimes', 'nullable', 'date'],
+                'status'       => ['sometimes', 'required', 'boolean'],
             ]);
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            throw $e;
-        } catch (Throwable $e) {
-            DB::rollBack();
-            report($e);
-            return response()->json([
-                'success' => false,
-                'message' => 'Unable to update deduction. Error: ' . $e->getMessage(),
-            ], 500);
+
+            try {
+                DB::beginTransaction();
+
+                $deduction = EmployeeDeductions::findOrFail($id);
+
+                // Update only the fields included in the request.
+                foreach ($validated as $field => $value) {
+                    $deduction->{$field} = $value;
+                }
+
+                $deduction->save();
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Deduction updated successfully.',
+                    'data'    => $deduction->fresh(),
+                ]);
+
+            } catch (ValidationException $e) {
+                DB::rollBack();
+                throw $e;
+
+            } catch (Throwable $e) {
+                DB::rollBack();
+                report($e);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to update deduction.',
+                ], 500);
+            }
         }
-    }
+
 
     // =========================================================
     // 5. Delete deduction

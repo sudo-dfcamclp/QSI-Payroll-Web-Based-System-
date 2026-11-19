@@ -1,4 +1,9 @@
-import { savePayrollState, loadPayrollState } from './localstorage.js';
+
+import {
+    saveModuleState,
+    getModuleState
+} from '../../components/localstorage.js';
+
 import { createPayrollComputation } from './payrollcomputation.js';
 
 export function initializePayrollForm(ctx, options = {}) {
@@ -12,7 +17,7 @@ export function initializePayrollForm(ctx, options = {}) {
     const cutoff = options.cutoff || null;
     const clientId = String(options.clientId || cutoff?.client_id || view.dataset.clientId || '');
     const periodId = String(options.periodId || cutoff?.period_id || view.dataset.periodId || '');
-    
+
     const formStateKey = `payroll_form_${clientId}_${periodId}`;
 
     if (clientId) view.dataset.clientId = clientId;
@@ -102,11 +107,7 @@ export function initializePayrollForm(ctx, options = {}) {
             savedAt: new Date().toISOString()
         };
 
-        try {
-            localStorage.setItem(formStateKey, JSON.stringify(data));
-        } catch (error) {
-            console.error('Unable to save payroll state:', error);
-        }
+        saveModuleState(formStateKey, data);
     }
 
     function showEmptyDeductionRow() {
@@ -173,16 +174,9 @@ export function initializePayrollForm(ctx, options = {}) {
     }
 
     function restoreState() {
-        let saved;
-        try {
-            const raw = localStorage.getItem(formStateKey);
-            saved = raw ? JSON.parse(raw) : null;
-        } catch (error) {
-            console.error('Unable to restore payroll state:', error);
-            return null;
-        }
+        const saved = getModuleState(formStateKey);
 
-        if (!saved || typeof saved !== 'object') return null;
+        if (!saved || Object.keys(saved).length === 0) return null;
         if (String(saved.clientId) !== clientId || String(saved.periodId) !== periodId) return null;
 
         // Ibalik ang inputs
@@ -217,7 +211,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
     // 🔑 I-restore muna ang state BAGO gumawa ng computation instance
     const savedState = restoreState();
-    
+
     const computation = createPayrollComputation({ panel, view, get, getDeductions, persistState });
 
     if (savedState?.switches) {
@@ -293,7 +287,7 @@ export function initializePayrollForm(ctx, options = {}) {
         get('payrollAddDeductionButton')?.addEventListener('click', () => { addDeductionRow('', '0'); persistState(); });
 
         get('payrollRefreshButton')?.addEventListener('click', () => {
-            window.location.reload(); 
+            window.location.reload();
         });
 
         get('payrollPrintButton')?.addEventListener('click', () => window.print());
@@ -390,9 +384,9 @@ export function initializePayrollForm(ctx, options = {}) {
 
                 button.addEventListener('click', () => {
                     computation.cancelComputation();
-                    
+
                     const isNewEmployee = view.dataset.selectedEmployeeId !== String(employee.emp_id ?? '');
-                    
+
                     if (isNewEmployee) {
                         panel.querySelectorAll('.payroll-number, .payroll-money').forEach(input => input.value = '0');
                         if (get('switchSss')) get('switchSss').checked = true;
@@ -414,7 +408,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
                     if (status === 'pending') {
                         // Ipatakbo ang compute agad kapag clinick
-                        computation.computePayroll(); 
+                        computation.computePayroll();
                     } else {
                         showDonePayrollNotice();
                     }
@@ -451,8 +445,8 @@ export function initializePayrollForm(ctx, options = {}) {
 
                 const selectedButton = [...panel.querySelectorAll('[data-employee-id]')].find(button => button.dataset.employeeId === savedSelectedEmployeeId);
                 if (selectedButton) {
-                    selectedButton.click(); 
-                    
+                    selectedButton.click();
+
                     // 🔑 IDINAGDAG ITO: I-trigger ang recompute pagkatapos ma-auto-click ang employee
                     setTimeout(() => {
                         if (view.dataset.selectedEmployeeId) {

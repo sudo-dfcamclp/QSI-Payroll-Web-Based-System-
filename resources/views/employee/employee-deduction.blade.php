@@ -1,49 +1,5 @@
 <body class="bg-gray-100 dark:bg-gray-800 min-h-screen">
 
-    <!-- Smooth recessed/pressed state for EMPLOYEE list only -->
-    <style>
-        .employee-box.list-item-pressable {
-            background-color: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-            transform: translateY(0) scale(1);
-            transition:
-                background-color 180ms ease,
-                border-color 180ms ease,
-                box-shadow 180ms ease,
-                transform 180ms ease;
-        }
-
-        .employee-box.list-item-pressable:hover:not(.active) {
-            background-color: #f9fafb;
-        }
-
-        .employee-box.list-item-pressable.active {
-            background-color: #f3f4f6;
-            border-color: #e5e7eb;
-            box-shadow: inset 0 2px 5px rgba(17, 24, 39, 0.16),
-                        inset 0 1px 2px rgba(17, 24, 39, 0.08);
-            transform: translateY(1px) scale(0.995);
-        }
-
-        .dark .employee-box.list-item-pressable {
-            background-color: #374151;
-            border-color: #4b5563;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-        }
-
-        .dark .employee-box.list-item-pressable:hover:not(.active) {
-            background-color: #4b5563;
-        }
-
-        .dark .employee-box.list-item-pressable.active {
-            background-color: #1f2937;
-            border-color: #374151;
-            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.38),
-                        inset 0 1px 2px rgba(0, 0, 0, 0.22);
-            transform: translateY(1px) scale(0.995);
-        }
-    </style>
-
     <!-- Main Application Content -->
     <main id="mainContent" class="min-h-screen transition-all duration-300">
 
@@ -117,7 +73,7 @@
                 </div>
 
                 <!-- RIGHT COLUMN (Top, Middle, Bottom) -->
-                <div class="flex flex-col gap-4 sm:gap-5 lg:gap-6 w-full h-full">
+                <div class="flex flex-col gap-4 sm:gap-5 lg:gap-6 w-full min-w-0 h-full">
 
                     <!-- RIGHT TOP BOX (Employee Information) -->
                     <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-4">
@@ -169,42 +125,80 @@
                             </div>
                         </dl>
                     </div>
-
                     <!-- RIGHT MIDDLE BOX (Deduction Header) -->
-                    <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-5 flex-1 flex flex-col">
-                        <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-600 pb-4 mb-4">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                                <i class="fa-solid fa-list-check text-lg"></i>
+                    <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-5 flex-1 flex flex-col min-w-0 w-full">
+                        
+                        <!-- Header Row -->
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-600 pb-4 mb-4">
+                            
+                            <!-- Left Side: Icon & Title -->
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                                    <i class="fa-solid fa-list-check text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 dark:text-white">Deductions</h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Employee loan and deduction schedules</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900 dark:text-white">Deductions</h3>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Employee loan and deduction schedules</p>
+
+                            <!-- Right Side: Sort Button (Hover effect sa text/icon lang) -->
+                            <div class="relative shrink-0">
+                                <button type="button" id="btnSortDeduction" class="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 bg-transparent hover:bg-transparent border-none outline-none transition-colors cursor-pointer" aria-expanded="false">
+                                    <i class="fa-solid fa-arrow-down-short-wide text-xs text-gray-500 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors"></i>
+                                    <span class="text-gray-500 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">Sort</span>
+                                </button>
+                            </div>
+
+                        </div>
+
+                        <!-- Deduction Table Container -->
+                        <div class="w-full min-w-0 max-w-full flex-1">
+
+                            <!-- SCROLL AREA: DEDUCTION TABLE LANG -->
+                            <div class="w-full max-w-full min-w-0 overflow-x-auto overflow-y-auto max-h-[450px]">
+
+                                <table class="w-full min-w-[1130px] table-fixed text-left text-sm">
+
+                            <colgroup>
+                                <col style="width: 90px;">
+                                <col style="width: 130px;">
+                                <col style="width: 130px;">
+                                <col style="width: 150px;">
+                                <col style="width: 150px;">
+                                <col style="width: 140px;">
+                                <col style="width: 140px;">
+                                <col style="width: 130px;">
+                                <col style="width: 180px;">
+                            </colgroup>
+
+                            <thead class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-3 py-3 font-semibold">Stop Ded</th>
+                                    <th class="px-3 py-3 font-semibold">Type</th>
+                                    <th class="px-3 py-3 font-semibold">Payment</th>
+                                    <th class="px-3 py-3 font-semibold">Total Amount</th>
+                                    <th class="px-3 py-3 font-semibold">Balance</th>
+                                    <th class="px-3 py-3 font-semibold">Start Payment</th>
+                                    <th class="px-3 py-3 font-semibold">End Payment</th>
+                                    <th class="px-3 py-3 font-semibold">Entry By</th>
+                                    <th class="px-3 py-3 font-semibold">Created At</th>
+                                </tr>
+                            </thead>
+
+                                    <tbody id="deductionHeaderTableBody" class="divide-y divide-gray-100 dark:divide-gray-600">
+                                        <tr>
+                                            <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                Select an employee to load deductions.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+
+                                </table>
+
                             </div>
                         </div>
-                        <div class="overflow-x-auto flex-1">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    <tr>
-                                        <th class="px-3 py-3 font-semibold">Stop Ded</th>
-                                        <th class="px-3 py-3 font-semibold">Type</th>
-                                        <th class="px-3 py-3 text-right font-semibold">Payment</th>
-                                        <th class="px-3 py-3 text-right font-semibold">Total Amount</th>
-                                        <th class="px-3 py-3 font-semibold">Start Payment</th>
-                                        <th class="px-3 py-3 font-semibold">End Payment</th>
-                                        <th class="px-3 py-3 font-semibold">Entry By</th>
-                                        <th class="px-3 py-3 font-semibold">Created At</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="deductionHeaderTableBody" class="divide-y divide-gray-100 dark:divide-gray-600">
-                                    <tr>
-                                        <td colspan="8" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            Select an employee to load deductions.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
                         </div>
-                    </div>
 
                     <!-- RIGHT BOTTOM BOX (Payment Details) -->
                     <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-5 flex-1 flex flex-col">
@@ -217,9 +211,9 @@
                                 <p class="text-xs text-gray-500 dark:text-gray-400">Payment history for the selected deduction</p>
                             </div>
                         </div>
-                        <div class="overflow-x-auto flex-1">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <div class="w-full min-w-0 max-h-[300px] overflow-auto">
+                                <table class="w-full min-w-[650px] text-left text-sm">
+                                <thead class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     <tr>
                                         <th class="px-3 py-3 text-right font-semibold">Amount</th>
                                         <th class="px-3 py-3 font-semibold">Start Date</th>
