@@ -50,6 +50,9 @@ Route::middleware('auth')->group(function () {
         return view('employee.employee-info');
     })->name('employee.info');
 
+    Route::get('/api/employee-master/employment-statuses', [EmployeeMasterController::class, 'employmentStatuses'])
+         ->name('api.employee-master.employment-statuses');
+
     // Employee search
     Route::get('/api/employee-master/search', [EmployeeMasterController::class, 'search'])
         ->name('api.employee-master.search');

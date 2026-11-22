@@ -7,10 +7,57 @@ use App\Models\EmployeeMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeMasterController extends Controller
 {
+    /**
+     * Legacy employment status codes.
+     * Reference:
+     * A - Absorb by client
+     * B - Project Based
+     * C - Contractual
+     * P - Probationary
+     * R - Regular
+     * T - Terminated
+     * W - AWOL
+     * X - Resigned
+     * Y - Early EOC
+     * Z - End of Contract
+     */
+    private const EMPLOYMENT_STATUSES = [
+        'A' => 'A - Absorb by Client',
+        'B' => 'B - Project Based',
+        'C' => 'C - Contractual',
+        'P' => 'P - Probationary',
+        'R' => 'R - Regular',
+        'T' => 'T - Terminated',
+        'W' => 'W - AWOL',
+        'X' => 'X - Resigned',
+        'Y' => 'Y - Early EOC',
+        'Z' => 'Z - End of Contract',
+    ];
+
+    /**
+     * Statuses na hindi na active (excluded sa payroll).
+     */
+    private const INACTIVE_EMPLOYMENT_STATUSES = ['T', 'W', 'X', 'Y', 'Z'];
+
+    public function employmentStatuses()
+    {
+        $data = [];
+        foreach (self::EMPLOYMENT_STATUSES as $code => $label) {
+            $data[] = [
+                'code' => $code,
+                'label' => $label,
+                'is_active' => !in_array($code, self::INACTIVE_EMPLOYMENT_STATUSES, true),
+            ];
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
     public function search(Request $request)
     {
         $search = trim((string) $request->input('q', ''));
@@ -208,6 +255,11 @@ class EmployeeMasterController extends Controller
         $data['profile_photo_url'] = $employee->profile_photo ? asset('storage/' . ltrim($employee->profile_photo, '/')) : null;
         $data['client_name'] = $employee->client?->client_name;
         $data['status'] = $employee->status ?? 'active';
+
+        // Display label para sa employment_status (para sa UI/readability)
+        $statusCode = strtoupper(trim((string) ($employee->employment_status ?? '')));
+        $data['employment_status_label'] = self::EMPLOYMENT_STATUSES[$statusCode] ?? $statusCode;
+
         return $data;
     }
 
@@ -315,7 +367,7 @@ class EmployeeMasterController extends Controller
             'philhealth_no' => ['nullable', 'string', 'max:50'],
             'pagibig_no' => ['nullable', 'string', 'max:50'],
             'tin_no' => ['nullable', 'string', 'max:50'],
-            'employment_status' => ['nullable', 'string', 'max:50'],
+            'employment_status' => ['nullable', 'string', 'max:10', Rule::in(array_keys(self::EMPLOYMENT_STATUSES))],
             'remarks' => ['nullable', 'string'],
             'position' => ['nullable', 'string', 'max:150'],
             'company' => ['nullable', 'string', 'max:255'],

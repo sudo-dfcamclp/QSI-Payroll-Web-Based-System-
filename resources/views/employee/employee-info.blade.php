@@ -347,16 +347,23 @@
  
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 xl:gap-x-8 gap-y-5"> 
  
-                <!-- Status --> 
-                <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
-                    <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Status:</label> 
-                    <select name="employment_status" class="w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"> 
-                        <option value="">Select Status</option> 
-                        <option value="regular">R-Regular</option> 
-                        <option value="probationary">Probationary</option> 
-                        <option value="contractual">Contractual</option> 
-                    </select> 
-                </div> 
+            <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0">
+                <label class="text-sm font-bold text-gray-700 dark:text-gray-200">Status:</label>
+                <select name="employment_status"
+                    class="w-full min-w-0 px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-600 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer">
+                    <option value="">Select Status</option>
+                    <option value="A">A - Absorb by Client</option>
+                    <option value="B">B - Project Based</option>
+                    <option value="C">C - Contractual</option>
+                    <option value="P">P - Probationary</option>
+                    <option value="R">R - Regular</option>
+                    <option value="T">T - Terminated</option>
+                    <option value="W">W - AWOL</option>
+                    <option value="X">X - Resigned</option>
+                    <option value="Y">Y - Early EOC</option>
+                    <option value="Z">Z - End of Contract</option>
+                </select>
+            </div>
  
                 <!-- Remarks --> 
                 <div class="grid grid-cols-1 sm:grid-cols-[100px_minmax(0,1fr)] items-center gap-2 sm:gap-4 min-w-0"> 
