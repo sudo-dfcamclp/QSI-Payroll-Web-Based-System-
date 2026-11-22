@@ -25,6 +25,7 @@
     </section> 
 </div> 
  
+
 <!-- Employee Form --> 
 <div id="employeeFormView" class="hidden"> 
     <div class="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 max-w-7xl"> 
@@ -84,100 +85,105 @@
  
         <!-- Basic Information --> 
         <form id="employeeForm" enctype="multipart/form-data">
-        <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-4 sm:p-6 mb-5 sm:mb-6"> 
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"> 
-                <div> 
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Basic Information</h2> 
-                    <p class="text-sm text-gray-500 dark:text-gray-300 mt-1">Complete list of registered employees in the system.</p> 
+<!-- Basic Information --> 
+<div class="relative mt-28 sm:mt-32 mb-5 sm:mb-6">
+    
+    <!-- OVERLAPPING PROFILE PICTURE -->
+    <div class="absolute -top-20 sm:-top-24 left-1/2 -translate-x-1/2 sm:left-10 sm:translate-x-0 z-10 w-40 h-40 sm:w-48 sm:h-48">
+        <div class="relative w-full h-full bg-white dark:bg-gray-700 rounded-full border-4 border-white dark:border-gray-700 shadow-lg overflow-hidden group cursor-pointer hover:ring-4 hover:ring-green-500/30 transition-all">
+            <img id="employeeProfilePreview" src="" alt="Employee Profile" class="hidden absolute inset-0 w-full h-full object-cover">
+            
+            <div id="employeeProfilePlaceholder" class="flex flex-col items-center justify-center w-full h-full bg-gray-100 dark:bg-gray-600">
+                <i class="fa-solid fa-camera text-4xl text-gray-400 dark:text-gray-300 group-hover:text-green-500 transition-colors mb-2"></i>
+                <p class="text-xs text-gray-500 dark:text-gray-300 font-medium uppercase tracking-wider">Upload</p>
+            </div>
+            
+            <input type="file" name="profile_photo" id="profilePhoto" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        </div>
+    </div>
+
+    <!-- THE MAIN BOX (Card) -->
+    <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 pt-24 pb-6 px-4 sm:px-8 sm:pt-28"> 
+        
+        <!-- HEADER AREA -->
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Basic Information</h2> 
+                <p class="text-sm text-gray-500 dark:text-gray-300 mt-1">Complete list of registered employees in the system.</p> 
+            </div>
+            
+            <!-- EMPLOYEE NO (Inilipat sa kanang taas) -->
+            <div class="w-full sm:w-64 shrink-0">
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 sm:text-right uppercase tracking-wider">Employee No</label> 
+                <input type="text" name="emp_id" placeholder="..." readonly class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 font-medium sm:text-right transition-all"> 
+            </div>
+        </div>
+
+        <!-- Inputs Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-5"> 
+
+            <!-- Last Name --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Last Name</label> 
+                <input type="text" name="last_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- First Name --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">First Name</label> 
+                <input type="text" name="first_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- Middle Name --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Middle Name</label> 
+                <input type="text" name="middle_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- Client (Company) --> 
+            <div class="relative"> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Company</label> 
+                <input type="hidden" name="client_id"> 
+                <div class="relative"> 
+                    <input type="text" id="employeeClientInput" placeholder="Search or select company..." autocomplete="off" readonly class="w-full px-4 pr-10 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 transition-all cursor-not-allowed"> 
+                    <i id="employeeClientIcon" class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none transition-transform"></i> 
+                </div> 
+                <input type="text" id="employeeClientIdDisplay" readonly placeholder="Client ID" class="mt-2 w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-xs text-gray-500 dark:text-gray-300 cursor-not-allowed"> 
+                <div id="employeeClientDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 overflow-hidden"> 
+                    <div class="p-2 border-b border-gray-100 dark:border-gray-600"> 
+                        <input type="text" id="employeeClientSearch" placeholder="Search company..." autocomplete="off" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"> 
+                    </div> 
+                    <div id="employeeClientList" class="max-h-60 overflow-y-auto"></div> 
                 </div> 
             </div> 
- 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8"> 
- 
-                    <!-- Profile --> 
-                    <div class="lg:col-span-3 flex flex-col items-center"> 
-                        <div class="w-full max-w-sm lg:max-w-none aspect-square lg:aspect-auto lg:min-h-[280px] bg-gray-200 dark:bg-gray-600 rounded-2xl flex flex-col items-center justify-center overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-500 hover:border-green-500 transition-colors cursor-pointer group relative"> 
-                            <img id="employeeProfilePreview" src="" alt="Employee Profile" class="hidden absolute inset-0 w-full h-full object-cover"> 
-                            <div id="employeeProfilePlaceholder" class="text-center p-4"> 
-                                <i class="fa-solid fa-camera text-4xl text-gray-400 dark:text-gray-300 group-hover:text-green-500 transition-colors mb-2"></i> 
-                                <p class="text-xs text-gray-500 dark:text-gray-300 font-medium">Upload Photo</p> 
-                            </div> 
-                            <input type="file" name="profile_photo" id="profilePhoto" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"> 
-                        </div> 
-                    </div> 
- 
-                    <!-- Employee Information --> 
-                    <div class="lg:col-span-9 min-w-0"> 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 lg:gap-6"> 
- 
-                            <!-- Employee No --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Employee No</label> 
-                                <input type="text" name="emp_id" placeholder="..." readonly class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 transition-all"> 
-                            </div> 
- 
-                            <!-- Client --> 
-                            <div class="relative"> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Company</label> 
-                                <input type="hidden" name="client_id"> 
-                                <div class="relative"> 
-                                    <input type="text" id="employeeClientInput" placeholder="Search or select company..." autocomplete="off" readonly class="w-full px-4 pr-10 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 transition-all cursor-not-allowed"> 
-                                    <i id="employeeClientIcon" class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none transition-transform"></i> 
-                                </div> 
-                                <input type="text" id="employeeClientIdDisplay" readonly placeholder="Client ID" class="mt-2 w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-xs text-gray-500 dark:text-gray-300 cursor-not-allowed"> 
-                                <div id="employeeClientDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 overflow-hidden"> 
-                                    <div class="p-2 border-b border-gray-100 dark:border-gray-600"> 
-                                        <input type="text" id="employeeClientSearch" placeholder="Search company..." autocomplete="off" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"> 
-                                    </div> 
-                                    <div id="employeeClientList" class="max-h-60 overflow-y-auto"></div> 
-                                </div> 
-                            </div> 
- 
-                            <!-- Contact No --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Contact No</label> 
-                                <input type="text" name="contact_no" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- Badge No --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Badge No</label> 
-                                <input type="text" name="badge_no" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- Nick Name --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Nick Name</label> 
-                                <input type="text" name="nickname" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- Last Name --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Last Name</label> 
-                                <input type="text" name="last_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- First Name --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">First Name</label> 
-                                <input type="text" name="first_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- Middle Name --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Middle Name</label> 
-                                <input type="text" name="middle_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
- 
-                            <!-- Suffix Name --> 
-                            <div> 
-                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Suffix Name</label> 
-                                <input type="text" name="suffix_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
-                            </div> 
-                        </div> 
-                    </div> 
-                </div> 
+
+            <!-- Contact No --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Contact No</label> 
+                <input type="text" name="contact_no" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- Nick Name --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Nick Name</label> 
+                <input type="text" name="nickname" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- Badge No --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Badge No</label> 
+                <input type="text" name="badge_no" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
+            <!-- Suffix Name --> 
+            <div> 
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Suffix Name</label> 
+                <input type="text" name="suffix_name" placeholder="..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-600 border border-transparent dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"> 
+            </div> 
+
         </div> 
+    </div> 
+</div>
  
         <!-- Personal Information --> 
         <div class="bg-white dark:bg-gray-700 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-600 p-4 sm:p-6 mb-5 sm:mb-6"> 
