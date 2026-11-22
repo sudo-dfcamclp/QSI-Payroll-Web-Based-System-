@@ -480,16 +480,16 @@
                         </div>
 
                         <button type="button" id="payrollAddDeductionButton"
-                            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 cursor-pointer">
                             <i class="fa-solid fa-plus"></i>
                             Add Deduction
                         </button>
                     </div>
 
-                    <!-- Deductions Table -->
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <!-- Deductions Table (scrollable) -->
+                    <div class="payroll-deduction-scroll-wrapper max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                         <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                            <thead class="sticky top-0 z-10 bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400">
                                 <tr>
                                     <th class="px-4 py-3 font-semibold">Deduction Type</th>
                                     <th class="px-4 py-3 text-right font-semibold">Amount</th>

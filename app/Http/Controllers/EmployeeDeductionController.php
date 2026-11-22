@@ -264,6 +264,7 @@ class EmployeeDeductionController extends Controller
                 'deduction_type_id' => $validated['deduction_type_id'],
                 'payment'           => $validated['payment'],
                 'total_amount'      => $validated['total_amount'],
+                'balance'           => $validated['total_amount'],
                 'start_date'        => $validated['start_date'],
                 'end_date'          => $validated['end_date'] ?? null,
                 'status'            => 0,
@@ -275,7 +276,7 @@ class EmployeeDeductionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Deduction added successfully.',
-                'data'    => $deduction,
+                'data'    => $deduction->fresh('deductionType'),
             ]);
         } catch (ValidationException $e) {
             DB::rollBack();
@@ -289,7 +290,6 @@ class EmployeeDeductionController extends Controller
             ], 500);
         }
     }
-
    
         // =========================================================
         // 4. Update deduction

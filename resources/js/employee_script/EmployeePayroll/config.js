@@ -5,5 +5,7 @@ const APP_URL = document
 
 export const API = {
     clients: `${APP_URL}/api/employee-payroll/clients`,
-    cutoffs: `${APP_URL}/api/employee-payroll/cutoffs`
+    cutoffs: `${APP_URL}/api/employee-payroll/cutoffs`,
+    types: `${APP_URL}/api/employee-deduction/types`,
+    store: `${APP_URL}/api/employee-deduction/deductions`
 };

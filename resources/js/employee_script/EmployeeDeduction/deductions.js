@@ -1,6 +1,3 @@
-
-// resources/js/employee_script/EmployeeDeduction/deductions.js
-
 import { state } from './state.js';
 
 import {
@@ -12,6 +9,22 @@ import {
 import { API } from './config.js';
 
 import Swal from 'sweetalert2';
+
+// ---------------------------------------------------------
+// DARK MODE HELPERS
+// ---------------------------------------------------------
+
+function isDarkMode() {
+    return document.documentElement.classList.contains('dark');
+}
+
+function swalTheme() {
+    const dark = isDarkMode();
+    return {
+        background: dark ? '#1f2937' : '#ffffff',
+        color: dark ? '#e5e7eb' : '#111827',
+    };
+}
 
 // ---------------------------------------------------------
 // Format Amount
@@ -103,7 +116,10 @@ export async function loadDeductions(panel, empId) {
 
         state.currentDeductions = response.data || [];
 
+        // Reset selected type when loading another employee
         state.deductionSortId = null;
+        state.deductionSort = 'start_date';
+        state.deductionSortDirection = 'desc';
 
         renderDeductions(panel);
 
@@ -175,6 +191,7 @@ async function updateDeductionStatus(panel, checkbox) {
             timerProgressBar: true,
             width: '380px',
             padding: '12px 18px',
+            ...swalTheme(),
         });
 
     } catch (error) {
@@ -188,6 +205,7 @@ async function updateDeductionStatus(panel, checkbox) {
             title: 'Update Failed',
             text: error.message || 'Unable to update deduction status.',
             confirmButtonColor: '#dc2626',
+            ...swalTheme(),
         });
 
     } finally {
@@ -228,14 +246,38 @@ export function renderDeductions(panel) {
 
     initDeductionStatusEvents(panel);
 
-    let data = [...state.currentDeductions];
+    // Start with all employee deductions
+    let data = [...(state.currentDeductions || [])];
+
+    // -----------------------------------------------------
+    // FILTER BY SELECTED TYPE
+    // -----------------------------------------------------
+
+    if (
+        state.deductionSort === 'type' &&
+        state.deductionSortId !== null &&
+        state.deductionSortId !== undefined
+    ) {
+        data = data.filter(d =>
+            String(d.deduction_type_id) ===
+            String(state.deductionSortId)
+        );
+    }
+
+    // -----------------------------------------------------
+    // EMPTY STATE
+    // -----------------------------------------------------
 
     if (!data.length) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="9"
                     class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No deductions found.
+                    ${
+                        state.deductionSort === 'type'
+                            ? 'No deductions found for the selected type.'
+                            : 'No deductions found.'
+                    }
                 </td>
             </tr>
         `;
@@ -244,7 +286,7 @@ export function renderDeductions(panel) {
     }
 
     // -----------------------------------------------------
-    // Sorting
+    // SORTING
     // -----------------------------------------------------
 
     data.sort((a, b) => {
@@ -252,18 +294,6 @@ export function renderDeductions(panel) {
         let valB;
 
         if (state.deductionSort === 'type') {
-            if (state.deductionSortId) {
-                const matchA =
-                    String(a.deduction_type_id) === String(state.deductionSortId) ? 0 : 1;
-
-                const matchB =
-                    String(b.deduction_type_id) === String(state.deductionSortId) ? 0 : 1;
-
-                if (matchA !== matchB) {
-                    return matchA - matchB;
-                }
-            }
-
             valA = a.deduction_type?.title?.toLowerCase() || '';
             valB = b.deduction_type?.title?.toLowerCase() || '';
 
@@ -292,11 +322,12 @@ export function renderDeductions(panel) {
     });
 
     // -----------------------------------------------------
-    // Table Rows
+    // TABLE ROWS
     // -----------------------------------------------------
 
     tbody.innerHTML = data.map(d => {
         const isStopped = Number(d.status) === 1;
+
         const balance = Number(d.balance ?? 0);
 
         const isPaid = balance <= 0;
@@ -350,6 +381,7 @@ export function renderDeductions(panel) {
                     }">
                         ${formatAmount(d.balance)}
                     </span>
+
                     ${
                         isPaid
                             ? `<span class="ml-1 text-[10px] font-semibold text-green-600 dark:text-green-400">PAID</span>`
@@ -396,7 +428,10 @@ export function renderDeductions(panel) {
 
 export function resetDeductionGrids(panel) {
     state.currentDeductions = [];
+
     state.deductionSortId = null;
+    state.deductionSort = 'start_date';
+    state.deductionSortDirection = 'desc';
 
     setHtml(
         panel,

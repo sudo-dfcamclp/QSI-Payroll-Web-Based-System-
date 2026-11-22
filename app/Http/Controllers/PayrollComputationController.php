@@ -11,10 +11,12 @@ use Throwable;
 
 class PayrollComputationController extends Controller
 {
+    // Initialize payroll computation service.
     public function __construct(
         private PayrollComputationService $payrollComputationService
     ) {}
 
+    // Validate inputs and return payroll preview.
     public function preview(Request $request)
     {
         $validated = $request->validate([
@@ -22,6 +24,7 @@ class PayrollComputationController extends Controller
             'period_id' => ['required', 'integer'],
             'emp_id' => ['required', 'integer'],
             'inputs' => ['nullable', 'array'],
+
             'inputs.days_present' => ['nullable', 'numeric', 'min:0'],
             'inputs.days_absent' => ['nullable', 'numeric', 'min:0'],
             'inputs.hours_worked' => ['nullable', 'numeric', 'min:0'],
@@ -58,10 +61,12 @@ class PayrollComputationController extends Controller
             'inputs.pagibig_er' => ['nullable', 'numeric', 'min:0'],
             'inputs.philhealth_ee' => ['nullable', 'numeric', 'min:0'],
             'inputs.philhealth_er' => ['nullable', 'numeric', 'min:0'],
+
             'inputs.other_deductions' => ['nullable', 'array'],
+            'inputs.other_deductions.*.id' => ['nullable', 'integer', 'min:1'],
             'inputs.other_deductions.*.type' => ['nullable', 'string', 'max:255'],
             'inputs.other_deductions.*.amount' => ['required', 'numeric', 'min:0'],
-            // Include switches in validation
+
             'inputs.deduct_sss' => ['nullable', 'boolean'],
             'inputs.deduct_pagibig' => ['nullable', 'boolean'],
             'inputs.deduct_philhealth' => ['nullable', 'boolean'],
@@ -69,20 +74,23 @@ class PayrollComputationController extends Controller
 
         try {
             $result = $this->payrollComputationService->compute($validated);
-            
-            // KUNIN ANG SWITCHES DIREKTA SA INPUTS (kung ano ang pinindot ng user), HINDI SA RESULT
-            $deductSss = array_key_exists('deduct_sss', $validated['inputs'] ?? []) ? $validated['inputs']['deduct_sss'] : true;
-            $deductPagibig = array_key_exists('deduct_pagibig', $validated['inputs'] ?? []) ? $validated['inputs']['deduct_pagibig'] : true;
-            $deductPhilhealth = array_key_exists('deduct_philhealth', $validated['inputs'] ?? []) ? $validated['inputs']['deduct_philhealth'] : true;
 
-            // I-save ang switches sa employee_payroll_settings
+            $deductSss = array_key_exists('deduct_sss', $validated['inputs'] ?? [])
+                ? $validated['inputs']['deduct_sss'] : true;
+
+            $deductPagibig = array_key_exists('deduct_pagibig', $validated['inputs'] ?? [])
+                ? $validated['inputs']['deduct_pagibig'] : true;
+
+            $deductPhilhealth = array_key_exists('deduct_philhealth', $validated['inputs'] ?? [])
+                ? $validated['inputs']['deduct_philhealth'] : true;
+
             DB::table('employee_payroll_settings')->updateOrInsert(
                 [
                     'emp_id' => $validated['emp_id'],
                     'period_id' => $validated['period_id'],
+                    'client_id' => $validated['client_id'],
                 ],
                 [
-                    'client_id' => $validated['client_id'],
                     'deduct_sss' => (bool) $deductSss,
                     'deduct_pagibig' => (bool) $deductPagibig,
                     'deduct_philhealth' => (bool) $deductPhilhealth,
@@ -97,11 +105,11 @@ class PayrollComputationController extends Controller
                 'message' => 'Payroll computation completed.',
                 'data' => $result,
             ]);
-
         } catch (ValidationException $e) {
             throw $e;
         } catch (Throwable $e) {
             report($e);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to compute payroll. Error: ' . $e->getMessage(),

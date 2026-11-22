@@ -19,14 +19,18 @@ class EmployeeDeductions extends Model
         'deduction_type_id',
         'payment',
         'total_amount',
+        'balance',
         'start_date',
         'end_date',
+        'status',
         'entry_by',
     ];
 
     protected $casts = [
         'payment' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'balance' => 'decimal:2',
+        'status' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',
     ];

@@ -155,8 +155,7 @@
                         <!-- Deduction Table Container -->
                         <div class="w-full min-w-0 max-w-full flex-1">
 
-                            <!-- SCROLL AREA: DEDUCTION TABLE LANG -->
-                            <div class="w-full max-w-full min-w-0 overflow-x-auto overflow-y-auto max-h-[450px]">
+                            <div class="w-full max-w-full min-w-0 overflow-x-auto overflow-y-auto max-h-[250px]">
 
                                 <table class="w-full min-w-[1130px] table-fixed text-left text-sm">
 
