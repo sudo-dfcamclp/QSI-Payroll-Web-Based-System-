@@ -12,20 +12,6 @@ use Illuminate\Validation\ValidationException;
 
 class EmployeeMasterController extends Controller
 {
-    /**
-     * Legacy employment status codes.
-     * Reference:
-     * A - Absorb by client
-     * B - Project Based
-     * C - Contractual
-     * P - Probationary
-     * R - Regular
-     * T - Terminated
-     * W - AWOL
-     * X - Resigned
-     * Y - Early EOC
-     * Z - End of Contract
-     */
     private const EMPLOYMENT_STATUSES = [
         'A' => 'A - Absorb by Client',
         'B' => 'B - Project Based',
@@ -39,9 +25,6 @@ class EmployeeMasterController extends Controller
         'Z' => 'Z - End of Contract',
     ];
 
-    /**
-     * Statuses na hindi na active (excluded sa payroll).
-     */
     private const INACTIVE_EMPLOYMENT_STATUSES = ['T', 'W', 'X', 'Y', 'Z'];
 
     public function employmentStatuses()
@@ -54,7 +37,6 @@ class EmployeeMasterController extends Controller
                 'is_active' => !in_array($code, self::INACTIVE_EMPLOYMENT_STATUSES, true),
             ];
         }
-
         return response()->json(['data' => $data]);
     }
 
@@ -192,8 +174,11 @@ class EmployeeMasterController extends Controller
         $validated['status'] = $validated['status'] ?? 'active';
         $rate = $this->computeRates($this->validateRate($request), $validated['client_id'] ?? null);
 
+        // 🔑 I-unset muna para hindi ma-overwrite ng null
+        unset($validated['profile_photo']);
+
         if ($request->hasFile('profile_photo')) {
-            $validated['profile_photo'] = $request->file('profile_photo')->store('employee-profiles', 'public');
+            $validated['profile_photo'] = $request->file('profile_photo')->store('employee-profile', 'public');
         }
 
         $employee = DB::transaction(function () use ($validated, $rate) {
@@ -213,9 +198,14 @@ class EmployeeMasterController extends Controller
         $validated = $this->validateEmployee($request);
         $rate = $this->computeRates($this->validateRate($request), $validated['client_id'] ?? null);
 
+        // 🔑 I-unset muna para hindi ma-overwrite ng null ang existing path
+        unset($validated['profile_photo']);
+
         if ($request->hasFile('profile_photo')) {
-            if ($employee->profile_photo) Storage::disk('public')->delete($employee->profile_photo);
-            $validated['profile_photo'] = $request->file('profile_photo')->store('employee-profiles', 'public');
+            if ($employee->profile_photo) {
+                Storage::disk('public')->delete($employee->profile_photo);
+            }
+            $validated['profile_photo'] = $request->file('profile_photo')->store('employee-profile', 'public');
         }
 
         DB::transaction(function () use ($employee, $validated, $rate) {
@@ -252,11 +242,12 @@ class EmployeeMasterController extends Controller
             'working_days_per_year' => $config->working_days_per_year,
         ] : null;
 
-        $data['profile_photo_url'] = $employee->profile_photo ? asset('storage/' . ltrim($employee->profile_photo, '/')) : null;
+        $data['profile_photo_url'] = $employee->profile_photo
+            ? asset('storage/' . ltrim($employee->profile_photo, '/'))
+            : null;
         $data['client_name'] = $employee->client?->client_name;
         $data['status'] = $employee->status ?? 'active';
 
-        // Display label para sa employment_status (para sa UI/readability)
         $statusCode = strtoupper(trim((string) ($employee->employment_status ?? '')));
         $data['employment_status_label'] = self::EMPLOYMENT_STATUSES[$statusCode] ?? $statusCode;
 

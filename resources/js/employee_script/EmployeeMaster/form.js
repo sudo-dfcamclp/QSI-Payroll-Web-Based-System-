@@ -36,9 +36,9 @@ export function setFieldValue(ctx, name, value) {
     if (!ctx.dom.form || !name) return;
     const fields = Array.from(ctx.dom.form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
     if (!fields.length) return;
-    
+
     const first = fields[0];
-    
+
     if (first.type === 'radio') {
         fields.forEach(field => {
             field.checked = String(field.value) === String(value ?? '');
@@ -62,7 +62,6 @@ export function setFieldValue(ctx, name, value) {
 
     if (first.type === 'date' && finalValue) {
         // Kukunin lang ang unang 10 characters (YYYY-MM-DD)
-        // Mula sa "2019-03-25T00:00:00.000000Z" → "2019-03-25"
         finalValue = String(finalValue).split('T')[0];
     }
 
@@ -71,8 +70,20 @@ export function setFieldValue(ctx, name, value) {
 
 export function populateForm(ctx, employee) {
     if (!employee) return;
-    const fields = ['emp_id','client_id','contact_no','badge_no','nickname','last_name','first_name','middle_name','suffix_name','birth_date','birth_place','citizenship','gender','civil_status','weight','height','religion','house_no','street','barangay','district','city','town','contact','phone','primary_education','secondary_education','college','degree','major','post_grad','course','sss_no','philhealth_no','pagibig_no','tin_no','employment_status','remarks','position','branch','department','date_hired','date_resigned','start_contract','end_contract','rate_basis','month_no','hourly_rate','daily_rate','monthly_rate','date_reg','date_prob','insurance_no','agency_fee','agency','account_no','expanded_tax','allowance','with_ecol'];
+
+    const fields = [
+        'emp_id','client_id','contact_no','nickname','last_name','first_name','middle_name','suffix_name',
+        'birth_date','birth_place','citizenship','gender','civil_status','weight','height','religion',
+        'house_no','street','barangay','district','city','town','contact','phone',
+        'primary_education','secondary_education','college','degree','major','post_grad','course',
+        'sss_no','philhealth_no','pagibig_no','tin_no',
+        'employment_status','remarks','position','branch','department','date_hired','date_resigned',
+        'start_contract','end_contract','rate_basis','month_no','hourly_rate','daily_rate','monthly_rate',
+        'date_reg','date_prob','insurance_no','agency_fee','agency','account_no','expanded_tax','allowance','with_ecol'
+    ];
+
     fields.forEach(name => ctx.setFieldValue(name, employee[name]));
+
     ctx.populateClient(employee);
     ctx.state.currentEmployeeId = employee.emp_id ?? null;
     if (ctx.dom.profileInput) ctx.dom.profileInput.value = '';
@@ -98,7 +109,9 @@ export function updateEmployeeHeader(ctx, employee) {
         ctx.dom.employeeSubtitle.textContent = 'Employee: None selected';
         return;
     }
-    const fullName = [employee.first_name,employee.middle_name,employee.last_name,employee.suffix_name].filter(Boolean).join(' ');
+    const fullName = [employee.first_name, employee.middle_name, employee.last_name, employee.suffix_name]
+        .filter(Boolean)
+        .join(' ');
     ctx.dom.employeeSubtitle.textContent = `Employee: ${fullName || 'Unnamed Employee'}`;
 }
 
@@ -139,8 +152,10 @@ export function setFieldState(ctx, enabled) {
         const isHidden = field.type === 'hidden';
         const isEmployeeId = field.name === 'emp_id';
         const isClientId = field.name === 'client_id';
-        const isRateField = ['rate_basis','hourly_rate','daily_rate','monthly_rate'].includes(field.name);
-        field.classList.remove('cursor-text','cursor-pointer','cursor-not-allowed');
+        const isRateField = ['rate_basis', 'hourly_rate', 'daily_rate', 'monthly_rate'].includes(field.name);
+
+        field.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
+
         if (isHidden || isClientId) {
             field.disabled = false;
             if ('readOnly' in field) field.readOnly = false;
@@ -149,7 +164,7 @@ export function setFieldState(ctx, enabled) {
         if (isEmployeeId) {
             field.readOnly = true;
             field.disabled = false;
-            field.classList.add('cursor-not-allowed','opacity-60');
+            field.classList.add('cursor-not-allowed', 'opacity-60');
             return;
         }
         if (isRateField) {
@@ -159,7 +174,7 @@ export function setFieldState(ctx, enabled) {
                 if ('readOnly' in field) field.readOnly = !enabled;
             }
             field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
-            field.classList.toggle('opacity-60',!enabled);
+            field.classList.toggle('opacity-60', !enabled);
             return;
         }
         if (isFile) {
@@ -172,34 +187,36 @@ export function setFieldState(ctx, enabled) {
         if (isCheckbox || isRadio || isSelect) {
             field.disabled = !enabled;
             field.classList.add(enabled ? 'cursor-pointer' : 'cursor-not-allowed');
-            field.classList.toggle('opacity-60',!enabled);
+            field.classList.toggle('opacity-60', !enabled);
             return;
         }
         if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
             field.disabled = false;
             field.readOnly = !enabled;
             field.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
-            field.classList.toggle('opacity-60',!enabled);
+            field.classList.toggle('opacity-60', !enabled);
             return;
         }
         field.disabled = !enabled;
     });
+
     if (ctx.dom.clientInput) {
-        ctx.dom.clientInput.classList.remove('cursor-text','cursor-pointer','cursor-not-allowed');
+        ctx.dom.clientInput.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
         ctx.dom.clientInput.disabled = !enabled;
         ctx.dom.clientInput.readOnly = !enabled;
-        ctx.dom.clientInput.classList.toggle('opacity-60',!enabled);
+        ctx.dom.clientInput.classList.toggle('opacity-60', !enabled);
         ctx.dom.clientInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
     }
+
     ctx.updateRateFieldState();
     if (!enabled) ctx.hideClientDropdown();
 }
 
 export function setSearchEnabled(ctx, enabled) {
     if (!ctx.dom.searchInput) return;
-    ctx.dom.searchInput.classList.remove('cursor-text','cursor-pointer','cursor-not-allowed');
+    ctx.dom.searchInput.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
     ctx.dom.searchInput.disabled = !enabled;
-    ctx.dom.searchInput.classList.toggle('opacity-60',!enabled);
+    ctx.dom.searchInput.classList.toggle('opacity-60', !enabled);
     ctx.dom.searchInput.classList.add(enabled ? 'cursor-text' : 'cursor-not-allowed');
     if (!enabled) ctx.hideSearchResults();
 }
@@ -219,7 +236,7 @@ export function setMode(ctx, newMode) {
             employeeId.value = '';
             employeeId.readOnly = true;
             employeeId.disabled = false;
-            employeeId.classList.remove('cursor-text','cursor-pointer','cursor-not-allowed');
+            employeeId.classList.remove('cursor-text', 'cursor-pointer', 'cursor-not-allowed');
             employeeId.classList.add('cursor-not-allowed');
         }
         if (ctx.dom.rateBasisField) ctx.dom.rateBasisField.value = 'Daily';
@@ -237,11 +254,11 @@ export function updateButtons(ctx) {
         ctx.dom.employeeAddButton?.removeAttribute('disabled');
         if (ctx.state.currentEmployeeId) {
             ctx.dom.editButton?.removeAttribute('disabled');
-            ctx.dom.editButton?.classList.remove('opacity-50','cursor-not-allowed');
+            ctx.dom.editButton?.classList.remove('opacity-50', 'cursor-not-allowed');
             ctx.dom.editButton?.classList.add('cursor-pointer');
         } else {
-            ctx.dom.editButton?.setAttribute('disabled','disabled');
-            ctx.dom.editButton?.classList.add('opacity-50','cursor-not-allowed');
+            ctx.dom.editButton?.setAttribute('disabled', 'disabled');
+            ctx.dom.editButton?.classList.add('opacity-50', 'cursor-not-allowed');
             ctx.dom.editButton?.classList.remove('cursor-pointer');
         }
         ctx.dom.saveButton?.classList.add('hidden');
@@ -253,8 +270,8 @@ export function updateButtons(ctx) {
     ctx.dom.saveButton?.classList.remove('hidden');
     ctx.dom.cancelButton?.classList.remove('hidden');
     if (ctx.dom.cancelButton) {
-        ctx.dom.cancelButton.classList.remove('bg-gray-600','hover:bg-gray-700');
-        ctx.dom.cancelButton.classList.add('bg-red-600','hover:bg-red-700');
+        ctx.dom.cancelButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+        ctx.dom.cancelButton.classList.add('bg-red-600', 'hover:bg-red-700');
     }
 }
 
@@ -275,36 +292,40 @@ export function updateNavigationButtons(ctx) {
     const canNext = hasSelection && ctx.state.currentSearchIndex < ctx.state.searchItems.length - 1;
     if (ctx.dom.previousButton) {
         ctx.dom.previousButton.disabled = !canPrevious;
-        ctx.dom.previousButton.classList.toggle('opacity-50',!canPrevious);
-        ctx.dom.previousButton.classList.toggle('cursor-not-allowed',!canPrevious);
-        ctx.dom.previousButton.classList.toggle('cursor-pointer',canPrevious);
+        ctx.dom.previousButton.classList.toggle('opacity-50', !canPrevious);
+        ctx.dom.previousButton.classList.toggle('cursor-not-allowed', !canPrevious);
+        ctx.dom.previousButton.classList.toggle('cursor-pointer', canPrevious);
     }
     if (ctx.dom.nextButton) {
         ctx.dom.nextButton.disabled = !canNext;
-        ctx.dom.nextButton.classList.toggle('opacity-50',!canNext);
-        ctx.dom.nextButton.classList.toggle('cursor-not-allowed',!canNext);
-        ctx.dom.nextButton.classList.toggle('cursor-pointer',canNext);
+        ctx.dom.nextButton.classList.toggle('opacity-50', !canNext);
+        ctx.dom.nextButton.classList.toggle('cursor-not-allowed', !canNext);
+        ctx.dom.nextButton.classList.toggle('cursor-pointer', canNext);
     }
 }
 
 export function saveOriginalData(ctx) {
     ctx.state.originalData = ctx.getFormDataObject();
     ctx.state.originalClientDisplayName = ctx.state.currentClientDisplayName;
-    ctx.state.originalClientPayrollConfig = ctx.state.currentClientPayrollConfig ? {...ctx.state.currentClientPayrollConfig} : null;
+    ctx.state.originalClientPayrollConfig = ctx.state.currentClientPayrollConfig
+        ? { ...ctx.state.currentClientPayrollConfig }
+        : null;
 }
 
 export function restoreOriginalData(ctx) {
-    Object.entries(ctx.state.originalData ?? {}).forEach(([key,value]) => ctx.setFieldValue(key,value));
-    ctx.state.currentClientPayrollConfig = ctx.state.originalClientPayrollConfig ? {...ctx.state.originalClientPayrollConfig} : null;
+    Object.entries(ctx.state.originalData ?? {}).forEach(([key, value]) => ctx.setFieldValue(key, value));
+    ctx.state.currentClientPayrollConfig = ctx.state.originalClientPayrollConfig
+        ? { ...ctx.state.originalClientPayrollConfig }
+        : null;
     ctx.updateClientDisplay(ctx.state.originalClientDisplayName);
-    if (ctx.dom.clientIdDisplay) ctx.dom.clientIdDisplay.value = ctx.getField('client_id')?.value || '';
     ctx.updateRateFieldState();
 }
 
 export function hasChanges(ctx) {
     const currentData = ctx.getFormDataObject();
     const originalData = ctx.state.originalData ?? {};
-    const fieldsChanged = Object.keys({...originalData,...currentData}).some(key => JSON.stringify(originalData[key] ?? '') !== JSON.stringify(currentData[key] ?? ''));
+    const fieldsChanged = Object.keys({ ...originalData, ...currentData })
+        .some(key => JSON.stringify(originalData[key] ?? '') !== JSON.stringify(currentData[key] ?? ''));
     const clientChanged = (ctx.state.originalClientDisplayName ?? '') !== (ctx.state.currentClientDisplayName ?? '');
     const originalPayroll = JSON.stringify(ctx.state.originalClientPayrollConfig ?? null);
     const currentPayroll = JSON.stringify(ctx.state.currentClientPayrollConfig ?? null);

@@ -1,4 +1,4 @@
-import { API } from './config.js'; // 🔑 Idinagdag para sa dynamic URLs
+import { API } from './config.js';
 
 export function getClientName(ctx, employee) {
     return employee?.client_name || employee?.client?.client_name || '';
@@ -20,10 +20,6 @@ export function clearClient(ctx) {
 
     if (ctx.dom.clientInput) {
         ctx.dom.clientInput.value = '';
-    }
-
-    if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value = '';
     }
 
     ctx.state.currentClientDisplayName = '';
@@ -48,10 +44,6 @@ export function populateClient(ctx, employee) {
     }
 
     ctx.updateClientDisplay(clientName);
-
-    if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value = clientId;
-    }
 
     ctx.state.currentClientPayrollConfig = employee?.payroll_config || null;
 }
@@ -124,7 +116,6 @@ export async function loadClients(ctx, query = '') {
     try {
         const trimmedQuery = query.trim();
 
-        // 🔑 Ginamit ang API.clients mula sa config.js
         const url = trimmedQuery
             ? `${API.clients}?q=${encodeURIComponent(trimmedQuery)}`
             : API.clients;
@@ -190,10 +181,6 @@ export function selectClient(ctx, clientId, clientName, payrollConfig = null) {
     ctx.state.currentClientDisplayName = clientName || '';
     ctx.state.currentClientPayrollConfig = payrollConfig;
 
-    if (ctx.dom.clientIdDisplay) {
-        ctx.dom.clientIdDisplay.value = clientId || '';
-    }
-
     ctx.clearComputedRates();
     ctx.updateRateFieldState();
     ctx.hideClientDropdown();
@@ -204,7 +191,6 @@ export function handleClientSearchInput(ctx) {
 
     const clientField = ctx.getField('client_id');
     if (clientField) clientField.value = '';
-    if (ctx.dom.clientIdDisplay) ctx.dom.clientIdDisplay.value = '';
 
     ctx.state.currentClientDisplayName = '';
     ctx.state.currentClientPayrollConfig = null;

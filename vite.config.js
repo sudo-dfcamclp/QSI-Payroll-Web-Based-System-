@@ -1,6 +1,21 @@
 import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
+import os from 'os';
+
+// Awtomatikong kunin ang IPv4 address ng kasalukuyang device sa LAN
+function getLocalIp() {
+    const interfaces = os.networkInterfaces();
+    for (const devName in interfaces) {
+        const iface = interfaces[devName];
+        for (const alias of iface) {
+            if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                return alias.address;
+            }
+        }
+    }
+    return '127.0.0.1';
+}
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
@@ -23,7 +38,7 @@ export default defineConfig(({ mode }) => {
             strictPort: true,
             cors: true,
             hmr: {
-                host: env.VITE_HMR_HOST || 'localhost',
+                host: getLocalIp(),
             },
             watch: {
                 ignored: ['**/storage/framework/views/**'],

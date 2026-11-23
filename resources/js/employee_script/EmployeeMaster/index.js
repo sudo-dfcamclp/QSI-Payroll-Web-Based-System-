@@ -23,7 +23,6 @@ export async function init(panel) {
         employeeBackButton: panel.querySelector('#employeeBackButton'),
         employeeSortButton: panel.querySelector('#employeeSortButton'),
         form: panel.querySelector('#employeeForm'),
-        clientIdDisplay: panel.querySelector('#employeeClientIdDisplay'),
         searchInput: panel.querySelector('#employeeSearch'),
         searchResults: panel.querySelector('#employeeSearchResults'),
         searchList: panel.querySelector('#employeeSearchList'),
@@ -52,7 +51,6 @@ export async function init(panel) {
         return;
     }
 
-    // Gagamitin natin ang API object mula sa config.js
     const api = API;
 
     const ctx = { panel, dom, api, state };

@@ -1,5 +1,5 @@
 import Swal from 'sweetalert2';
-import { API } from './config.js'; // 🔑 Idinagdag para sa dynamic URLs
+import { API } from './config.js';
 
 export async function saveEmployee(ctx) {
     const firstName = ctx.getField('first_name')?.value.trim();
@@ -70,8 +70,6 @@ export async function saveEmployee(ctx) {
 
     try {
         const employeeId = ctx.state.currentEmployeeId;
-
-        // 🔑 Gagamitin na natin ang API mula sa config.js
         const url = isNew ? API.store : API.update(employeeId);
 
         const formData = ctx.buildFormData();
@@ -93,9 +91,6 @@ export async function saveEmployee(ctx) {
         if (!isNew) {
             formData.append('_method', 'PUT');
         }
-
-        console.log('Rate basis selected:', rateBasis);
-        console.log('Rate basis sent:', formData.get('rate_basis'));
 
         const response = await fetch(url, {
             method: 'POST',
@@ -119,6 +114,17 @@ export async function saveEmployee(ctx) {
         }
 
         const employee = result.data || result.employee || result;
+
+        // Cache busting para hindi lumang image ang i-load
+        if (employee.profile_photo_url) {
+            employee.profile_photo_url = employee.profile_photo_url + '?t=' + Date.now();
+        }
+
+        // Explicit preview update bago i-populate
+        if (ctx.dom.profilePreview && employee.profile_photo_url) {
+            ctx.dom.profilePreview.src = employee.profile_photo_url;
+            ctx.dom.profilePreview.classList.remove('hidden');
+        }
 
         ctx.populateForm(employee);
         ctx.setMode('view');
@@ -191,7 +197,9 @@ export async function startEdit(ctx) {
 
     ctx.state.originalData = ctx.getFormDataObject();
     ctx.state.originalClientDisplayName = ctx.state.currentClientDisplayName;
-    ctx.state.originalClientPayrollConfig = ctx.state.currentClientPayrollConfig ? { ...ctx.state.currentClientPayrollConfig } : null;
+    ctx.state.originalClientPayrollConfig = ctx.state.currentClientPayrollConfig
+        ? { ...ctx.state.currentClientPayrollConfig }
+        : null;
     ctx.setMode('edit');
 }
 

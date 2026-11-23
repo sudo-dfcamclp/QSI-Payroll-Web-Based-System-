@@ -1,5 +1,5 @@
 <!-- Payroll Transaction -->
-<div id="employeePayrollModule" class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-7xl">
+<div id="employeePayrollModule" class="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-10 max-w-6xl">
 <div id="employeePayrollBreadcrumbTrail" class="hidden items-center gap-2 mb-4 text-sm">
     <button
         type="button"
@@ -25,7 +25,7 @@
         <div class="mb-4">
             <div class="relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300 text-sm"></i>
-                <input type="text" id="payrollClientSearch" placeholder="Search company..." class="w-full h-11 pl-11 pr-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 dark:focus:border-green-500 transition-colors">
+                <input type="text" id="payrollClientSearch" placeholder="Search company..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm text-gray-700 dark:text-gray-100 cursor-text focus:outline-none focus:ring-2 focus:ring-green-100 dark:focus:ring-green-900/30 focus:border-green-400">
             </div>
         </div>
         <div class="grid grid-cols-[100px_minmax(0,1fr)_auto] items-center gap-2 px-1 sm:px-5 py-3 text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">
