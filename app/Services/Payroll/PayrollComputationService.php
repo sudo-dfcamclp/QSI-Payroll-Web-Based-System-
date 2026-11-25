@@ -24,11 +24,10 @@ class PayrollComputationService {
     }
 
     public function compute(array $data): array {
-        // Fetch essential models with relationships
         $employee = EmployeeMaster::with('basicRates')->where('emp_id', $data['emp_id'])->where('client_id', $data['client_id'])->firstOrFail();
         $period = PayrollPeriod::where('period_id', $data['period_id'])->where('client_id', $data['client_id'])->firstOrFail();
         $client = ClientMaster::with('payrollConfig')->where('client_id', $data['client_id'])->firstOrFail();
-        
+
         $config = $client->payrollConfig;
         if (!$config) {
             throw ValidationException::withMessages(['client_id' => 'Payroll configuration not found for this client.']);
@@ -38,7 +37,6 @@ class PayrollComputationService {
         $inputs = $this->normalizeInputs($data['inputs'] ?? []);
         $ctx = $this->buildContext($rate, $config);
 
-        // Resolve deduction switches from inputs or DB settings
         $switches = [
             'deduct_sss' => array_key_exists('deduct_sss', $data['inputs'] ?? []) ? $this->toBool($data['inputs']['deduct_sss']) : null,
             'deduct_pagibig' => array_key_exists('deduct_pagibig', $data['inputs'] ?? []) ? $this->toBool($data['inputs']['deduct_pagibig']) : null,
@@ -67,10 +65,8 @@ class PayrollComputationService {
         $inputs['deduct_pagibig'] = $switches['deduct_pagibig'];
         $inputs['deduct_philhealth'] = $switches['deduct_philhealth'];
 
-        // Compute Earnings
         $e = $this->earnings->compute($inputs, $rate, $config, $ctx);
 
-        // Handle Contribution Overrides
         $contributionOverrides = is_array($data['contribution_overrides'] ?? null) ? $data['contribution_overrides'] : [];
         foreach (['deduct_sss' => 'sss', 'deduct_pagibig' => 'pagibig', 'deduct_philhealth' => 'philhealth'] as $switch => $contribution) {
             if ($inputs[$switch] === false) {
@@ -78,34 +74,28 @@ class PayrollComputationService {
             }
         }
 
-        // Compute Deductions & Tax
         $deductions = $this->deductions->compute($rate, $config, $ctx, $e['gross_pay'], $e['basic_pay'], $period, $contributionOverrides, $inputs);
-        
+
         $taxableIncome = $e['gross_pay'];
-        if (empty($config->ecola_taxable)) {
-            $taxableIncome -= $e['ecola_pay'];
-        }
-        if (!empty($config->tax_exclude_contributions)) {
+        if (!empty($config->exclude_sss_pagibig_from_tax)) {
             $taxableIncome -= ($deductions['sss_ee'] + $deductions['pagibig_ee'] + $deductions['philhealth_ee']);
         }
 
         $tax = $this->tax->compute(
-            $employee, $rate, $config, $period, $taxableIncome, 
-            $e['premium']['regular_ot'] + $e['premium']['sunday_ot'], 
+            $employee, $rate, $config, $period, $taxableIncome,
+            $e['premium']['regular_ot'] + $e['premium']['sunday_ot'],
             $data, $data['min_wage_rate'] ?? config('payroll.min_wage_rate', 0)
         );
 
-        // Merge Other Deductions
         $databaseDeductions = $this->otherDeductions->getForPayroll((int) $employee->emp_id, (int) $employee->client_id, $period->start_date, $period->end_date);
         $otherDeductionResult = $this->mergeOtherDeductions($databaseDeductions, $inputs['other_deductions']);
-        
+
         $otherDeductions = $otherDeductionResult['total'];
         $overUnderPay = $this->money($inputs['over_under_pay']);
 
-        // Final Calculations
         $totalDeductions = $this->money(
-            $e['absent_deduction'] + $e['tardy_deduction'] + $otherDeductions + 
-            $overUnderPay + $deductions['sss_ee'] + $deductions['philhealth_ee'] + 
+            $otherDeductions +
+            $overUnderPay + $deductions['sss_ee'] + $deductions['philhealth_ee'] +
             $deductions['pagibig_ee'] + $tax['amount']
         );
         $netPay = $this->money($e['gross_pay'] - $totalDeductions);
@@ -114,48 +104,50 @@ class PayrollComputationService {
             'employee' => ['emp_id' => $employee->emp_id, 'name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''))],
             'period' => ['period_id' => $period->period_id, 'start_date' => $period->start_date, 'end_date' => $period->end_date],
             'rate' => [
-                'rate_basis' => $rate->rate_basis, 'monthly_rate' => $rate->monthly_rate, 
-                'daily_rate' => $rate->daily_rate, 'hourly_rate' => $rate->hourly_rate, 
+                'rate_basis' => $rate->rate_basis, 'monthly_rate' => $rate->monthly_rate,
+                'daily_rate' => $rate->daily_rate, 'hourly_rate' => $rate->hourly_rate,
                 'hourly_base' => $this->money($ctx['hourly_base'], 6), 'daily_base' => $this->money($ctx['daily_base'], 6)
             ],
             'inputs' => $inputs,
             'earnings' => [
-                'basic_pay' => $e['basic_pay'], 'regular_ot_pay' => $e['premium']['regular_ot'], 
-                'night_diff_pay' => $e['premium']['night_diff'], 'rest_day_ot_pay' => $e['premium']['rest_day'], 
-                'sunday_ot_pay' => $e['premium']['sunday_ot'], 'regular_holiday_pay' => $e['premium']['legal'], 
-                'regular_holiday_ot_pay' => $e['premium']['legal_ot'], 'special_holiday_pay' => $e['premium']['special'], 
-                'special_holiday_ot_pay' => $e['premium']['special_ot'], 'excess_ot_pay' => $e['premium']['excess_ot'], 
-                'excess_sun_legal_ot_pay' => $e['premium']['excess_sun_legal'], 'excess_legal_hol_ot_pay' => $e['premium']['excess_legal_hol'], 
-                'excess_sun_special_ot_pay' => $e['premium']['excess_sun_special'], 'ot_without_premium_pay' => $e['premium']['ot_no_premium'], 
-                'sick_leave_pay' => $e['sick_leave_pay'], 'vacation_leave_pay' => $e['vacation_leave_pay'], 
-                'allowance' => $this->money($e['fixed_allowance']), 'allowances' => $e['allowances'], 
-                'load_allow' => $this->money($inputs['load_allow']), 'meal_allow' => $this->money($inputs['meal_allow']), 
-                'transpo_allow' => $this->money($inputs['transpo_allow']), 'salary_adjustment' => $this->money($inputs['salary_adj']), 
-                'incentive_pay' => $this->money($inputs['incentive_pay']), 'ecola_pay' => $e['ecola_pay'], 
+                'basic_pay' => $e['basic_pay'], 'regular_ot_pay' => $e['premium']['regular_ot'],
+                'night_diff_pay' => $e['premium']['night_diff'], 'rest_day_ot_pay' => $e['premium']['rest_day'],
+                'sunday_ot_pay' => $e['premium']['sunday_ot'], 'regular_holiday_pay' => $e['premium']['legal'],
+                'regular_holiday_ot_pay' => $e['premium']['legal_ot'], 'special_holiday_pay' => $e['premium']['special'],
+                'special_holiday_ot_pay' => $e['premium']['special_ot'], 'excess_ot_pay' => $e['premium']['excess_ot'],
+                'excess_sun_legal_ot_pay' => $e['premium']['excess_sun_legal'], 'excess_legal_hol_ot_pay' => $e['premium']['excess_legal_hol'],
+                'excess_sun_special_ot_pay' => $e['premium']['excess_sun_special'], 'ot_without_premium_pay' => $e['premium']['ot_no_premium'],
+                'allowance' => $this->money($e['fixed_allowance']), 'allowances' => $e['allowances'],
+                'load_allow' => $this->money($inputs['load_allow']), 'meal_allow' => $this->money($inputs['meal_allow']),
+                'transpo_allow' => $this->money($inputs['transpo_allow']), 'salary_adjustment' => $this->money($inputs['salary_adj']),
+                'incentive_pay' => $this->money($inputs['incentive_pay']),
                 'thirteenth_month_pay' => $e['thirteenth_month_pay']
             ],
             'deductions' => [
-                'absent_ded' => $e['absent_deduction'], 'tardy_ded' => $e['tardy_deduction'], 
-                'sss_ee' => $deductions['sss_ee'], 'philhealth_ee' => $deductions['philhealth_ee'], 
-                'pagibig_ee' => $deductions['pagibig_ee'], 'wtax' => $tax['amount'], 
-                'other_deductions' => $otherDeductions, 'over_under_pay' => $overUnderPay, 
+                'absent_ded' => $e['absent_deduction'], 'tardy_ded' => $e['tardy_deduction'],
+                'sss_ee' => $deductions['sss_ee'], 'philhealth_ee' => $deductions['philhealth_ee'],
+                'pagibig_ee' => $deductions['pagibig_ee'], 'wtax' => $tax['amount'],
+                'other_deductions' => $otherDeductions, 'over_under_pay' => $overUnderPay,
                 'total_ded' => $totalDeductions
             ],
             'other_deduction_details' => $otherDeductionResult['database_details'],
             'manual_other_deduction_details' => $otherDeductionResult['manual_details'],
             'contributions' => $deductions,
             'summary' => [
-                'earnings_before_absent_tardy' => $e['earnings_before_absent_tardy'], 
-                'gross_pay' => $e['gross_pay'], 'thirteenth_in_gross' => $e['thirteenth_in_gross'], 
-                'taxable_income' => $this->money($taxableIncome), 'total_deductions' => $totalDeductions, 
+                'earnings_before_absent_tardy' => $e['earnings_before_absent_tardy'],
+                'gross_pay' => $e['gross_pay'], 'thirteenth_in_gross' => $e['thirteenth_in_gross'],
+                'taxable_income' => $this->money($taxableIncome), 'total_deductions' => $totalDeductions,
                 'net_pay' => $netPay
             ],
             'switches' => $switches,
         ];
     }
 
-    private function mergeOtherDeductions(Collection $databaseDeductions, array $manualDeductions): array
+    // FIXED: Array ang tinatanggap para tugma sa OtherDeductionService
+    private function mergeOtherDeductions(array $databaseDeductions, array $manualDeductions): array
     {
+        $databaseDeductions = collect($databaseDeductions); // <-- CONVERT TO COLLECTION
+
         $databaseById = $databaseDeductions->keyBy('id');
         $editedIds = [];
         $manualDetails = [];
@@ -200,9 +192,6 @@ class PayrollComputationService {
             }
         }
 
-        // Server database retrieval is authoritative. Include every
-        // eligible database deduction, even those not submitted by the
-        // browser (e.g. a record just inserted via Add Deduction).
         foreach ($databaseDeductions as $deduction) {
             if (!isset($editedIds[(int) $deduction->id])) {
                 $databaseDetails[] = $deduction;
@@ -214,20 +203,20 @@ class PayrollComputationService {
 
         return [
             'total' => $this->money($databaseTotal + $manualTotal),
-            'database_details' => collect($databaseDetails)->values(),
-            'manual_details' => collect($manualDetails)->values()
+            'database_details' => collect($databaseDetails)->values()->toArray(), // <-- ARRAY NA
+            'manual_details' => collect($manualDetails)->values()->toArray() // <-- ARRAY NA
         ];
     }
 
     private function normalizeInputs(array $inputs): array {
         $fields = [
-            'days_present', 'days_absent', 'hours_worked', 'ot_hrs', 'excess_ot_hrs', 
-            'night_diff_ot', 'rest_day_ot_hrs', 'sunday_ot', 'sp_hol_hrs', 'sp_hol_ot_hrs', 
-            'excess_sp_hol_ot_hrs', 'leg_hol_hrs', 'leg_hol_ot_hrs', 'excess_leg_hol_ot_hrs', 
-            'excess_sun_leg_ot_hrs', 'excess_sun_sp_ot_hrs', 'ot_no_prem_hrs', 'vl_days', 
-            'sl_days', 'vl_pay', 'sl_pay', 'tardy_hrs', 'salary_adj', 'incentive_pay', 
-            'ecola_pay', 'thirteenth_month_pay', 'allowance', 'load_allow', 'meal_allow', 
-            'transpo_allow', 'over_under_pay', 'sss_ee', 'sss_er', 'pagibig_ee', 'pagibig_er', 
+            'days_present', 'days_absent', 'hours_worked', 'ot_hrs', 'excess_ot_hrs',
+            'night_diff_ot', 'rest_day_ot_hrs', 'sunday_ot', 'sp_hol_hrs', 'sp_hol_ot_hrs',
+            'excess_sp_hol_ot_hrs', 'leg_hol_hrs', 'leg_hol_ot_hrs', 'excess_leg_hol_ot_hrs',
+            'excess_sun_leg_ot_hrs', 'excess_sun_sp_ot_hrs', 'ot_no_prem_hrs',
+            'tardy_hrs', 'salary_adj', 'incentive_pay',
+            'thirteenth_month_pay', 'allowance', 'load_allow', 'meal_allow',
+            'transpo_allow', 'over_under_pay', 'sss_ee', 'sss_er', 'pagibig_ee', 'pagibig_er',
             'philhealth_ee', 'philhealth_er'
         ];
 
@@ -239,8 +228,6 @@ class PayrollComputationService {
         $normalized['sp_hol_hrs'] = $this->num($inputs['sp_hol_hrs'] ?? $inputs['sp_hol_days'] ?? 0);
         $normalized['leg_hol_hrs'] = $this->num($inputs['leg_hol_hrs'] ?? $inputs['leg_hol_days'] ?? 0);
         $normalized['excess_sun_sp_ot_hrs'] = $this->num($inputs['excess_sun_sp_ot_hrs'] ?? $inputs['excess_sp_hol_ot_hrs'] ?? $normalized['excess_sun_sp_ot_hrs']);
-        $normalized['ecola_hol_checked'] = $this->toBool($inputs['ecola_hol_checked'] ?? false);
-        $normalized['ecola_legal_checked'] = $this->toBool($inputs['ecola_legal_checked'] ?? false);
 
         foreach (['deduct_sss', 'deduct_pagibig', 'deduct_philhealth'] as $switch) {
             $normalized[$switch] = array_key_exists($switch, $inputs) ? $this->toBool($inputs[$switch]) : null;
@@ -258,26 +245,25 @@ class PayrollComputationService {
 
         if (!$rate) {
             return (object) [
-                'rate_basis' => 'Daily', 'monthly_rate' => 0.0, 'daily_rate' => 0.0, 'hourly_rate' => 0.0, 
-                'ecola_amount' => 0.0, 'exp_tax' => 0.0, 'tax_code' => 'Z', 'allowance' => 0.0, 
-                'ot_no_tax' => false, 'ecola_in_ot_rate' => false, 'sss_ded_is_monthly' => false, 
-                'hourly_13th_month_rate' => 0.0
+                'rate_basis' => 'Daily', 'monthly_rate' => 0.0, 'daily_rate' => 0.0, 'hourly_rate' => 0.0,
+                'exp_tax' => 0.0, 'tax_code' => 'Z', 'allowance' => 0.0,
+                'ot_no_tax' => false, 'sss_ded_is_monthly' => false,
+                'hourly_13th_month_rate' => 0.0, 'ecola_rate' => 0.0
             ];
         }
 
         return (object) [
-            'rate_basis' => $rate->rate_basis ?: 'Daily', 
-            'monthly_rate' => (float) ($rate->monthly_rate ?? 0), 
-            'daily_rate' => (float) ($rate->daily_rate ?? 0), 
-            'hourly_rate' => (float) ($rate->hourly_rate ?? 0), 
-            'ecola_amount' => (float) $pick('ecola_amount', 0), 
-            'exp_tax' => (float) $pick('exp_tax', 0), 
-            'tax_code' => $pick('tax_code') ?: 'Z', 
-            'allowance' => (float) $pick('allowance', 0), 
-            'ot_no_tax' => (bool) $pick('ot_no_tax', false), 
-            'ecola_in_ot_rate' => (bool) $pick('ecola_in_ot_rate', false), 
-            'sss_ded_is_monthly' => (bool) $pick('sss_ded_is_monthly', false), 
-            'hourly_13th_month_rate' => (float) $pick('hourly_13th_month_rate', 0)
+            'rate_basis' => $rate->rate_basis ?: 'Daily',
+            'monthly_rate' => (float) ($rate->monthly_rate ?? 0),
+            'daily_rate' => (float) ($rate->daily_rate ?? 0),
+            'hourly_rate' => (float) ($rate->hourly_rate ?? 0),
+            'exp_tax' => (float) $pick('exp_tax', 0),
+            'tax_code' => $pick('tax_code') ?: 'Z',
+            'allowance' => (float) $pick('allowance', 0),
+            'ot_no_tax' => (bool) $pick('ot_no_tax', false),
+            'sss_ded_is_monthly' => (bool) $pick('sss_ded_is_monthly', false),
+            'hourly_13th_month_rate' => (float) $pick('hourly_13th_month_rate', 0),
+            'ecola_rate' => (float) $pick('ecola_rate', 0),
         ];
     }
 
@@ -299,20 +285,20 @@ class PayrollComputationService {
         }
 
         return [
-            'basis' => $basis, 'cutoffs' => $this->resolveCutoffs($config), 
-            'monthly_rate' => $monthly, 'daily_rate' => (float) $rate->daily_rate, 
-            'ecola_rate' => (float) $rate->ecola_amount, 'ecola_in_ot_rate' => (bool) $rate->ecola_in_ot_rate, 
-            'hourly_base' => $hourlyBase, 'daily_base' => $dailyBase, 
-            'work_days_per_year' => (float) (($config->work_days_per_year ?? null) ?: 303), 
-            'work_hrs_per_day' => (float) (($config->hours_per_day ?? null) ?: 8), 
-            'days_per_month' => (float) (($config->no_of_days_per_month ?? null) ?: 26)
+            'basis' => $basis, 'cutoffs' => $this->resolveCutoffs($config),
+            'monthly_rate' => $monthly, 'daily_rate' => (float) $rate->daily_rate,
+            'hourly_base' => $hourlyBase, 'daily_base' => $dailyBase,
+            'work_days_per_year' => (float) (($config->working_days_per_year ?? null) ?: 303),
+            'work_hrs_per_day' => (float) (($config->hours_per_day ?? null) ?: 8),
+            'days_per_month' => (float) (($config->working_days_per_month ?? null) ?: 26),
+            'ecola_rate' => (float) ($rate->ecola_rate ?? 0),
         ];
     }
 
     private function resolveCutoffs($config): int {
         $configured = (int) ($config->cutoff_period ?? 0);
         if (in_array($configured, [1, 2, 4], true)) { return $configured; }
-        
+
         $frequency = strtolower(trim((string) ($config->payroll_frequency ?? '')));
         if (str_contains($frequency, 'week')) return 4;
         if (str_contains($frequency, 'semi')) return 2;

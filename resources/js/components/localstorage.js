@@ -1,15 +1,19 @@
-
 const STORAGE_PREFIX = 'epayroll:module:';
+
+// Bagong helper — pumipili ng storage backend
+function getStorage(scope = 'local') {
+    return scope === 'session' ? sessionStorage : localStorage;
+}
 
 /**
  * Kunin ang saved state ng isang module.
  */
-export function getModuleState(moduleName) {
+export function getModuleState(moduleName, scope = 'local') {
     if (!moduleName) return {};
 
     try {
         const key = `${STORAGE_PREFIX}${moduleName}`;
-        const savedData = localStorage.getItem(key);
+        const savedData = getStorage(scope).getItem(key);
 
         if (!savedData) return {};
 
@@ -28,7 +32,7 @@ export function getModuleState(moduleName) {
  * I-save o i-update ang state ng isang module.
  * Existing values na hindi kasama sa bagong data ay mapapanatili.
  */
-export function saveModuleState(moduleName, newState) {
+export function saveModuleState(moduleName, newState, scope = 'local') {
     if (
         !moduleName ||
         !newState ||
@@ -40,14 +44,14 @@ export function saveModuleState(moduleName, newState) {
 
     try {
         const key = `${STORAGE_PREFIX}${moduleName}`;
-        const currentState = getModuleState(moduleName);
+        const currentState = getModuleState(moduleName, scope);
 
         const updatedState = {
             ...currentState,
             ...newState,
         };
 
-        localStorage.setItem(key, JSON.stringify(updatedState));
+        getStorage(scope).setItem(key, JSON.stringify(updatedState));
 
         return true;
     } catch (error) {
@@ -59,12 +63,12 @@ export function saveModuleState(moduleName, newState) {
 /**
  * Burahin lamang ang saved state ng tinukoy na module.
  */
-export function clearModuleState(moduleName) {
+export function clearModuleState(moduleName, scope = 'local') {
     if (!moduleName) return false;
 
     try {
         const key = `${STORAGE_PREFIX}${moduleName}`;
-        localStorage.removeItem(key);
+        getStorage(scope).removeItem(key);
 
         return true;
     } catch (error) {

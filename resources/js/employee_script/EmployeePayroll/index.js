@@ -1,4 +1,3 @@
-
 import { state } from './state.js';
 
 import {
@@ -197,7 +196,7 @@ export function init(panel) {
                 clientName: clientName || '',
                 periodId: null,
                 cutoff: null
-            });
+            }, 'session');
 
             payrollTransactionView?.classList.add('hidden');
             cutoffListView.classList.remove('hidden');
@@ -226,7 +225,7 @@ export function init(panel) {
                 clientName: '',
                 periodId: null,
                 cutoff: null
-            });
+            }, 'session');
 
             state.payrollSelectedClientId = null;
             state.payrollSelectedClientName = '';
@@ -269,7 +268,7 @@ export function init(panel) {
                 clientName,
                 periodId: String(cutoff.period_id),
                 cutoff
-            });
+            }, 'session');
 
             if (payrollTransactionView) {
                 payrollTransactionView.dataset.clientId = String(clientId);
@@ -344,7 +343,7 @@ export function init(panel) {
 
     // RESTORE NAVIGATION
     async function restoreNavigation() {
-        const saved = getModuleState(PAYROLL_STORAGE_KEY);
+        const saved = getModuleState(PAYROLL_STORAGE_KEY, 'session');
 
         await ctx.loadClientList('', 1);
 
@@ -358,7 +357,7 @@ export function init(panel) {
         }
 
         if (!saved.clientId) {
-            clearModuleState(PAYROLL_STORAGE_KEY);
+            clearModuleState(PAYROLL_STORAGE_KEY, 'session');
             ctx.showClientList();
             return;
         }
@@ -383,7 +382,7 @@ export function init(panel) {
                     clientName: saved.clientName || '',
                     periodId: null,
                     cutoff: null
-                });
+                }, 'session');
 
                 await ctx.showCutoffList(
                     saved.clientId,

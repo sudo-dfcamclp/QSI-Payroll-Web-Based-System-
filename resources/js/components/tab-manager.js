@@ -1114,6 +1114,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // ✅ IDINAGDAG: Clear payroll session state kapag clinose ang payroll tab
+        if (tabId === 'employee-payroll') {
+            try {
+                const payrollPrefix = 'epayroll:module:payroll';
+                Object.keys(sessionStorage)
+                    .filter(key => key.startsWith(payrollPrefix))
+                    .forEach(key => sessionStorage.removeItem(key));
+            } catch (error) {
+                console.error('Failed to clear payroll state:', error);
+            }
+        }
+
         const isActive =
             tab.classList.contains('active');
 
