@@ -9,7 +9,7 @@ import {
 import { initializeClientSearch } from './search.js';
 import { initializeSort } from './sort.js';
 import { initializePayrollForm } from './payrollform.js';
-
+import { initializeAddCutoff } from './addcutoff.js';
 import {
     saveModuleState,
     getModuleState,
@@ -336,6 +336,7 @@ export function init(panel) {
     initializeClientSearch(ctx);
     initializeSort(ctx);
     initializeCutoffSearch(ctx);
+    initializeAddCutoff(ctx);
 
     // INITIALIZE PAYROLL FORM
     // Actual form initialization happens when a cutoff is selected.

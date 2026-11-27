@@ -201,6 +201,15 @@ Route::middleware('auth')->group(function () {
         [PayrollCutoffController::class, 'index']
     )->name('api.employee-payroll.cutoffs');
 
+    Route::post('/cutoffs', [PayrollCutoffController::class, 'store'])
+    ->name('api.employee-payroll.cutoffs.store');
+
+    // Create new payroll cutoff
+    Route::post(
+    '/api/employee-payroll/cutoffs',
+    [PayrollCutoffController::class, 'store']
+    )->name('api.employee-payroll.cutoffs.store');
+
     // Fetch employees with basic rates
     Route::get('/api/employee-payroll/employees',
         [PayrollEmployeeController::class,'getEmployeesWithBasicRates']
