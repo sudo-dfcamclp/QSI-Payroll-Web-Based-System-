@@ -1,4 +1,3 @@
-
 import {
     saveModuleState,
     getModuleState
@@ -6,6 +5,7 @@ import {
 
 import { createPayrollComputation } from './payrollcomputation.js';
 import { createOtherDeductionManager } from './otherdeduction.js';
+import { createPayrollRetrieval } from './payrollretrieval.js';
 
 export function initializePayrollForm(ctx, options = {}) {
     const panel = ctx.panel;
@@ -44,6 +44,11 @@ export function initializePayrollForm(ctx, options = {}) {
         view.dataset.computeUrl = options.computeUrl;
     }
 
+    if (options.payrollRetrievalUrl) {
+        view.dataset.payrollRetrievalUrl =
+            options.payrollRetrievalUrl;
+    }
+
     if (get('payrollClientName')) {
         get('payrollClientName').value = clientName;
     }
@@ -52,10 +57,7 @@ export function initializePayrollForm(ctx, options = {}) {
         get('payrollSidebarClient').textContent = clientName || '—';
     }
 
-    // ---------------------------------------------------------
-    // Cutoff Information
-    // ---------------------------------------------------------
-
+    // Cutoff information
     if (cutoff) {
         const formatDate = value => {
             if (!value) return '';
@@ -91,10 +93,7 @@ export function initializePayrollForm(ctx, options = {}) {
         }
     }
 
-    // ---------------------------------------------------------
-    // Payroll Tabs
-    // ---------------------------------------------------------
-
+    // Payroll tabs
     const pendingTab = get('payrollPendingTab');
     const doneTab = get('payrollDoneTab');
 
@@ -104,18 +103,12 @@ export function initializePayrollForm(ctx, options = {}) {
     let computation = null;
     let otherDeductionManager = null;
 
-    // ---------------------------------------------------------
-    // Other Deductions
-    // ---------------------------------------------------------
-
+    // Other deductions
     function getDeductions() {
         return otherDeductionManager?.getDeductions() || [];
     }
 
-    // ---------------------------------------------------------
-    // Persist Payroll Form State
-    // ---------------------------------------------------------
-
+    // Persist payroll form state
     function persistState() {
         if (!clientId || !periodId) return;
 
@@ -160,8 +153,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
             fields,
 
-            // Manual deductions only.
-            // Database deductions are retrieved by the backend.
+            // Manual deductions only, database deductions are retrieved by the backend
             deductions: getDeductions(),
 
             switches,
@@ -182,10 +174,7 @@ export function initializePayrollForm(ctx, options = {}) {
         saveModuleState(formStateKey, data, 'session');
     }
 
-    // ---------------------------------------------------------
-    // Initialize Other Deduction Manager
-    // ---------------------------------------------------------
-
+    // Initialize other deduction manager
     otherDeductionManager = createOtherDeductionManager({
         panel,
         get,
@@ -196,27 +185,27 @@ export function initializePayrollForm(ctx, options = {}) {
         }
     });
 
-    // ---------------------------------------------------------
-    // Restore Manual Deductions
-    // ---------------------------------------------------------
+    // Initialize payroll retrieval
+    const payrollRetrieval = createPayrollRetrieval({
+        panel,
+        view,
+        get,
+        persistState
+    });
 
+    // Restore manual deductions
     function restoreOtherDeductions(deductions = []) {
         const savedDeductions = Array.isArray(deductions)
             ? deductions
             : [];
 
-        // Restore manual deductions only.
-        // Do not use render() here because render() is intended
-        // for actual payroll computation results.
+        // Restore manual deductions only, not render() since that is for actual payroll computation results
         otherDeductionManager?.restoreManualDeductions(
             savedDeductions
         );
     }
 
-    // ---------------------------------------------------------
-    // Activate Payroll Tab
-    // ---------------------------------------------------------
-
+    // Activate payroll tab
     function activatePayrollTab(activeTab) {
         const showPending = activeTab === pendingTab;
 
@@ -276,10 +265,7 @@ export function initializePayrollForm(ctx, options = {}) {
         }
     }
 
-    // ---------------------------------------------------------
-    // Restore Payroll Form State
-    // ---------------------------------------------------------
-
+    // Restore payroll form state
     function restoreState() {
         const saved = getModuleState(formStateKey, 'session');
 
@@ -294,7 +280,7 @@ export function initializePayrollForm(ctx, options = {}) {
             return null;
         }
 
-        // Restore input fields.
+        // Restore input fields
         Object.entries(saved.fields || {}).forEach(([id, value]) => {
             const input = get(id);
 
@@ -303,7 +289,7 @@ export function initializePayrollForm(ctx, options = {}) {
             }
         });
 
-        // Restore contribution switches.
+        // Restore contribution switches
         if (saved.switches) {
             if (get('switchSss')) {
                 get('switchSss').checked =
@@ -321,10 +307,10 @@ export function initializePayrollForm(ctx, options = {}) {
             }
         }
 
-        // Restore manual deductions.
+        // Restore manual deductions
         restoreOtherDeductions(saved.deductions || []);
 
-        // Restore selected employee.
+        // Restore selected employee
         view.dataset.selectedEmployeeId =
             saved.selectedEmployeeId || '';
 
@@ -340,13 +326,10 @@ export function initializePayrollForm(ctx, options = {}) {
         return saved;
     }
 
-    // Restore state before creating computation instance.
+    // Restore state before creating computation instance
     const savedState = restoreState();
 
-    // ---------------------------------------------------------
-    // Initialize Payroll Computation
-    // ---------------------------------------------------------
-
+    // Initialize payroll computation
     computation = createPayrollComputation({
         panel,
         view,
@@ -365,10 +348,7 @@ export function initializePayrollForm(ctx, options = {}) {
         computation.skipBackendSwitchesOnce();
     }
 
-    // ---------------------------------------------------------
-    // Payroll Preview Mapping
-    // ---------------------------------------------------------
-
+    // Payroll preview mapping
     const previewMap = {
         earnings: {
             basic_pay: 'previewDaysWorked',
@@ -413,10 +393,7 @@ export function initializePayrollForm(ctx, options = {}) {
         }
     };
 
-    // ---------------------------------------------------------
-    // Money Formatter
-    // ---------------------------------------------------------
-
+    // Money formatter
     const money = value => {
         return new Intl.NumberFormat('en-PH', {
             style: 'currency',
@@ -425,10 +402,7 @@ export function initializePayrollForm(ctx, options = {}) {
         }).format(Number(value) || 0);
     };
 
-    // ---------------------------------------------------------
-    // Render Payroll Previews
-    // ---------------------------------------------------------
-
+    // Render payroll previews
     function renderPreviews(result) {
         const earnings = result?.earnings || {};
         const deductions = result?.deductions || {};
@@ -450,20 +424,14 @@ export function initializePayrollForm(ctx, options = {}) {
         });
     }
 
-    // ---------------------------------------------------------
-    // Reset Payroll Previews
-    // ---------------------------------------------------------
-
+    // Reset payroll previews
     function resetPreviews() {
         panel.querySelectorAll('[id^="preview"]').forEach(el => {
             el.textContent = money(0);
         });
     }
 
-    // ---------------------------------------------------------
-    // Employee Search
-    // ---------------------------------------------------------
-
+    // Employee search
     function filterEmployees(input, list) {
         if (!input || !list) return;
 
@@ -481,25 +449,7 @@ export function initializePayrollForm(ctx, options = {}) {
         });
     }
 
-    // ---------------------------------------------------------
-    // Done Payroll Notice
-    // ---------------------------------------------------------
-
-    function showDonePayrollNotice() {
-        const el = get('payrollComputationError');
-
-        if (!el) return;
-
-        el.textContent =
-            'Completed payroll display requires retrieval of the saved payroll record.';
-
-        el.classList.remove('hidden');
-    }
-
-    // ---------------------------------------------------------
-    // Payroll Computed Event
-    // ---------------------------------------------------------
-
+    // Payroll computed event
     if (!view.dataset.payrollComputedListener) {
         view.dataset.payrollComputedListener = 'true';
 
@@ -508,16 +458,27 @@ export function initializePayrollForm(ctx, options = {}) {
 
             renderPreviews(result);
 
-            // Render database deductions and manual deductions
-            // returned by the backend computation.
+            // Render database deductions and manual deductions returned by the backend computation
             otherDeductionManager?.render(result);
         });
     }
 
-    // ---------------------------------------------------------
-    // Payroll Tab Events
-    // ---------------------------------------------------------
+    if (!view.dataset.payrollSavedRecordListener) {
+        view.dataset.payrollSavedRecordListener = 'true';
 
+        view.addEventListener('payroll:saved-record-loaded', event => {
+            const { otherDeductions, empId } = event.detail || {};
+
+            otherDeductionManager?.renderSavedDeductions(
+                otherDeductions,
+                empId
+            );
+
+            persistState();
+        });
+    }
+
+    // Payroll tab events
     if (!view.dataset.payrollTabsInitialized) {
         view.dataset.payrollTabsInitialized = 'true';
 
@@ -530,14 +491,11 @@ export function initializePayrollForm(ctx, options = {}) {
         });
     }
 
-    // ---------------------------------------------------------
-    // Initialize Payroll Form Events
-    // ---------------------------------------------------------
-
+    // Initialize payroll form events
     if (!view.dataset.payrollFormInitialized) {
         view.dataset.payrollFormInitialized = 'true';
 
-        // Persist input changes.
+        // Persist input changes
         panel.addEventListener('input', event => {
             if (
                 event.target.matches(
@@ -556,17 +514,17 @@ export function initializePayrollForm(ctx, options = {}) {
             }
         });
 
-        // Refresh.
+        // Refresh
         get('payrollRefreshButton')?.addEventListener('click', () => {
             window.location.reload();
         });
 
-        // Print.
+        // Print
         get('payrollPrintButton')?.addEventListener('click', () => {
             window.print();
         });
 
-        // Pending employee search.
+        // Pending employee search
         get('payrollEmployeeSearch')?.addEventListener(
             'input',
             event => {
@@ -577,7 +535,7 @@ export function initializePayrollForm(ctx, options = {}) {
             }
         );
 
-        // Done employee search.
+        // Done employee search
         get('payrollDoneSearch')?.addEventListener(
             'input',
             event => {
@@ -588,7 +546,7 @@ export function initializePayrollForm(ctx, options = {}) {
             }
         );
 
-        // Save local payroll draft.
+        // Save local payroll draft
         get('payrollSaveButton')?.addEventListener('click', () => {
             persistState();
 
@@ -598,10 +556,7 @@ export function initializePayrollForm(ctx, options = {}) {
         });
     }
 
-    // ---------------------------------------------------------
-    // Activate Saved Tab and Load Employees
-    // ---------------------------------------------------------
-
+    // Activate saved tab and load employees
     activatePayrollTab(
         savedState?.activeTab === 'done'
             ? doneTab
@@ -610,10 +565,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
     loadEmployees();
 
-    // ---------------------------------------------------------
-    // Load Employees
-    // ---------------------------------------------------------
-
+    // Load employees
     async function loadEmployees() {
         const pendingList = get('payrollPendingEmployees');
         const doneList = get('payrollDoneEmployees');
@@ -699,7 +651,7 @@ export function initializePayrollForm(ctx, options = {}) {
                 );
             }
 
-            // Prevent stale employee responses.
+            // Prevent stale employee responses
             if (
                 view.dataset.clientId !== clientId ||
                 view.dataset.periodId !== periodId ||
@@ -733,10 +685,7 @@ export function initializePayrollForm(ctx, options = {}) {
                 );
             }
 
-            // -------------------------------------------------
-            // Render Individual Employee
-            // -------------------------------------------------
-
+            // Render individual employee
             function renderEmployee(employee, list, status) {
                 const button = document.createElement('button');
 
@@ -780,10 +729,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
                 button.append(title, subtitle);
 
-                // ---------------------------------------------
-                // Employee Selection
-                // ---------------------------------------------
-
+                // Employee selection
                 button.addEventListener('click', async () => {
                     computation.cancelComputation();
 
@@ -794,7 +740,7 @@ export function initializePayrollForm(ctx, options = {}) {
                     const isNewEmployee =
                         view.dataset.selectedEmployeeId !== employeeId;
 
-                    // Reset previous employee's values.
+                    // Reset previous employee's values
                     if (isNewEmployee) {
                         panel.querySelectorAll(
                             '.payroll-number, .payroll-money'
@@ -814,14 +760,14 @@ export function initializePayrollForm(ctx, options = {}) {
                             get('switchPhilhealth').checked = true;
                         }
 
-                        // Clear previous employee's deductions.
+                        // Clear previous employee's deductions
                         otherDeductionManager?.reset();
 
-                        // Clear previous preview.
+                        // Clear previous preview
                         resetPreviews();
                     }
 
-                    // Set selected employee.
+                    // Set selected employee
                     view.dataset.selectedEmployeeId = employeeId;
 
                     view.dataset.selectedEmployeeRates =
@@ -834,7 +780,7 @@ export function initializePayrollForm(ctx, options = {}) {
                             name || 'Unnamed employee';
                     }
 
-                    // Update selected employee appearance.
+                    // Update selected employee appearance
                     panel.querySelectorAll(
                         '#payrollPendingEmployees button, #payrollDoneEmployees button'
                     ).forEach(item => {
@@ -853,24 +799,23 @@ export function initializePayrollForm(ctx, options = {}) {
 
                     persistState();
 
-                    // -----------------------------------------
-                    // Compute Pending Payroll
-                    // -----------------------------------------
-
+                    // Compute pending payroll
                     if (status === 'pending') {
+                        payrollRetrieval.cancel();
                         await computation.computePayroll();
                     } else {
-                        showDonePayrollNotice();
+                        await payrollRetrieval.load({
+                            clientId,
+                            periodId,
+                            empId: employeeId
+                        });
                     }
                 });
 
                 list.appendChild(button);
             }
 
-            // -------------------------------------------------
-            // Render Employee List
-            // -------------------------------------------------
-
+            // Render employee list
             function renderList(employees, list, status, message) {
                 if (!employees.length) {
                     const empty = document.createElement('div');
@@ -904,7 +849,7 @@ export function initializePayrollForm(ctx, options = {}) {
                 'No completed payroll records for this cutoff.'
             );
 
-            // Apply employee search filters.
+            // Apply employee search filters
             filterEmployees(
                 get('payrollEmployeeSearch'),
                 pendingList
@@ -917,10 +862,7 @@ export function initializePayrollForm(ctx, options = {}) {
 
             view.dataset.employeesLoaded = 'true';
 
-            // ---------------------------------------------
-            // Restore Previously Selected Employee
-            // ---------------------------------------------
-
+            // Restore previously selected employee
             if (savedSelectedEmployeeId) {
                 if (view.dataset.selectedPayrollStatus === 'done') {
                     activatePayrollTab(doneTab);
@@ -936,8 +878,7 @@ export function initializePayrollForm(ctx, options = {}) {
                 });
 
                 if (selectedButton) {
-                    // The click handler already runs computation.
-                    // Do not call computePayroll() again here.
+                    // Click handler already runs computation, do not call computePayroll() again
                     selectedButton.click();
                 } else {
                     view.dataset.selectedEmployeeId = '';

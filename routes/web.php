@@ -217,6 +217,16 @@ Route::middleware('auth')->group(function () {
         return view('employee.payroll-config');
     })->name('employee.payroll-config');
 
+    // Payroll computation preview
+    Route::post(
+        '/api/employee-payroll/compute-preview',
+        [PayrollComputationController::class, 'preview']
+    )->name('payroll.compute.preview');
+
+    Route::get(
+        '/api/employee-payroll/saved',
+        [PayrollComputationController::class, 'getSavedPayroll']
+    )->name('payroll.saved');
     // =========================================================
     // SETTINGS
     // =========================================================

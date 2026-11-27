@@ -84,7 +84,7 @@
         </div>
     </div>
     <!-- Payroll Form -->
-    <div id="payrollTransactionView" class="hidden" data-employees-url="{{ route('payroll.employees') }}" data-compute-url="{{ route('payroll.compute.preview') }}">
+    <div id="payrollTransactionView" class="hidden" data-employees-url="{{ route('payroll.employees') }}" data-compute-url="{{ route('payroll.compute.preview') }}" data-payroll-retrieval-url="{{ route('payroll.saved') }}">
      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <!-- Back Button -->
             <div class="flex items-center">

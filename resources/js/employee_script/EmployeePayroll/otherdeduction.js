@@ -18,6 +18,7 @@ export function createOtherDeductionManager({
         return {
             getDeductions: () => [],
             render: () => {},
+            renderSavedDeductions: () => {},
             reset: () => {},
             restoreManualDeductions: () => {},
             openAddDeduction: () => {}
@@ -471,7 +472,7 @@ export function createOtherDeductionManager({
     // RENDER COMPUTATION RESULT
     // -----------------------------------------------------
 
-    function render(result) {
+    function renderRows(databaseDeductions, manualDeductions, employeeId) {
         const tbody = getTbody();
 
         if (!tbody) {
@@ -479,11 +480,7 @@ export function createOtherDeductionManager({
             return;
         }
 
-        const data = result?.data || result || {};
-
-        const employeeId = String(
-            data.employee?.emp_id ?? ''
-        );
+        const normalizedEmployeeId = String(employeeId ?? '');
 
         const selectedEmployeeId = String(
             view?.dataset.selectedEmployeeId ?? ''
@@ -491,12 +488,12 @@ export function createOtherDeductionManager({
 
         // Prevent rendering data belonging to another employee.
         if (
-            !employeeId ||
+            !normalizedEmployeeId ||
             !selectedEmployeeId ||
-            employeeId !== selectedEmployeeId
+            normalizedEmployeeId !== selectedEmployeeId
         ) {
             console.warn('[OTHER DEDUCTION] Employee mismatch.', {
-                employeeId,
+                employeeId: normalizedEmployeeId,
                 selectedEmployeeId
             });
 
@@ -505,17 +502,12 @@ export function createOtherDeductionManager({
 
         initScrollableLayout();
 
-        const databaseDeductions = normalizeArray(
-            data.other_deduction_details
-        );
-
-        const manualDeductions = normalizeArray(
-            data.manual_other_deduction_details
-        );
+        databaseDeductions = normalizeArray(databaseDeductions);
+        manualDeductions = normalizeArray(manualDeductions);
 
         tbody.replaceChildren();
 
-        renderedEmployeeId = employeeId;
+        renderedEmployeeId = normalizedEmployeeId;
 
         // Database deductions.
         databaseDeductions.forEach(deduction => {
@@ -563,11 +555,25 @@ export function createOtherDeductionManager({
         }
 
         console.log('[OTHER DEDUCTION] Render complete:', {
-            employeeId,
+            employeeId: normalizedEmployeeId,
             databaseCount: databaseDeductions.length,
             manualCount: manualDeductions.length,
             renderedRows
         });
+    }
+
+    function render(result) {
+        const data = result?.data || result || {};
+
+        renderRows(
+            data.other_deduction_details,
+            data.manual_other_deduction_details,
+            data.employee?.emp_id
+        );
+    }
+
+    function renderSavedDeductions(deductions, employeeId) {
+        renderRows(deductions, [], employeeId);
     }
 
     // -----------------------------------------------------
@@ -987,6 +993,7 @@ export function createOtherDeductionManager({
     return {
         getDeductions,
         render,
+        renderSavedDeductions,
         reset,
         restoreManualDeductions,
         openAddDeduction

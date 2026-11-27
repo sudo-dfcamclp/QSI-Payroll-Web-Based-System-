@@ -18,7 +18,7 @@ class OtherDeductionService
         int $clientId,
         string $cutoffStart,
         string $cutoffEnd
-    ): array { // <-- ARRAY NA ITO
+    ): array { 
         $deductions = DB::table('employee_deductions as ed')
             ->leftJoin(
                 'deduction_types as dt',
@@ -77,7 +77,7 @@ class OtherDeductionService
             })
             ->filter(fn ($deduction) => $deduction->amount > 0)
             ->values()
-            ->toArray(); // <-- ITO ANG FIX
+            ->toArray();
     }
 
     /**
